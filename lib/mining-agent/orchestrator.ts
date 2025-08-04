@@ -1,8 +1,4 @@
-// import { SEDARScraper } from './scrapers/sedar-scraper'
-// import { EDGARScraper } from './scrapers/edgar-scraper'
-// import { LSEScraper } from './scrapers/lse-scraper'
-// import { ASXScraper } from './scrapers/asx-scraper'
-import { TestScraper } from './scrapers/test-scraper'
+import { SimpleMininingScraper } from './scrapers/simple-mining-scraper'
 import { DocumentProcessor } from './document-processor'
 import { updateProgress, resetProgress } from './progress-tracker'
 import PQueue from 'p-queue'
@@ -25,12 +21,7 @@ export class MiningAgentOrchestrator {
 
   constructor() {
     this.scrapers = [
-      { name: 'TEST', scraper: new TestScraper() }
-      // Uncomment these when ready for production:
-      // { name: 'SEDAR', scraper: new SEDARScraper() },
-      // { name: 'EDGAR', scraper: new EDGARScraper() },
-      // { name: 'LSE', scraper: new LSEScraper() },
-      // { name: 'ASX', scraper: new ASXScraper() }
+      { name: 'Mining Projects Database', scraper: new SimpleMininingScraper() }
     ]
     this.processor = new DocumentProcessor()
     this.queue = new PQueue({ concurrency: 2 }) // Process 2 documents at a time

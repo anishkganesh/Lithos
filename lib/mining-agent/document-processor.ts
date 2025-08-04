@@ -8,6 +8,7 @@ export interface Document {
   type?: string
   date?: string
   source: string
+  metadata?: any
 }
 
 export interface ProcessingResult {
@@ -88,10 +89,11 @@ export class DocumentProcessor {
 
   private async extractProjectData(content: string, document: Document): Promise<any> {
     const prompt = `
-      You are a mining industry analyst. Extract structured data from this technical report.
+      You are a mining industry analyst. Extract structured data from this mining project information.
       
       Document source: ${document.source}
       Document type: ${document.type || 'Unknown'}
+      ${document.metadata ? `Additional info: ${JSON.stringify(document.metadata)}` : ''}
       
       Content:
       ${content.substring(0, 15000)} // Limit content length
