@@ -1,6 +1,6 @@
 import FirecrawlApp from '@mendable/firecrawl-js'
 import OpenAI from 'openai'
-import { supabaseAdmin } from '@/lib/supabase/client'
+import { getSupabaseAdmin } from '@/lib/supabase/client'
 
 export interface Document {
   url: string
@@ -155,6 +155,7 @@ export class DocumentProcessor {
   }
 
   private async findExistingProject(projectName: string, companyName: string): Promise<any> {
+    const supabaseAdmin = getSupabaseAdmin()
     const { data, error } = await supabaseAdmin
       .from('projects')
       .select('id')
@@ -177,6 +178,7 @@ export class DocumentProcessor {
       delete projectData.longitude
     }
 
+    const supabaseAdmin = getSupabaseAdmin()
     const { data, error } = await supabaseAdmin
       .from('projects')
       .insert(projectData)
@@ -202,6 +204,7 @@ export class DocumentProcessor {
       delete projectData.longitude
     }
 
+    const supabaseAdmin = getSupabaseAdmin()
     const { error } = await supabaseAdmin
       .from('projects')
       .update(projectData)

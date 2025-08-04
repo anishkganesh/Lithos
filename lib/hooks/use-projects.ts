@@ -11,7 +11,7 @@ export function useProjects() {
     fetchProjects()
 
     // Subscribe to realtime changes
-    const subscription = supabase
+    const subscription = supabase()
       .channel('projects')
       .on(
         'postgres_changes',
@@ -30,7 +30,7 @@ export function useProjects() {
   const fetchProjects = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      const { data, error } = await supabase()
         .from('project_screener_view')
         .select('*')
         .order('updated_at', { ascending: false })
@@ -38,7 +38,7 @@ export function useProjects() {
       if (error) throw error
 
       // Transform database data to match MiningProject interface
-      const transformedProjects: MiningProject[] = (data || []).map(project => ({
+      const transformedProjects: MiningProject[] = (data || []).map((project: any) => ({
         id: project.id,
         project: project.project_name,
         company: project.company_name,
