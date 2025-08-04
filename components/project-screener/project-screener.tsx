@@ -481,9 +481,8 @@ export function ProjectScreener() {
       <div className="w-full space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold tracking-tight">Projects Screener — {data.length} deposits</h2>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <MiningAgentSimpleButton />
-            <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
               <Eye className="mr-2 h-4 w-4" />
               View Data in Public Company Search
@@ -537,7 +536,6 @@ export function ProjectScreener() {
                   })}
               </DropdownMenuContent>
             </DropdownMenu>
-            </div>
           </div>
           <div className="text-sm text-muted-foreground">
             {selectedRowsCount} of {table.getFilteredRowModel().rows.length} row(s) selected.

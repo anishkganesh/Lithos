@@ -138,7 +138,7 @@ export function ProjectComparisonView({ projects }: ProjectComparisonViewProps) 
 
       {/* Project Cards */}
       <div className="grid grid-cols-2 gap-4">
-        {projects.slice(0, 2).map((project, index) => (
+        {projects.map((project, index) => (
           <Card key={project.id} className="relative">
             <CardHeader>
               <CardTitle className="text-lg">{project.project}</CardTitle>
@@ -274,34 +274,6 @@ export function ProjectComparisonView({ projects }: ProjectComparisonViewProps) 
           </Card>
         ))}
       </div>
-
-      {/* More projects cards for > 2 projects */}
-      {projects.length > 2 && (
-        <div className="grid grid-cols-2 gap-4">
-          {projects.slice(2).map((project) => (
-            <Card key={project.id} className="p-4">
-              <h3 className="font-medium">{project.project}</h3>
-              <div className="text-sm text-muted-foreground mb-2">
-                {project.investorsOwnership.split("(")[0].trim()}
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">NPV:</span> ${(project.postTaxNPV / 1000).toFixed(1)}B
-                </div>
-                <div>
-                  <span className="text-muted-foreground">IRR:</span> {project.irr.toFixed(1)}%
-                </div>
-                <div>
-                  <span className="text-muted-foreground">CAPEX:</span> ${project.capex}M
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Stage:</span> {project.stage}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
 
       <Separator />
 
