@@ -5,7 +5,7 @@ import { X, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { MiningProject } from "@/lib/types/mining-project"
-import { SingleProjectView } from "./single-project-view"
+import { SingleProjectView } from "./single-project-view-compact"
 import { ProjectComparisonView } from "./project-comparison-view"
 
 interface ProjectDetailPanelProps {
