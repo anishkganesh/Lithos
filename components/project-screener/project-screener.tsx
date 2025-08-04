@@ -37,10 +37,11 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { MiningProject, ProjectStage, Commodity, RiskLevel } from "@/lib/types/mining-project"
-import { dummyProjects } from "@/lib/data/dummy-projects"
+import { useProjects } from "@/lib/hooks/use-projects"
 import { ProjectFilters } from "./project-filters"
 import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { ProjectDetailPanel } from "@/components/project-detail-panel"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const defaultVisibleColumns = [
   "select",
@@ -103,7 +104,7 @@ function getESGBadgeColor(grade?: string) {
 }
 
 export function ProjectScreener() {
-  const [data] = React.useState(dummyProjects)
+  const { projects: data, loading, error } = useProjects()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -455,6 +456,24 @@ export function ProjectScreener() {
   })
 
   const selectedRowsCount = Object.keys(rowSelection).length
+
+  if (loading) {
+    return (
+      <div className="w-full space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="w-full p-8 text-center">
+        <p className="text-muted-foreground">Failed to load projects. Using sample data.</p>
+      </div>
+    )
+  }
 
   return (
     <>
