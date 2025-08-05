@@ -42,7 +42,7 @@ export function MiningAgentEnhanced({ onProgressChange }: MiningAgentEnhancedPro
       } else {
         // Run immediately if time has passed
         setAutoRunEnabled(true)
-        handleRunAgent()
+        setTimeout(() => handleRunAgent(), 1000) // Small delay to ensure component is mounted
       }
     }
   }, [])
@@ -87,16 +87,24 @@ export function MiningAgentEnhanced({ onProgressChange }: MiningAgentEnhancedPro
           totalProjects: data.totalProjects,
           canRunNow: true
         })
+      } else {
+        console.warn('Agent status endpoint returned:', response.status)
       }
     } catch (error) {
-      console.error('Error fetching agent status:', error)
+      // Silently handle errors during initial load
+      if (typeof window !== 'undefined') {
+        console.warn('Could not fetch agent status:', error)
+      }
     }
   }
 
   useEffect(() => {
-    fetchAgentStatus()
-    const interval = setInterval(fetchAgentStatus, 30000)
-    return () => clearInterval(interval)
+    // Only fetch status if we're in the browser
+    if (typeof window !== 'undefined') {
+      fetchAgentStatus()
+      const interval = setInterval(fetchAgentStatus, 30000)
+      return () => clearInterval(interval)
+    }
   }, [])
 
   const handleRunAgent = async () => {
@@ -140,10 +148,13 @@ export function MiningAgentEnhanced({ onProgressChange }: MiningAgentEnhancedPro
               
               if (data.message === 'COMPLETE' && data.data) {
                 const result = data.data
-                // Just refresh the table, no toast
-                refetch()
-                fetchAgentStatus()
-                onProgressChange?.(false)
+                // Refresh the table and wait for it to complete
+                await refetch()
+                await fetchAgentStatus()
+                // Small delay to ensure UI updates
+                setTimeout(() => {
+                  onProgressChange?.(false)
+                }, 500)
               } else if (data.message === 'ERROR' && data.data) {
                 throw new Error(data.data.error || 'Mining agent failed')
               } else {
