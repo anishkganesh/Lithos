@@ -28,7 +28,7 @@ html {
 }
         `}</style>
       </head>
-      <body>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         <ChatProvider>
           <GlobalChatProvider>
             {children}

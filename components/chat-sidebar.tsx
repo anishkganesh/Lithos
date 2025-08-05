@@ -559,7 +559,7 @@ export function ChatSidebar({
   if (!isLoggedIn) {
     return (
       <div className={cn(
-        "flex flex-col h-full font-sans bg-background items-center justify-center",
+        "flex flex-col h-full bg-background items-center justify-center",
         isFullscreen && "pt-12"
       )}>
         <div className="w-full max-w-md space-y-4 p-6">
@@ -607,7 +607,7 @@ export function ChatSidebar({
   }
 
   return (
-    <div className="flex flex-col h-full font-sans">
+    <div className="flex flex-col h-full">
       {!isFullscreen && (
         <div className="flex items-center justify-between p-3 border-b">
           <div className="flex items-center gap-2">
