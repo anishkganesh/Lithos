@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   title: 'Lithos',
   description: 'AI-powered critical minerals intelligence platform',
   generator: 'v0.dev',
+  icons: {
+    icon: [
+      { url: '/favicon.avif', type: 'image/avif' },
+    ],
+    shortcut: '/favicon.avif',
+    apple: '/favicon.avif',
+  },
 }
 
 export default function RootLayout({
@@ -20,6 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.avif" type="image/avif" />
+        <link rel="shortcut icon" href="/favicon.avif" type="image/avif" />
+        <link rel="apple-touch-icon" href="/favicon.avif" />
         <style>{`
 html {
   font-family: ${GeistSans.style.fontFamily};

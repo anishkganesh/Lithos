@@ -11,7 +11,6 @@ import {
   IconFileWord,
   IconFolder,
   IconHelp,
-  IconInnerShadowTop,
   IconListDetails,
   IconReport,
   IconSearch,
@@ -160,8 +159,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
+              <a href="#" className="flex items-center gap-2">
+                <img src="/favicon.avif" alt="Lithos" className="h-6 w-6 rounded" />
                 <span className="text-base font-semibold">Lithos</span>
               </a>
             </SidebarMenuButton>
