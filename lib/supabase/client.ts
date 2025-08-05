@@ -9,7 +9,8 @@ export const supabase = () => {
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     if (!url || !key) {
-      throw new Error('Missing Supabase environment variables')
+      console.warn('Missing Supabase environment variables - app will use dummy data')
+      return null
     }
     
     supabaseInstance = createClient(url, key)

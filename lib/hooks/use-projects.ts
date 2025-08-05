@@ -10,27 +10,41 @@ export function useProjects() {
   useEffect(() => {
     fetchProjects()
 
-    // Subscribe to realtime changes
-    const subscription = supabase()
-      .channel('projects')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'projects' },
-        () => {
-          fetchProjects()
-        }
-      )
-      .subscribe()
+    // Subscribe to realtime changes if Supabase is available
+    const client = supabase()
+    if (client) {
+      const subscription = client
+        .channel('projects')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'projects' },
+          () => {
+            fetchProjects()
+          }
+        )
+        .subscribe()
 
-    return () => {
-      subscription.unsubscribe()
+      return () => {
+        subscription.unsubscribe()
+      }
     }
   }, [])
 
   const fetchProjects = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase()
+      
+      const client = supabase()
+      if (!client) {
+        // Use dummy data if Supabase is not available
+        const { dummyProjects } = await import('@/lib/data/dummy-projects')
+        setProjects(dummyProjects)
+        setError(null)
+        setLoading(false)
+        return
+      }
+
+      const { data, error } = await client
         .from('project_screener_view')
         .select('*')
         .order('updated_at', { ascending: false })
@@ -70,11 +84,6 @@ export function useProjects() {
     } catch (err) {
       console.error('Error fetching projects:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch projects')
-      // Fall back to dummy data if Supabase is not configured
-      if (err instanceof Error && err.message.includes('SUPABASE')) {
-        const { dummyProjects } = await import('@/lib/data/dummy-projects')
-        setProjects(dummyProjects)
-      }
     } finally {
       setLoading(false)
     }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Play } from 'lucide-react'
 import { toast } from 'sonner'
 import { useProjects } from '@/lib/hooks/use-projects'
+import { supabase } from '@/lib/supabase/client'
 
 export function MiningAgentSimpleButton() {
   const [isRunning, setIsRunning] = useState(false)
@@ -12,6 +13,12 @@ export function MiningAgentSimpleButton() {
   const { refetch } = useProjects()
 
   const runMiningAgent = async () => {
+    // Check if Supabase is available
+    if (!supabase()) {
+      toast.info('Mining agent requires database configuration')
+      return
+    }
+
     setIsRunning(true)
     setStatus('Initializing mining agent...')
 

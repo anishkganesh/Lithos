@@ -10,7 +10,8 @@
     "test:scraper": "tsx scripts/test-scraper.ts",
     "test:scraper:mock": "tsx scripts/test-scraper-mock.ts",
     "test:scraper:real": "tsx scripts/test-real-scraper.ts",
-    "populate:projects": "tsx scripts/populate-real-projects.ts"
+    "populate:projects": "tsx scripts/populate-real-projects.ts",
+    "demo:scraper": "tsx scripts/demo-scraper-pipeline.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "latest",

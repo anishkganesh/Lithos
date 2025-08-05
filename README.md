@@ -99,10 +99,32 @@ This project is optimized for deployment on Vercel:
 
 ## Environment Variables
 
-No environment variables are required for the basic setup. For production use, you may want to add:
+The app works without environment variables (using dummy data), but for full functionality, add these in Vercel:
 
-- `NEXT_PUBLIC_API_URL` - Backend API endpoint
-- `DATABASE_URL` - Database connection string
+### Required for Database Features:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+### Required for Mining Agent:
+```bash
+FIRECRAWL_API_KEY=your_firecrawl_api_key
+OPENAI_API_KEY=your_openai_api_key
+```
+
+### Optional:
+```bash
+NEWS_API_KEY=your_news_api_key
+NEWS_API_HOST=your_news_api_host
+```
+
+To add these in Vercel:
+1. Go to your project settings
+2. Navigate to "Environment Variables"
+3. Add each variable with its value
+4. Redeploy your application
 
 ## Contributing
 
