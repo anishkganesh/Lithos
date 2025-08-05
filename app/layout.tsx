@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import { ChatProvider } from '@/lib/chat-context'
+import { GlobalChatProvider } from '@/lib/global-chat-context'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'Lithos',
@@ -25,7 +28,14 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        <ChatProvider>
+          <GlobalChatProvider>
+            {children}
+          </GlobalChatProvider>
+        </ChatProvider>
+        <Toaster />
+      </body>
     </html>
   )
 }
