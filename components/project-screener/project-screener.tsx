@@ -43,6 +43,7 @@ import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { ProjectDetailPanel } from "@/components/project-detail-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MiningAgentSimpleButton } from "@/components/mining-agent-simple-button"
+import { MiningAgentProgress } from "@/components/mining-agent-progress"
 
 const defaultVisibleColumns = [
   "select",
@@ -478,7 +479,8 @@ export function ProjectScreener() {
 
   return (
     <>
-      <div className="w-full space-y-4">
+      <div className="w-full space-y-4 relative">
+        <MiningAgentProgress />
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold tracking-tight">Projects Screener — {data.length} deposits</h2>
           <div className="flex items-center gap-2">

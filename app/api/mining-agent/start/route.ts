@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MiningAgentOrchestrator } from '@/lib/mining-agent/orchestrator'
+import { MiningAgentV2 } from '@/lib/mining-agent/mining-agent-v2'
 import { getSupabaseAdmin } from '@/lib/supabase/client'
 
 export async function POST(request: NextRequest) {
@@ -10,11 +10,11 @@ export async function POST(request: NextRequest) {
       .from('projects')
       .select('*', { count: 'exact', head: true })
     
-    // Initialize the orchestrator
-    const orchestrator = new MiningAgentOrchestrator()
+    // Initialize the mining agent
+    const agent = new MiningAgentV2()
     
     // Start the scraping process
-    const result = await orchestrator.run()
+    const result = await agent.run()
     
     // Get new project count
     const { count: afterCount } = await supabaseAdmin
