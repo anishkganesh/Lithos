@@ -148,9 +148,12 @@ export function MiningAgentEnhanced({ onProgressChange }: MiningAgentEnhancedPro
               
               if (data.message === 'COMPLETE' && data.data) {
                 const result = data.data
-                // Refresh the table and wait for it to complete
-                await refetch()
+                // Dispatch custom event to refresh projects
+                window.dispatchEvent(new CustomEvent('refreshProjects'))
+                
+                // Update status
                 await fetchAgentStatus()
+                
                 // Small delay to ensure UI updates
                 setTimeout(() => {
                   onProgressChange?.(false)

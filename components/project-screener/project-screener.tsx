@@ -43,7 +43,7 @@ import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { ProjectDetailPanel } from "@/components/project-detail-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MiningAgentEnhanced } from "@/components/mining-agent-enhanced"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
 
 const defaultVisibleColumns = [
@@ -113,7 +113,7 @@ interface DetailPanelState {
 }
 
 export function ProjectScreener() {
-  const { projects: data, loading, error } = useProjects()
+  const { projects: data, loading, error, refetch } = useProjects()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -126,6 +126,31 @@ export function ProjectScreener() {
   const [detailPanelMode, setDetailPanelMode] = useState<"single" | "comparison">("single")
   const [miningAgentRunning, setMiningAgentRunning] = useState(false)
   const [miningAgentProgress, setMiningAgentProgress] = useState<string>("")
+
+  // Listen for refresh events
+  useEffect(() => {
+    const handleRefreshProjects = () => {
+      // Refetch data when mining agent completes
+      refetch()
+    }
+    
+    window.addEventListener('refreshProjects', handleRefreshProjects)
+    
+    return () => {
+      window.removeEventListener('refreshProjects', handleRefreshProjects)
+    }
+  }, [refetch])
+
+  // Set default column visibility
+  useEffect(() => {
+    const hiddenCols = Object.fromEntries(
+      hiddenColumns.map((col: string) => [col, false])
+    )
+    setColumnVisibility(prev => ({
+      ...hiddenCols,
+      ...prev
+    }))
+  }, [])
 
   const handleProjectClick = (projectId: string) => {
     const project = data.find(p => p.id === projectId)
@@ -437,17 +462,6 @@ export function ProjectScreener() {
       },
     },
   ]
-
-  // Initialize column visibility after columns are defined
-  React.useEffect(() => {
-    const visibility: VisibilityState = {}
-    columns.forEach((col) => {
-      if (col.id && hiddenColumns.includes(col.id)) {
-        visibility[col.id] = false
-      }
-    })
-    setColumnVisibility(visibility)
-  }, [])
 
   const table = useReactTable({
     data,

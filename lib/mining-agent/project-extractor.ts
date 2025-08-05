@@ -45,49 +45,37 @@ export class ProjectExtractor {
   }
 
   async extractProjects(documents: ScrapedDocument[]): Promise<ExtractedProject[]> {
-    const extractedProjects: ExtractedProject[] = []
-    const processedNames = new Set<string>()
-
+    const allProjects: ExtractedProject[] = []
+    const seenProjects = new Set<string>()
+    
     for (let i = 0; i < documents.length; i++) {
       const doc = documents[i]
       
       updateProgress({
         stage: 'processing',
-        message: `Analyzing document ${i + 1}/${documents.length}...`,
+        message: `Processing document ${i + 1}/${documents.length}...`,
         currentStep: i + 1,
         totalSteps: documents.length
       })
-
+      
       try {
         const projects = await this.extractFromDocument(doc)
         
-        // Filter out duplicates
         for (const project of projects) {
-          const key = `${project.project_name}-${project.company_name}`.toLowerCase()
-          if (!processedNames.has(key)) {
-            processedNames.add(key)
-            extractedProjects.push(project)
-            
-            // Update progress with found project
-            updateProgress({
-              stage: 'processing',
-              message: `Added: ${project.project_name}`,
-              currentStep: i + 1,
-              totalSteps: documents.length
-            })
+          const enriched = this.enrichProject(project, doc)
+          const key = `${enriched.project_name}-${enriched.company_name}`.toLowerCase()
+          
+          if (!seenProjects.has(key)) {
+            seenProjects.add(key)
+            allProjects.push(enriched)
           }
         }
-
-        // Stop if we have enough projects
-        if (extractedProjects.length >= 10) {
-          break
-        }
       } catch (error) {
-        console.error('Extraction error:', error)
+        console.error(`Error extracting from ${doc.url}:`, error)
       }
     }
-
-    return extractedProjects
+    
+    return allProjects
   }
 
   private async extractFromDocument(doc: ScrapedDocument): Promise<ExtractedProject[]> {

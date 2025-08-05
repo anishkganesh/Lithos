@@ -52,19 +52,36 @@ export async function POST(request: NextRequest) {
         .select('*', { count: 'exact', head: true })
       
       // Step 1: Generate queries
-      sendProgress('Generating search queries for diverse mining projects...')
+      sendProgress('Starting Mining Discovery Agent...')
       const queryGenerator = new MiningQueryGenerator()
       const queries = queryGenerator.generateQueries()
+      sendProgress(`Generated ${queries.length} mining-specific search queries`)
       
       // Step 2: Search for documents
-      sendProgress('Searching mining news sites...')
+      sendProgress('Initializing search across mining databases...')
       const scraper = new MiningWebScraper()
       
       // Custom progress handler for scraping
       const originalUpdateProgress = (global as any).updateProgress
+      let searchCount = 0
+      let documentCount = 0
+      
       ;(global as any).updateProgress = (state: any) => {
         if (state.message) {
-          sendProgress(state.message)
+          // Enhance progress messages with more detail
+          if (state.message.includes('Searching for')) {
+            searchCount++
+            sendProgress(`Searching SEDAR, EDGAR, Mining.com (${searchCount}/${queries.length})...`)
+          } else if (state.message.includes('Scanning technical report')) {
+            sendProgress('Analyzing technical report databases...')
+          } else if (state.message.includes('Found') && state.message.includes('project')) {
+            documentCount++
+            sendProgress(`Found ${documentCount} mining documents...`)
+          } else if (state.message.includes('Searching regional')) {
+            sendProgress('Scanning ASX and TSX filings...')
+          } else {
+            sendProgress(state.message)
+          }
         }
       }
       
@@ -77,11 +94,25 @@ export async function POST(request: NextRequest) {
         return
       }
       
-      sendProgress(`Found ${documents.length} documents, extracting project data...`)
+      sendProgress(`Processing ${documents.length} documents for project data...`)
       
       // Step 3: Extract projects
       const extractor = new ProjectExtractor()
+      let extractedCount = 0
+      
+      // Override progress for extraction
+      const originalExtractorProgress = (global as any).updateProgress
+      ;(global as any).updateProgress = (state: any) => {
+        if (state.message && state.message.includes('Processing document')) {
+          extractedCount++
+          sendProgress(`Extracting project data (${extractedCount}/${documents.length})...`)
+        }
+      }
+      
       const projects = await extractor.extractProjects(documents)
+      
+      // Restore original progress handler
+      ;(global as any).updateProgress = originalExtractorProgress
       
       if (projects.length === 0) {
         sendProgress('No new projects found in documents')
@@ -90,7 +121,7 @@ export async function POST(request: NextRequest) {
         return
       }
       
-      sendProgress(`Extracted ${projects.length} projects, saving to database...`)
+      sendProgress(`Found ${projects.length} mining projects, updating database...`)
       
       // Step 4: Save projects
       let inserted = 0
