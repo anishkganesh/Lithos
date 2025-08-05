@@ -42,8 +42,9 @@ import { ProjectFilters } from "./project-filters"
 import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { ProjectDetailPanel } from "@/components/project-detail-panel"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MiningAgentSimpleButton } from "@/components/mining-agent-simple-button"
-import { MiningAgentProgress } from "@/components/mining-agent-progress"
+import { MiningAgentEnhanced } from "@/components/mining-agent-enhanced"
+import { useState } from "react"
+import { Loader2 } from "lucide-react"
 
 const defaultVisibleColumns = [
   "select",
@@ -105,18 +106,26 @@ function getESGBadgeColor(grade?: string) {
   }
 }
 
+interface DetailPanelState {
+  isOpen: boolean;
+  mode: "single" | "comparison";
+  selectedProjects: MiningProject[];
+}
+
 export function ProjectScreener() {
   const { projects: data, loading, error } = useProjects()
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [globalFilter, setGlobalFilter] = React.useState("")
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [rowSelection, setRowSelection] = useState({})
+  const [globalFilter, setGlobalFilter] = useState("")
   
   // Project detail panel state
-  const [detailPanelOpen, setDetailPanelOpen] = React.useState(false)
-  const [selectedProjects, setSelectedProjects] = React.useState<MiningProject[]>([])
-  const [detailPanelMode, setDetailPanelMode] = React.useState<"single" | "comparison">("single")
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false)
+  const [selectedProjects, setSelectedProjects] = useState<MiningProject[]>([])
+  const [detailPanelMode, setDetailPanelMode] = useState<"single" | "comparison">("single")
+  const [miningAgentRunning, setMiningAgentRunning] = useState(false)
+  const [miningAgentProgress, setMiningAgentProgress] = useState<string>("")
 
   const handleProjectClick = (projectId: string) => {
     const project = data.find(p => p.id === projectId)
@@ -143,6 +152,11 @@ export function ProjectScreener() {
       setDetailPanelMode("comparison")
       setDetailPanelOpen(true)
     }
+  }
+
+  const handleMiningAgentProgress = (isRunning: boolean, message?: string) => {
+    setMiningAgentRunning(isRunning)
+    setMiningAgentProgress(message || "")
   }
 
   const columns: ColumnDef<MiningProject>[] = [
@@ -480,22 +494,23 @@ export function ProjectScreener() {
   return (
     <>
       <div className="w-full space-y-4 relative">
-        <MiningAgentProgress />
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold tracking-tight">Projects Screener — {data.length} deposits</h2>
           <div className="flex items-center gap-2">
-            <MiningAgentSimpleButton />
-            <Button variant="outline" size="sm">
-              <Eye className="mr-2 h-4 w-4" />
-              View Data in Public Company Search
-            </Button>
-            <Button variant="outline" size="sm">
-              Set Alerts
-            </Button>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Save
-            </Button>
+            <MiningAgentEnhanced onProgressChange={handleMiningAgentProgress} />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Eye className="mr-2 h-4 w-4" />
+                View Data in Public Company Search
+              </Button>
+              <Button variant="outline" size="sm">
+                Set Alerts
+              </Button>
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Project
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -554,7 +569,19 @@ export function ProjectScreener() {
           />
         )}
 
-        <div className="rounded-md border">
+        <div className="rounded-lg border relative overflow-hidden">
+          {/* Mining agent progress overlay */}
+          {miningAgentRunning && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="text-sm text-muted-foreground font-medium">
+                  {miningAgentProgress || "Running mining agent..."}
+                </div>
+              </div>
+            </div>
+          )}
+          
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

@@ -28,12 +28,39 @@ export class MiningWebScraper {
     for (let i = 0; i < queries.length; i += batchSize) {
       const batch = queries.slice(i, i + batchSize)
       
-      updateProgress({
-        stage: 'collecting',
-        message: `Searching for mining projects... (${i + 1}/${queries.length} queries)`,
-        currentStep: i + 1,
-        totalSteps: queries.length
-      })
+      // Create more specific progress messages
+      const commodities = batch.map(q => q.commodity).filter(Boolean)
+      const uniqueCommodities = [...new Set(commodities)]
+      
+      if (uniqueCommodities.length > 0) {
+        updateProgress({
+          stage: 'collecting',
+          message: `Searching for ${uniqueCommodities.join(', ')} projects...`,
+          currentStep: i + 1,
+          totalSteps: queries.length
+        })
+      } else if (batch[0].category === 'technical-reports') {
+        updateProgress({
+          stage: 'collecting',
+          message: `Scanning technical report databases...`,
+          currentStep: i + 1,
+          totalSteps: queries.length
+        })
+      } else if (batch[0].category === 'regional') {
+        updateProgress({
+          stage: 'collecting',
+          message: `Searching regional mining news...`,
+          currentStep: i + 1,
+          totalSteps: queries.length
+        })
+      } else {
+        updateProgress({
+          stage: 'collecting',
+          message: `Searching mining databases... (${i + 1}/${queries.length})`,
+          currentStep: i + 1,
+          totalSteps: queries.length
+        })
+      }
 
       const batchResults = await Promise.allSettled(
         batch.map(query => this.searchSingleQuery(query))
@@ -46,9 +73,10 @@ export class MiningWebScraper {
           
           // Update progress with found documents
           const commodity = batch[index].commodity || 'mining'
+          const docCount = result.value.length
           updateProgress({
             stage: 'collecting',
-            message: `Found ${commodity} project documents...`,
+            message: `Found ${docCount} ${commodity} project${docCount > 1 ? 's' : ''}...`,
             currentStep: i + index + 1,
             totalSteps: queries.length
           })
@@ -57,6 +85,12 @@ export class MiningWebScraper {
 
       // Stop if we have enough documents
       if (allDocuments.length >= 15) {
+        updateProgress({
+          stage: 'collecting',
+          message: `Found ${allDocuments.length} documents total`,
+          currentStep: queries.length,
+          totalSteps: queries.length
+        })
         break
       }
     }
