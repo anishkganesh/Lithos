@@ -38,7 +38,7 @@ html {
 }
         `}</style>
       </head>
-      <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`} suppressHydrationWarning>
         <ChatProvider>
           <GlobalChatProvider>
             {children}

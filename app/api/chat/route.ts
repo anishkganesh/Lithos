@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import pdfParse from 'pdf-parse'
+
+// Dynamic import for pdf-parse to avoid issues
+let pdfParse: any;
+try {
+  pdfParse = require('pdf-parse');
+} catch (error) {
+  console.warn('pdf-parse not available:', error);
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
@@ -117,7 +124,10 @@ Always provide data-driven insights and cite sources when available. Focus on ac
             const base64Data = file.fileContent.split(',')[1];
             const pdfBuffer = Buffer.from(base64Data, 'base64');
             
-            // Parse the PDF
+            // Parse the PDF if library is available
+            if (!pdfParse) {
+              throw new Error('PDF parsing library not available');
+            }
             const data = await pdfParse(pdfBuffer);
             
             // Add the extracted text with mining-specific context
