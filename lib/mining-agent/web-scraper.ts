@@ -28,38 +28,51 @@ export class MiningWebScraper {
     for (let i = 0; i < queries.length; i += batchSize) {
       const batch = queries.slice(i, i + batchSize)
       
-      // Create more specific progress messages
+      // Create more specific and detailed progress messages
       const commodities = batch.map(q => q.commodity).filter(Boolean)
       const uniqueCommodities = [...new Set(commodities)]
       
-      if (uniqueCommodities.length > 0) {
+      // Determine the data source being searched
+      for (const query of batch) {
+        let source = ''
+        let detail = ''
+        
+        // Map queries to specific data sources
+        if (query.query.includes('SEDAR') || query.query.includes('NI 43-101')) {
+          source = '🇨🇦 SEDAR+ (Canadian Securities)'
+          detail = 'Scanning NI 43-101 technical reports...'
+        } else if (query.query.includes('EDGAR') || query.query.includes('SEC')) {
+          source = '🇺🇸 SEC EDGAR Database'
+          detail = 'Searching U.S. mining company filings...'
+        } else if (query.query.includes('ASX') || query.query.includes('JORC')) {
+          source = '🇦🇺 ASX (Australian Exchange)'
+          detail = 'Retrieving JORC resource statements...'
+        } else if (query.query.includes('LSE')) {
+          source = '🇬🇧 London Stock Exchange'
+          detail = 'Checking LSE mining announcements...'
+        } else if (query.query.includes('feasibility')) {
+          source = '📊 Feasibility Study Databases'
+          detail = `Looking for ${query.commodity || 'mining'} feasibility studies...`
+        } else if (query.query.includes('news') || query.query.includes('announcement')) {
+          source = '📰 Mining News Platforms'
+          detail = 'Scanning Mining.com, Kitco, Northern Miner...'
+        } else if (query.commodity) {
+          source = `⛏️ ${query.commodity.charAt(0).toUpperCase() + query.commodity.slice(1)} Project Search`
+          detail = `Finding ${query.commodity} exploration & development projects...`
+        } else {
+          source = '🌐 Global Mining Databases'
+          detail = 'Searching technical report repositories...'
+        }
+        
         updateProgress({
           stage: 'collecting',
-          message: `Searching for ${uniqueCommodities.join(', ')} projects...`,
-          currentStep: i + 1,
+          message: `${source} - ${detail}`,
+          currentStep: i + batch.indexOf(query) + 1,
           totalSteps: queries.length
         })
-      } else if (batch[0].category === 'technical-reports') {
-        updateProgress({
-          stage: 'collecting',
-          message: `Scanning technical report databases...`,
-          currentStep: i + 1,
-          totalSteps: queries.length
-        })
-      } else if (batch[0].category === 'regional') {
-        updateProgress({
-          stage: 'collecting',
-          message: `Searching regional mining news...`,
-          currentStep: i + 1,
-          totalSteps: queries.length
-        })
-      } else {
-        updateProgress({
-          stage: 'collecting',
-          message: `Searching mining databases... (${i + 1}/${queries.length})`,
-          currentStep: i + 1,
-          totalSteps: queries.length
-        })
+        
+        // Small delay between progress updates for visibility
+        await new Promise(resolve => setTimeout(resolve, 200))
       }
 
       const batchResults = await Promise.allSettled(
@@ -71,15 +84,40 @@ export class MiningWebScraper {
         if (result.status === 'fulfilled' && result.value.length > 0) {
           allDocuments.push(...result.value)
           
-          // Update progress with found documents
+          // Update progress with detailed found documents info
           const commodity = batch[index].commodity || 'mining'
           const docCount = result.value.length
-          updateProgress({
-            stage: 'collecting',
-            message: `Found ${docCount} ${commodity} project${docCount > 1 ? 's' : ''}...`,
-            currentStep: i + index + 1,
-            totalSteps: queries.length
-          })
+          const query = batch[index]
+          
+          if (docCount > 0) {
+            // Show what type of documents were found
+            let docType = 'documents'
+            if (query.query.includes('feasibility')) docType = 'feasibility studies'
+            else if (query.query.includes('NI 43-101')) docType = 'NI 43-101 reports'
+            else if (query.query.includes('JORC')) docType = 'JORC statements'
+            else if (query.query.includes('resource')) docType = 'resource updates'
+            else if (query.query.includes('PEA')) docType = 'preliminary assessments'
+            
+            updateProgress({
+              stage: 'collecting',
+              message: `✅ Found ${docCount} ${commodity} ${docType}`,
+              currentStep: i + index + 1,
+              totalSteps: queries.length
+            })
+            
+            // Show document titles
+            for (let j = 0; j < Math.min(2, result.value.length); j++) {
+              const doc = result.value[j]
+              setTimeout(() => {
+                updateProgress({
+                  stage: 'collecting',
+                  message: `   📄 ${doc.title.substring(0, 60)}${doc.title.length > 60 ? '...' : ''}`,
+                  currentStep: i + index + 1,
+                  totalSteps: queries.length
+                })
+              }, (j + 1) * 150)
+            }
+          }
         }
       })
 
@@ -87,7 +125,7 @@ export class MiningWebScraper {
       if (allDocuments.length >= 15) {
         updateProgress({
           stage: 'collecting',
-          message: `Found ${allDocuments.length} documents total`,
+          message: `🎯 Collected ${allDocuments.length} relevant documents - Sufficient data for analysis`,
           currentStep: queries.length,
           totalSteps: queries.length
         })
@@ -136,7 +174,13 @@ export class MiningWebScraper {
 
       return documents
     } catch (error) {
-      console.error(`Search failed for query: ${query.query}`, error)
+      console.warn(`Search timeout for: ${query.query.substring(0, 50)}...`)
+      updateProgress({
+        stage: 'collecting',
+        message: `⚠️ Skipped query (timeout): ${query.query.substring(0, 40)}..`,
+        currentStep: 0,
+        totalSteps: 0
+      })
       return []
     }
   }

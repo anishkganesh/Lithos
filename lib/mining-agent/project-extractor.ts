@@ -51,9 +51,26 @@ export class ProjectExtractor {
     for (let i = 0; i < documents.length; i++) {
       const doc = documents[i]
       
+      // Detailed progress for each document
+      const docTitle = doc.title.substring(0, 50)
+      const source = doc.url.includes('sedar') ? 'SEDAR' :
+                     doc.url.includes('sec.gov') ? 'SEC EDGAR' :
+                     doc.url.includes('asx.com') ? 'ASX' :
+                     doc.url.includes('mining.com') ? 'Mining.com' :
+                     'Web Source'
+      
       updateProgress({
         stage: 'processing',
-        message: `Processing document ${i + 1}/${documents.length}...`,
+        message: `📝 Analyzing document ${i + 1}/${documents.length} - Source: ${source}`,
+        currentStep: i + 1,
+        totalSteps: documents.length
+      })
+      
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      updateProgress({
+        stage: 'processing',
+        message: `   📑 ${docTitle}...`,
         currentStep: i + 1,
         totalSteps: documents.length
       })
@@ -68,10 +85,24 @@ export class ProjectExtractor {
           if (!seenProjects.has(key)) {
             seenProjects.add(key)
             allProjects.push(enriched)
+            
+            // Show what was extracted
+            updateProgress({
+              stage: 'processing',
+              message: `   ✅ Extracted: ${project.project_name} (${enriched.primary_commodity || 'mining'}) - Stage: ${enriched.stage || 'Unknown'}`,
+              currentStep: i + 1,
+              totalSteps: documents.length
+            })
           }
         }
       } catch (error) {
-        console.error(`Error extracting from ${doc.url}:`, error)
+        console.warn(`Could not extract from ${doc.url.substring(0, 50)}...`)
+        updateProgress({
+          stage: 'processing',
+          message: `   ⚠️ Skipped document (extraction failed)`,
+          currentStep: i + 1,
+          totalSteps: documents.length
+        })
       }
     }
     
