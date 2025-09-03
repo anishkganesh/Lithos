@@ -8,7 +8,7 @@ import { updateProgress } from '@/lib/mining-agent/progress-tracker'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-export async function GET(request: NextRequest) {
+async function handleMiningAgent(request: NextRequest) {
   const encoder = new TextEncoder()
   
   const stream = new ReadableStream({
@@ -290,4 +290,13 @@ export async function GET(request: NextRequest) {
       'Connection': 'keep-alive',
     },
   })
+}
+
+// Export both GET and POST handlers
+export async function GET(request: NextRequest) {
+  return handleMiningAgent(request)
+}
+
+export async function POST(request: NextRequest) {
+  return handleMiningAgent(request)
 }
