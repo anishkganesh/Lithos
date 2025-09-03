@@ -617,7 +617,7 @@ export function ChatSidebar({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {!isFullscreen && (
         <div className="flex items-center justify-between p-3 border-b">
           <div className="flex items-center gap-2">
@@ -660,12 +660,12 @@ export function ChatSidebar({
       
       <ScrollArea 
         className={cn(
-          "flex-1", 
+          "flex-1 overflow-y-auto", 
           isFullscreen ? "px-4 md:px-0 max-w-3xl mx-auto w-full" : "p-4"
         )} 
         ref={scrollAreaRef}
       >
-        <div className="flex flex-col gap-4 pb-2 pt-4">
+        <div className="flex flex-col gap-4 pb-2 pt-4 min-h-full">
           {messages.filter(message => message.role !== "system").map((message, index, filteredMessages) => {
             const isLatestMessage = index === filteredMessages.length - 1
             const showActions = isLatestMessage || hoveredMessageId === message.id
@@ -919,12 +919,12 @@ export function ChatSidebar({
       </ScrollArea>
 
       <div className={cn(
-        "px-4 py-3 border-t bg-background",
+        "px-4 py-3 border-t bg-background flex-shrink-0",
         isFullscreen && "pb-6"
       )}>
         {/* Tool indicators */}
         {(isGeneratingImage || isSearchingWeb || uploadedFiles.length > 0) && (
-          <div className="mb-2 flex items-center gap-2 flex-wrap">
+          <div className="mb-2 flex items-center gap-2 flex-wrap min-h-[28px]">
             {isGeneratingImage && (
               <div className="text-xs bg-blue-500/10 text-blue-500 py-1 px-2 rounded-full flex items-center gap-1">
                 <ImageIcon className="h-3 w-3" />
@@ -1054,8 +1054,8 @@ export function ChatSidebar({
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 placeholder={isGeneratingImage 
-                  ? "Describe the mining visualization you want to generate..." 
-                  : "Ask me anything about mining projects, commodities, or technical analysis..."}
+                  ? "Describe image..." 
+                  : "Ask about mining..."}
                 className="px-3 pr-12 min-h-[69px] max-h-[250px] border-0 resize-none py-2 bg-background shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 align-top text-2xl"
                 disabled={isLoading}
               />

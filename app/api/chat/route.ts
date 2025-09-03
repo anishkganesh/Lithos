@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
-
-// Dynamic import for pdf-parse to avoid issues
-let pdfParse: any;
-try {
-  pdfParse = require('pdf-parse');
-} catch (error) {
-  console.warn('pdf-parse not available:', error);
-}
+import { PDFDocument } from 'pdf-lib'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
@@ -118,38 +111,47 @@ Always provide data-driven insights and cite sources when available. Focus on ac
             ]
           });
         } else if (file.fileType === 'application/pdf') {
-          // Extract text from PDF
+          // Extract metadata from PDF using pdf-lib
           try {
             // Remove the data:application/pdf;base64, prefix
             const base64Data = file.fileContent.split(',')[1];
             const pdfBuffer = Buffer.from(base64Data, 'base64');
             
-            // Parse the PDF if library is available
-            if (!pdfParse) {
-              throw new Error('PDF parsing library not available');
-            }
-            const data = await pdfParse(pdfBuffer);
+            // Load the PDF document
+            const pdfDoc = await PDFDocument.load(pdfBuffer);
             
-            // Add the extracted text with mining-specific context
+            // Get metadata
+            const pageCount = pdfDoc.getPageCount();
+            const title = pdfDoc.getTitle() || 'N/A';
+            const author = pdfDoc.getAuthor() || 'N/A';
+            const subject = pdfDoc.getSubject() || 'N/A';
+            const creator = pdfDoc.getCreator() || 'N/A';
+            const creationDate = pdfDoc.getCreationDate();
+            const modificationDate = pdfDoc.getModificationDate();
+            
+            // Note: pdf-lib doesn't extract text content, only metadata
+            // For now, we'll provide metadata and ask the user to copy relevant text
             fileAnalysisPrompt += `PDF Document "${file.fileName}" (likely a mining technical report - NI 43-101, JORC, feasibility study, etc.):\n\n`;
             fileAnalysisPrompt += `Metadata:\n`;
-            fileAnalysisPrompt += `- Pages: ${data.numpages}\n`;
-            fileAnalysisPrompt += `- Title: ${data.info?.Title || 'N/A'}\n`;
-            fileAnalysisPrompt += `- Author: ${data.info?.Author || 'N/A'}\n`;
-            fileAnalysisPrompt += `- Subject: ${data.info?.Subject || 'N/A'}\n`;
-            fileAnalysisPrompt += `- Creation Date: ${data.info?.CreationDate || 'N/A'}\n\n`;
-            fileAnalysisPrompt += `Content (extracted text):\n\`\`\`\n${data.text.substring(0, 10000)}${data.text.length > 10000 ? '\n... (truncated to first 10,000 characters)' : ''}\n\`\`\`\n\n`;
+            fileAnalysisPrompt += `- Pages: ${pageCount}\n`;
+            fileAnalysisPrompt += `- Title: ${title}\n`;
+            fileAnalysisPrompt += `- Author: ${author}\n`;
+            fileAnalysisPrompt += `- Subject: ${subject}\n`;
+            fileAnalysisPrompt += `- Creator: ${creator}\n`;
+            fileAnalysisPrompt += `- Creation Date: ${creationDate ? creationDate.toISOString() : 'N/A'}\n`;
+            fileAnalysisPrompt += `- Modification Date: ${modificationDate ? modificationDate.toISOString() : 'N/A'}\n\n`;
+            fileAnalysisPrompt += `Note: This PDF has ${pageCount} pages. To analyze specific content, please copy and paste the relevant sections from the PDF.\n\n`;
             
             finalMessages.push({
               role: 'system',
-              content: `PDF Document uploaded: ${file.fileName}. This appears to be a technical mining document with ${data.numpages} pages. Focus on extracting key mining project information such as resource estimates, project economics, metallurgy, and risk factors.`
+              content: `PDF Document uploaded: ${file.fileName}. This appears to be a technical document with ${pageCount} pages. The document metadata has been extracted. For detailed content analysis, the user should copy relevant sections from the PDF.`
             });
           } catch (error) {
             console.error('Error parsing PDF:', error);
-            fileAnalysisPrompt += `PDF File "${file.fileName}": [Error extracting PDF content: ${error}]\n\n`;
+            fileAnalysisPrompt += `PDF File "${file.fileName}": [Error reading PDF: ${error}]\n\n`;
             finalMessages.push({
               role: 'system',
-              content: `PDF Document: ${file.fileName}. Unable to extract text content. The document may be image-based or corrupted.`
+              content: `PDF Document: ${file.fileName}. Unable to read the PDF file. The document may be corrupted or password-protected.`
             });
           }
         } else if (file.fileType === 'application/json' || file.fileName.endsWith('.json')) {
