@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import pdfParse from 'pdf-parse'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
@@ -110,13 +111,37 @@ Always provide data-driven insights and cite sources when available. Focus on ac
             ]
           });
         } else if (file.fileType === 'application/pdf') {
-          // For PDF files - note about technical reports
-          finalMessages.push({
-            role: 'system',
-            content: `PDF Document: ${file.fileName}. This may be a technical report (NI 43-101, JORC, feasibility study, etc.). Note: PDF text extraction may not preserve exact formatting.`
-          });
-          
-          fileAnalysisPrompt += `PDF File "${file.fileName}": [PDF parsing will be implemented - for mining technical reports, please copy the relevant sections]\n\n`;
+          // Extract text from PDF
+          try {
+            // Remove the data:application/pdf;base64, prefix
+            const base64Data = file.fileContent.split(',')[1];
+            const pdfBuffer = Buffer.from(base64Data, 'base64');
+            
+            // Parse the PDF
+            const data = await pdfParse(pdfBuffer);
+            
+            // Add the extracted text with mining-specific context
+            fileAnalysisPrompt += `PDF Document "${file.fileName}" (likely a mining technical report - NI 43-101, JORC, feasibility study, etc.):\n\n`;
+            fileAnalysisPrompt += `Metadata:\n`;
+            fileAnalysisPrompt += `- Pages: ${data.numpages}\n`;
+            fileAnalysisPrompt += `- Title: ${data.info?.Title || 'N/A'}\n`;
+            fileAnalysisPrompt += `- Author: ${data.info?.Author || 'N/A'}\n`;
+            fileAnalysisPrompt += `- Subject: ${data.info?.Subject || 'N/A'}\n`;
+            fileAnalysisPrompt += `- Creation Date: ${data.info?.CreationDate || 'N/A'}\n\n`;
+            fileAnalysisPrompt += `Content (extracted text):\n\`\`\`\n${data.text.substring(0, 10000)}${data.text.length > 10000 ? '\n... (truncated to first 10,000 characters)' : ''}\n\`\`\`\n\n`;
+            
+            finalMessages.push({
+              role: 'system',
+              content: `PDF Document uploaded: ${file.fileName}. This appears to be a technical mining document with ${data.numpages} pages. Focus on extracting key mining project information such as resource estimates, project economics, metallurgy, and risk factors.`
+            });
+          } catch (error) {
+            console.error('Error parsing PDF:', error);
+            fileAnalysisPrompt += `PDF File "${file.fileName}": [Error extracting PDF content: ${error}]\n\n`;
+            finalMessages.push({
+              role: 'system',
+              content: `PDF Document: ${file.fileName}. Unable to extract text content. The document may be image-based or corrupted.`
+            });
+          }
         } else if (file.fileType === 'application/json' || file.fileName.endsWith('.json')) {
           // Parse JSON files
           try {

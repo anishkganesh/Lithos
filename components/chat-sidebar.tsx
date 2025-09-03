@@ -68,6 +68,7 @@ export function ChatSidebar({
   const [tempUserName, setTempUserName] = React.useState("User")
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const scrollAreaRef = React.useRef<HTMLDivElement>(null)
+  const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const { closeChat } = useChatContext()
   const [isSearching, setIsSearching] = React.useState(false)
@@ -315,15 +316,24 @@ export function ChatSidebar({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   };
 
-  React.useEffect(() => {
-    // Scroll to bottom when new messages arrive
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+  // Smooth scroll to bottom function
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  // Scroll to bottom when new messages arrive
+  React.useEffect(() => {
+    scrollToBottom();
   }, [messages]);
+
+  // Also scroll when loading state changes
+  React.useEffect(() => {
+    if (isLoading) {
+      scrollToBottom();
+    }
+  }, [isLoading]);
 
   const handleNameSubmit = () => {
     if (tempUserName.trim() !== "") {
@@ -903,6 +913,8 @@ export function ChatSidebar({
               </div>
             </div>
           )}
+          {/* Invisible element at the end to scroll to */}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
@@ -972,7 +984,7 @@ export function ChatSidebar({
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleAttachmentChange}
-                accept=".txt,.md,.json,.csv,.xlsx,.xls,.html,.xml,.js,.ts,.jsx,.tsx,.css,.py,.png,.jpg,.jpeg,.pdf,.docx,.doc"
+                accept=".txt,.md,.json,.csv,.xlsx,.xls,.html,.xml,.js,.ts,.jsx,.tsx,.css,.py,.png,.jpg,.jpeg,.pdf,.docx,.doc,.ppt,.pptx"
                 multiple
               />
               
