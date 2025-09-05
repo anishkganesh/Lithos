@@ -16,7 +16,7 @@ interface ContextMenuProps {
 export function ContextMenuChat({ x, y, selectedText, onClose }: ContextMenuProps) {
   const [mounted, setMounted] = useState(false)
   const { setInput, handleSubmit } = useGlobalChat()
-  const { setIsOpen } = useChat()
+  const { toggleChat, chatMode } = useChat()
 
   useEffect(() => {
     setMounted(true)
@@ -36,7 +36,9 @@ export function ContextMenuChat({ x, y, selectedText, onClose }: ContextMenuProp
   }, [onClose])
 
   const handleChatWithData = async (prompt: string) => {
-    setIsOpen(true)
+    if (chatMode === null) {
+      toggleChat()
+    }
     setInput(prompt)
     setTimeout(() => {
       handleSubmit(new Event('submit') as any)

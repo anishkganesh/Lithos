@@ -34,45 +34,70 @@ export class MiningWebScraper {
       
       // Determine the data source being searched
       for (const query of batch) {
-        let source = ''
-        let detail = ''
+        let messages: string[] = []
         
-        // Map queries to specific data sources
+        // Map queries to specific data sources with Looki-style messaging
         if (query.query.includes('SEDAR') || query.query.includes('NI 43-101')) {
-          source = '🇨🇦 SEDAR+ (Canadian Securities)'
-          detail = 'Scanning NI 43-101 technical reports...'
+          messages = [
+            '🔍 Accessing SEDAR+ database...',
+            '📡 Connecting to Canadian securities filings...',
+            '📄 Scanning for NI 43-101 technical reports...'
+          ]
         } else if (query.query.includes('EDGAR') || query.query.includes('SEC')) {
-          source = '🇺🇸 SEC EDGAR Database'
-          detail = 'Searching U.S. mining company filings...'
+          messages = [
+            '🔍 Querying SEC EDGAR system...',
+            '🇺🇸 Analyzing U.S. mining registrants...',
+            '📊 Extracting 10-K and 8-K filings...'
+          ]
         } else if (query.query.includes('ASX') || query.query.includes('JORC')) {
-          source = '🇦🇺 ASX (Australian Exchange)'
-          detail = 'Retrieving JORC resource statements...'
+          messages = [
+            '🔍 Connecting to ASX announcements...',
+            '🇦🇺 Processing Australian mining data...',
+            '⛏️ Analyzing JORC-compliant resources...'
+          ]
         } else if (query.query.includes('LSE')) {
-          source = '🇬🇧 London Stock Exchange'
-          detail = 'Checking LSE mining announcements...'
+          messages = [
+            '🔍 Accessing London Stock Exchange...',
+            '🇬🇧 Scanning AIM market updates...',
+            '📈 Reviewing regulatory news service...'
+          ]
         } else if (query.query.includes('feasibility')) {
-          source = '📊 Feasibility Study Databases'
-          detail = `Looking for ${query.commodity || 'mining'} feasibility studies...`
+          messages = [
+            `🔍 Searching ${query.commodity || 'mining'} feasibility studies...`,
+            '📊 Analyzing economic assessments...',
+            '💎 Extracting project valuations...'
+          ]
         } else if (query.query.includes('news') || query.query.includes('announcement')) {
-          source = '📰 Mining News Platforms'
-          detail = 'Scanning Mining.com, Kitco, Northern Miner...'
+          messages = [
+            '🔍 Scanning global mining news...',
+            '📰 Checking Mining.com, Kitco, Reuters...',
+            '🌐 Aggregating industry updates...'
+          ]
         } else if (query.commodity) {
-          source = `⛏️ ${query.commodity.charAt(0).toUpperCase() + query.commodity.slice(1)} Project Search`
-          detail = `Finding ${query.commodity} exploration & development projects...`
+          const comm = query.commodity.charAt(0).toUpperCase() + query.commodity.slice(1)
+          messages = [
+            `🔍 Searching ${comm} projects worldwide...`,
+            `⛏️ Analyzing ${comm} exploration data...`,
+            `💎 Processing ${comm} resource estimates...`
+          ]
         } else {
-          source = '🌐 Global Mining Databases'
-          detail = 'Searching technical report repositories...'
+          messages = [
+            '🔍 Searching technical report databases...',
+            '🌐 Scanning global mining repositories...',
+            '📊 Analyzing project documentation...'
+          ]
         }
         
-        updateProgress({
-          stage: 'collecting',
-          message: `${source} - ${detail}`,
-          currentStep: i + batch.indexOf(query) + 1,
-          totalSteps: queries.length
-        })
-        
-        // Small delay between progress updates for visibility
-        await new Promise(resolve => setTimeout(resolve, 200))
+        // Display messages sequentially like Looki
+        for (const msg of messages) {
+          updateProgress({
+            stage: 'collecting',
+            message: msg,
+            currentStep: i + batch.indexOf(query) + 1,
+            totalSteps: queries.length
+          })
+          await new Promise(resolve => setTimeout(resolve, 300))
+        }
       }
 
       const batchResults = await Promise.allSettled(
@@ -100,7 +125,7 @@ export class MiningWebScraper {
             
             updateProgress({
               stage: 'collecting',
-              message: `✅ Found ${docCount} ${commodity} ${docType}`,
+              message: `✨ Discovered ${docCount} ${commodity} ${docType}`,
               currentStep: i + index + 1,
               totalSteps: queries.length
             })
@@ -111,7 +136,7 @@ export class MiningWebScraper {
               setTimeout(() => {
                 updateProgress({
                   stage: 'collecting',
-                  message: `   📄 ${doc.title.substring(0, 60)}${doc.title.length > 60 ? '...' : ''}`,
+                  message: `   → ${doc.title.substring(0, 80)}${doc.title.length > 80 ? '...' : ''}`,
                   currentStep: i + index + 1,
                   totalSteps: queries.length
                 })

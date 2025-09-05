@@ -41,14 +41,33 @@ export function useContextMenu() {
 
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
-      // Check if right-clicking on a data element
-      const target = e.target as HTMLElement
-      const dataElement = target.closest('[data-contextmenu]')
+      e.preventDefault()
       
-      if (dataElement) {
-        e.preventDefault()
-        const text = dataElement.getAttribute('data-contextmenu') || dataElement.textContent || ''
-        
+      // Get the selected text if any
+      const selection = window.getSelection()?.toString().trim()
+      
+      // Check if right-clicking on a data element or its parent containers
+      const target = e.target as HTMLElement
+      let dataElement = target.closest('[data-contextmenu]')
+      
+      // If no data-contextmenu found, check for common data containers
+      if (!dataElement) {
+        dataElement = target.closest('td, .card, [role="cell"], [role="gridcell"], .project-detail, .chart-area')
+      }
+      
+      // Get text content from various sources
+      let text = ''
+      if (selection) {
+        text = selection
+      } else if (dataElement) {
+        text = dataElement.getAttribute('data-contextmenu') || 
+               dataElement.textContent || 
+               ''
+      } else if (target.textContent) {
+        text = target.textContent
+      }
+      
+      if (text.trim()) {
         setContextMenu({
           x: e.clientX,
           y: e.clientY,

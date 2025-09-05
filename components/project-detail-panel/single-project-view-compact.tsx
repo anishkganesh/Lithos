@@ -7,9 +7,11 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { ExternalLink, AlertTriangle, FileText, Users } from "lucide-react"
+import { ExternalLink, AlertTriangle, FileText, Users, MessageSquare } from "lucide-react"
 import { SensitivityAnalysis } from "./sensitivity-analysis"
 import { cn } from "@/lib/utils"
+import { useGlobalChat } from "@/lib/global-chat-context"
+import { useChat } from "@/lib/chat-context"
 
 interface SingleProjectViewProps {
   project: MiningProject
@@ -30,12 +32,26 @@ const getRiskBadgeColor = (risk: string) => {
 }
 
 export function SingleProjectView({ project, onProjectSelect }: SingleProjectViewProps) {
+  const { setInput, handleSubmit } = useGlobalChat()
+  const { toggleChat, chatMode } = useChat()
+  
   const similarProjects = [
     { id: '1', name: 'Similar Project 1', npv: 3200, irr: 28 },
     { id: '2', name: 'Similar Project 2', npv: 2800, irr: 24 },
     { id: '3', name: 'Similar Project 3', npv: 4100, irr: 31 },
     { id: '4', name: 'Similar Project 4', npv: 2500, irr: 22 }
   ]
+  
+  const handleChatWithProject = () => {
+    if (chatMode === null) {
+      toggleChat()
+    }
+    const projectInfo = `Analyze this mining project: ${project.project} by ${project.investorsOwnership.split("(")[0].trim()} in ${project.jurisdiction}. Key metrics: NPV $${project.npv}M, IRR ${project.irr}%, CAPEX $${project.capex}M, Mine life ${project.mineLife} years.`
+    setInput(projectInfo)
+    setTimeout(() => {
+      handleSubmit(new Event('submit') as any)
+    }, 100)
+  }
 
   return (
     <div className="space-y-4 p-6">
@@ -48,9 +64,20 @@ export function SingleProjectView({ project, onProjectSelect }: SingleProjectVie
               {project.investorsOwnership.split("(")[0].trim()} • {project.jurisdiction}
             </p>
           </div>
-          <Badge className={cn("text-xs", getRiskBadgeColor(project.riskLevel))}>
-            {project.riskLevel} Risk
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleChatWithProject}
+              className="gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Chat with AI
+            </Button>
+            <Badge className={cn("text-xs", getRiskBadgeColor(project.riskLevel))}>
+              {project.riskLevel} Risk
+            </Badge>
+          </div>
         </div>
       </div>
 
