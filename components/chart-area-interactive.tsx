@@ -33,109 +33,109 @@ import {
 export const description = "An interactive area chart"
 
 const chartData = [
-  { date: "2024-04-01", desktop: 222, mobile: 150 },
-  { date: "2024-04-02", desktop: 97, mobile: 180 },
-  { date: "2024-04-03", desktop: 167, mobile: 120 },
-  { date: "2024-04-04", desktop: 242, mobile: 260 },
-  { date: "2024-04-05", desktop: 373, mobile: 290 },
-  { date: "2024-04-06", desktop: 301, mobile: 340 },
-  { date: "2024-04-07", desktop: 245, mobile: 180 },
-  { date: "2024-04-08", desktop: 409, mobile: 320 },
-  { date: "2024-04-09", desktop: 59, mobile: 110 },
-  { date: "2024-04-10", desktop: 261, mobile: 190 },
-  { date: "2024-04-11", desktop: 327, mobile: 350 },
-  { date: "2024-04-12", desktop: 292, mobile: 210 },
-  { date: "2024-04-13", desktop: 342, mobile: 380 },
-  { date: "2024-04-14", desktop: 137, mobile: 220 },
-  { date: "2024-04-15", desktop: 120, mobile: 170 },
-  { date: "2024-04-16", desktop: 138, mobile: 190 },
-  { date: "2024-04-17", desktop: 446, mobile: 360 },
-  { date: "2024-04-18", desktop: 364, mobile: 410 },
-  { date: "2024-04-19", desktop: 243, mobile: 180 },
-  { date: "2024-04-20", desktop: 89, mobile: 150 },
-  { date: "2024-04-21", desktop: 137, mobile: 200 },
-  { date: "2024-04-22", desktop: 224, mobile: 170 },
-  { date: "2024-04-23", desktop: 138, mobile: 230 },
-  { date: "2024-04-24", desktop: 387, mobile: 290 },
-  { date: "2024-04-25", desktop: 215, mobile: 250 },
-  { date: "2024-04-26", desktop: 75, mobile: 130 },
-  { date: "2024-04-27", desktop: 383, mobile: 420 },
-  { date: "2024-04-28", desktop: 122, mobile: 180 },
-  { date: "2024-04-29", desktop: 315, mobile: 240 },
-  { date: "2024-04-30", desktop: 454, mobile: 380 },
-  { date: "2024-05-01", desktop: 165, mobile: 220 },
-  { date: "2024-05-02", desktop: 293, mobile: 310 },
-  { date: "2024-05-03", desktop: 247, mobile: 190 },
-  { date: "2024-05-04", desktop: 385, mobile: 420 },
-  { date: "2024-05-05", desktop: 481, mobile: 390 },
-  { date: "2024-05-06", desktop: 498, mobile: 520 },
-  { date: "2024-05-07", desktop: 388, mobile: 300 },
-  { date: "2024-05-08", desktop: 149, mobile: 210 },
-  { date: "2024-05-09", desktop: 227, mobile: 180 },
-  { date: "2024-05-10", desktop: 293, mobile: 330 },
-  { date: "2024-05-11", desktop: 335, mobile: 270 },
-  { date: "2024-05-12", desktop: 197, mobile: 240 },
-  { date: "2024-05-13", desktop: 197, mobile: 160 },
-  { date: "2024-05-14", desktop: 448, mobile: 490 },
-  { date: "2024-05-15", desktop: 473, mobile: 380 },
-  { date: "2024-05-16", desktop: 338, mobile: 400 },
-  { date: "2024-05-17", desktop: 499, mobile: 420 },
-  { date: "2024-05-18", desktop: 315, mobile: 350 },
-  { date: "2024-05-19", desktop: 235, mobile: 180 },
-  { date: "2024-05-20", desktop: 177, mobile: 230 },
-  { date: "2024-05-21", desktop: 82, mobile: 140 },
-  { date: "2024-05-22", desktop: 81, mobile: 120 },
-  { date: "2024-05-23", desktop: 252, mobile: 290 },
-  { date: "2024-05-24", desktop: 294, mobile: 220 },
-  { date: "2024-05-25", desktop: 201, mobile: 250 },
-  { date: "2024-05-26", desktop: 213, mobile: 170 },
-  { date: "2024-05-27", desktop: 420, mobile: 460 },
-  { date: "2024-05-28", desktop: 233, mobile: 190 },
-  { date: "2024-05-29", desktop: 78, mobile: 130 },
-  { date: "2024-05-30", desktop: 340, mobile: 280 },
-  { date: "2024-05-31", desktop: 178, mobile: 230 },
-  { date: "2024-06-01", desktop: 178, mobile: 200 },
-  { date: "2024-06-02", desktop: 470, mobile: 410 },
-  { date: "2024-06-03", desktop: 103, mobile: 160 },
-  { date: "2024-06-04", desktop: 439, mobile: 380 },
-  { date: "2024-06-05", desktop: 88, mobile: 140 },
-  { date: "2024-06-06", desktop: 294, mobile: 250 },
-  { date: "2024-06-07", desktop: 323, mobile: 370 },
-  { date: "2024-06-08", desktop: 385, mobile: 320 },
-  { date: "2024-06-09", desktop: 438, mobile: 480 },
-  { date: "2024-06-10", desktop: 155, mobile: 200 },
-  { date: "2024-06-11", desktop: 92, mobile: 150 },
-  { date: "2024-06-12", desktop: 492, mobile: 420 },
-  { date: "2024-06-13", desktop: 81, mobile: 130 },
-  { date: "2024-06-14", desktop: 426, mobile: 380 },
-  { date: "2024-06-15", desktop: 307, mobile: 350 },
-  { date: "2024-06-16", desktop: 371, mobile: 310 },
-  { date: "2024-06-17", desktop: 475, mobile: 520 },
-  { date: "2024-06-18", desktop: 107, mobile: 170 },
-  { date: "2024-06-19", desktop: 341, mobile: 290 },
-  { date: "2024-06-20", desktop: 408, mobile: 450 },
-  { date: "2024-06-21", desktop: 169, mobile: 210 },
-  { date: "2024-06-22", desktop: 317, mobile: 270 },
-  { date: "2024-06-23", desktop: 480, mobile: 530 },
-  { date: "2024-06-24", desktop: 132, mobile: 180 },
-  { date: "2024-06-25", desktop: 141, mobile: 190 },
-  { date: "2024-06-26", desktop: 434, mobile: 380 },
-  { date: "2024-06-27", desktop: 448, mobile: 490 },
-  { date: "2024-06-28", desktop: 149, mobile: 200 },
-  { date: "2024-06-29", desktop: 103, mobile: 160 },
-  { date: "2024-06-30", desktop: 446, mobile: 400 },
+  { date: "2024-10-01", technical: 12, feasibility: 8 },
+  { date: "2024-10-02", technical: 9, feasibility: 10 },
+  { date: "2024-10-03", technical: 15, feasibility: 7 },
+  { date: "2024-10-04", technical: 18, feasibility: 12 },
+  { date: "2024-10-05", technical: 22, feasibility: 15 },
+  { date: "2024-10-06", technical: 20, feasibility: 18 },
+  { date: "2024-10-07", technical: 16, feasibility: 10 },
+  { date: "2024-10-08", technical: 25, feasibility: 20 },
+  { date: "2024-10-09", technical: 8, feasibility: 6 },
+  { date: "2024-10-10", technical: 19, feasibility: 11 },
+  { date: "2024-10-11", technical: 21, feasibility: 17 },
+  { date: "2024-10-12", technical: 17, feasibility: 13 },
+  { date: "2024-10-13", technical: 23, feasibility: 19 },
+  { date: "2024-10-14", technical: 11, feasibility: 9 },
+  { date: "2024-10-15", technical: 10, feasibility: 8 },
+  { date: "2024-10-16", technical: 12, feasibility: 10 },
+  { date: "2024-10-17", technical: 28, feasibility: 22 },
+  { date: "2024-10-18", technical: 24, feasibility: 20 },
+  { date: "2024-10-19", technical: 18, feasibility: 12 },
+  { date: "2024-10-20", technical: 9, feasibility: 7 },
+  { date: "2024-10-21", technical: 13, feasibility: 11 },
+  { date: "2024-10-22", technical: 16, feasibility: 10 },
+  { date: "2024-10-23", technical: 14, feasibility: 12 },
+  { date: "2024-10-24", technical: 26, feasibility: 18 },
+  { date: "2024-10-25", technical: 17, feasibility: 14 },
+  { date: "2024-10-26", technical: 8, feasibility: 6 },
+  { date: "2024-10-27", technical: 25, feasibility: 21 },
+  { date: "2024-10-28", technical: 10, feasibility: 9 },
+  { date: "2024-10-29", technical: 20, feasibility: 15 },
+  { date: "2024-10-30", technical: 29, feasibility: 23 },
+  { date: "2024-10-31", technical: 13, feasibility: 11 },
+  { date: "2024-11-01", technical: 19, feasibility: 16 },
+  { date: "2024-11-02", technical: 18, feasibility: 11 },
+  { date: "2024-11-03", technical: 26, feasibility: 22 },
+  { date: "2024-11-04", technical: 30, feasibility: 24 },
+  { date: "2024-11-05", technical: 31, feasibility: 26 },
+  { date: "2024-11-06", technical: 25, feasibility: 18 },
+  { date: "2024-11-07", technical: 12, feasibility: 10 },
+  { date: "2024-11-08", technical: 16, feasibility: 11 },
+  { date: "2024-11-09", technical: 20, feasibility: 17 },
+  { date: "2024-11-10", technical: 22, feasibility: 16 },
+  { date: "2024-11-11", technical: 14, feasibility: 12 },
+  { date: "2024-11-12", technical: 15, feasibility: 10 },
+  { date: "2024-11-13", technical: 28, feasibility: 25 },
+  { date: "2024-11-14", technical: 29, feasibility: 22 },
+  { date: "2024-11-15", technical: 23, feasibility: 20 },
+  { date: "2024-11-16", technical: 32, feasibility: 26 },
+  { date: "2024-11-17", technical: 21, feasibility: 18 },
+  { date: "2024-11-18", technical: 17, feasibility: 11 },
+  { date: "2024-11-19", technical: 13, feasibility: 12 },
+  { date: "2024-11-20", technical: 8, feasibility: 7 },
+  { date: "2024-11-21", technical: 9, feasibility: 6 },
+  { date: "2024-11-22", technical: 18, feasibility: 15 },
+  { date: "2024-11-23", technical: 20, feasibility: 13 },
+  { date: "2024-11-24", technical: 15, feasibility: 13 },
+  { date: "2024-11-25", technical: 16, feasibility: 10 },
+  { date: "2024-11-26", technical: 27, feasibility: 24 },
+  { date: "2024-11-27", technical: 17, feasibility: 12 },
+  { date: "2024-11-28", technical: 7, feasibility: 6 },
+  { date: "2024-11-29", technical: 22, feasibility: 16 },
+  { date: "2024-11-30", technical: 13, feasibility: 12 },
+  { date: "2024-12-01", technical: 14, feasibility: 11 },
+  { date: "2024-12-02", technical: 29, feasibility: 23 },
+  { date: "2024-12-03", technical: 10, feasibility: 8 },
+  { date: "2024-12-04", technical: 28, feasibility: 22 },
+  { date: "2024-12-05", technical: 9, feasibility: 7 },
+  { date: "2024-12-06", technical: 20, feasibility: 14 },
+  { date: "2024-12-07", technical: 22, feasibility: 19 },
+  { date: "2024-12-08", technical: 25, feasibility: 18 },
+  { date: "2024-12-09", technical: 28, feasibility: 25 },
+  { date: "2024-12-10", technical: 12, feasibility: 11 },
+  { date: "2024-12-11", technical: 9, feasibility: 8 },
+  { date: "2024-12-12", technical: 31, feasibility: 24 },
+  { date: "2024-12-13", technical: 8, feasibility: 7 },
+  { date: "2024-12-14", technical: 27, feasibility: 21 },
+  { date: "2024-12-15", technical: 21, feasibility: 18 },
+  { date: "2024-12-16", technical: 24, feasibility: 17 },
+  { date: "2024-12-17", technical: 30, feasibility: 27 },
+  { date: "2024-12-18", technical: 11, feasibility: 9 },
+  { date: "2024-12-19", technical: 23, feasibility: 16 },
+  { date: "2024-12-20", technical: 26, feasibility: 24 },
+  { date: "2024-12-21", technical: 13, feasibility: 11 },
+  { date: "2024-12-22", technical: 21, feasibility: 15 },
+  { date: "2024-12-23", technical: 31, feasibility: 28 },
+  { date: "2024-12-24", technical: 10, feasibility: 9 },
+  { date: "2024-12-25", technical: 11, feasibility: 10 },
+  { date: "2024-12-26", technical: 28, feasibility: 21 },
+  { date: "2024-12-27", technical: 29, feasibility: 26 },
+  { date: "2024-12-28", technical: 12, feasibility: 11 },
+  { date: "2024-12-29", technical: 10, feasibility: 8 },
+  { date: "2024-12-30", technical: 29, feasibility: 23 },
 ]
 
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
+  reports: {
+    label: "Reports",
   },
-  desktop: {
-    label: "Desktop",
+  technical: {
+    label: "NI 43-101",
     color: "var(--primary)",
   },
-  mobile: {
-    label: "Mobile",
+  feasibility: {
+    label: "Feasibility Studies",
     color: "var(--primary)",
   },
 } satisfies ChartConfig
@@ -152,7 +152,7 @@ export function ChartAreaInteractive() {
 
   const filteredData = chartData.filter((item) => {
     const date = new Date(item.date)
-    const referenceDate = new Date("2024-06-30")
+    const referenceDate = new Date("2024-12-30")
     let daysToSubtract = 90
     if (timeRange === "30d") {
       daysToSubtract = 30
@@ -167,10 +167,10 @@ export function ChartAreaInteractive() {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Total Visitors</CardTitle>
+        <CardTitle data-contextmenu="Mining Reports Published">Mining Reports Published</CardTitle>
         <CardDescription>
-          <span className="hidden @[540px]/card:block">
-            Total for the last 3 months
+          <span className="hidden @[540px]/card:block" data-contextmenu="Technical reports and feasibility studies for the last 3 months">
+            Technical reports and feasibility studies for the last 3 months
           </span>
           <span className="@[540px]/card:hidden">Last 3 months</span>
         </CardDescription>
@@ -270,17 +270,17 @@ export function ChartAreaInteractive() {
               }
             />
             <Area
-              dataKey="mobile"
+              dataKey="feasibility"
               type="natural"
               fill="url(#fillMobile)"
-              stroke="var(--color-mobile)"
+              stroke="var(--color-feasibility)"
               stackId="a"
             />
             <Area
-              dataKey="desktop"
+              dataKey="technical"
               type="natural"
               fill="url(#fillDesktop)"
-              stroke="var(--color-desktop)"
+              stroke="var(--color-technical)"
               stackId="a"
             />
           </AreaChart>

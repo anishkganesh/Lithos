@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { ChatProvider } from '@/lib/chat-context'
 import { GlobalChatProvider } from '@/lib/global-chat-context'
+import { ContextMenuProvider } from '@/components/context-menu-provider'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
@@ -41,7 +42,9 @@ html {
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`} suppressHydrationWarning>
         <ChatProvider>
           <GlobalChatProvider>
-            {children}
+            <ContextMenuProvider>
+              {children}
+            </ContextMenuProvider>
           </GlobalChatProvider>
         </ChatProvider>
         <Toaster />
