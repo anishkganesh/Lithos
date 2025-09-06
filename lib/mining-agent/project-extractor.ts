@@ -59,22 +59,21 @@ export class ProjectExtractor {
                      doc.url.includes('mining.com') ? 'Mining.com' :
                      'Web Source'
       
-      // Looki-style progressive messages
-      const messages = [
-        `🤖 Reading document ${i + 1}/${documents.length}...`,
-        `🔍 Analyzing ${source} filing...`,
-        `📄 Extracting mining data from: ${docTitle}...`
-      ]
+      updateProgress({
+        stage: 'processing',
+        message: `📝 Analyzing document ${i + 1}/${documents.length} - Source: ${source}`,
+        currentStep: i + 1,
+        totalSteps: documents.length
+      })
       
-      for (const msg of messages) {
-        updateProgress({
-          stage: 'processing',
-          message: msg,
-          currentStep: i + 1,
-          totalSteps: documents.length
-        })
-        await new Promise(resolve => setTimeout(resolve, 200))
-      }
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      updateProgress({
+        stage: 'processing',
+        message: `   📑 ${docTitle}...`,
+        currentStep: i + 1,
+        totalSteps: documents.length
+      })
       
       try {
         const projects = await this.extractFromDocument(doc)
@@ -87,22 +86,13 @@ export class ProjectExtractor {
             seenProjects.add(key)
             allProjects.push(enriched)
             
-            // Show what was extracted in Looki style
-            const projectMsgs = [
-              `   ✨ Found new project: ${project.project_name}`,
-              `   💎 Commodity: ${enriched.primary_commodity || 'Various'} | Stage: ${enriched.stage || 'Exploration'}`,
-              `   📍 Location: ${enriched.location || 'TBD'} | NPV: $${enriched.npv || 'TBD'}M`
-            ]
-            
-            for (const msg of projectMsgs) {
-              updateProgress({
-                stage: 'processing',
-                message: msg,
-                currentStep: i + 1,
-                totalSteps: documents.length
-              })
-              await new Promise(resolve => setTimeout(resolve, 150))
-            }
+            // Show what was extracted
+            updateProgress({
+              stage: 'processing',
+              message: `   ✅ Extracted: ${project.project_name} (${enriched.primary_commodity || 'mining'}) - Stage: ${enriched.stage || 'Unknown'}`,
+              currentStep: i + 1,
+              totalSteps: documents.length
+            })
           }
         }
       } catch (error) {

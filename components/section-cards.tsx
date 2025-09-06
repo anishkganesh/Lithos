@@ -16,7 +16,7 @@ export function SectionCards() {
       <Card className="@container/card">
         <CardHeader>
           <CardDescription>Projects</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" data-contextmenu="8,432 active mining projects">
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             8,432
           </CardTitle>
           <CardAction>
@@ -38,7 +38,7 @@ export function SectionCards() {
       <Card className="@container/card">
         <CardHeader>
           <CardDescription>Reporting Issuers</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" data-contextmenu="1,234 reporting issuers">
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             1,234
           </CardTitle>
           <CardAction>
@@ -60,7 +60,7 @@ export function SectionCards() {
       <Card className="@container/card">
         <CardHeader>
           <CardDescription>Filings</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" data-contextmenu="45,678 technical reports filed">
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             45,678
           </CardTitle>
           <CardAction>
@@ -80,7 +80,7 @@ export function SectionCards() {
       <Card className="@container/card">
         <CardHeader>
           <CardDescription>M&A/JVs</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl" data-contextmenu="326 M&A and joint venture deals">
+          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             326
           </CardTitle>
           <CardAction>

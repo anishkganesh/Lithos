@@ -34,70 +34,45 @@ export class MiningWebScraper {
       
       // Determine the data source being searched
       for (const query of batch) {
-        let messages: string[] = []
+        let source = ''
+        let detail = ''
         
-        // Map queries to specific data sources with Looki-style messaging
+        // Map queries to specific data sources
         if (query.query.includes('SEDAR') || query.query.includes('NI 43-101')) {
-          messages = [
-            '🔍 Accessing SEDAR+ database...',
-            '📡 Connecting to Canadian securities filings...',
-            '📄 Scanning for NI 43-101 technical reports...'
-          ]
+          source = '🇨🇦 SEDAR+ (Canadian Securities)'
+          detail = 'Scanning NI 43-101 technical reports...'
         } else if (query.query.includes('EDGAR') || query.query.includes('SEC')) {
-          messages = [
-            '🔍 Querying SEC EDGAR system...',
-            '🇺🇸 Analyzing U.S. mining registrants...',
-            '📊 Extracting 10-K and 8-K filings...'
-          ]
+          source = '🇺🇸 SEC EDGAR Database'
+          detail = 'Searching U.S. mining company filings...'
         } else if (query.query.includes('ASX') || query.query.includes('JORC')) {
-          messages = [
-            '🔍 Connecting to ASX announcements...',
-            '🇦🇺 Processing Australian mining data...',
-            '⛏️ Analyzing JORC-compliant resources...'
-          ]
+          source = '🇦🇺 ASX (Australian Exchange)'
+          detail = 'Retrieving JORC resource statements...'
         } else if (query.query.includes('LSE')) {
-          messages = [
-            '🔍 Accessing London Stock Exchange...',
-            '🇬🇧 Scanning AIM market updates...',
-            '📈 Reviewing regulatory news service...'
-          ]
+          source = '🇬🇧 London Stock Exchange'
+          detail = 'Checking LSE mining announcements...'
         } else if (query.query.includes('feasibility')) {
-          messages = [
-            `🔍 Searching ${query.commodity || 'mining'} feasibility studies...`,
-            '📊 Analyzing economic assessments...',
-            '💎 Extracting project valuations...'
-          ]
+          source = '📊 Feasibility Study Databases'
+          detail = `Looking for ${query.commodity || 'mining'} feasibility studies...`
         } else if (query.query.includes('news') || query.query.includes('announcement')) {
-          messages = [
-            '🔍 Scanning global mining news...',
-            '📰 Checking Mining.com, Kitco, Reuters...',
-            '🌐 Aggregating industry updates...'
-          ]
+          source = '📰 Mining News Platforms'
+          detail = 'Scanning Mining.com, Kitco, Northern Miner...'
         } else if (query.commodity) {
-          const comm = query.commodity.charAt(0).toUpperCase() + query.commodity.slice(1)
-          messages = [
-            `🔍 Searching ${comm} projects worldwide...`,
-            `⛏️ Analyzing ${comm} exploration data...`,
-            `💎 Processing ${comm} resource estimates...`
-          ]
+          source = `⛏️ ${query.commodity.charAt(0).toUpperCase() + query.commodity.slice(1)} Project Search`
+          detail = `Finding ${query.commodity} exploration & development projects...`
         } else {
-          messages = [
-            '🔍 Searching technical report databases...',
-            '🌐 Scanning global mining repositories...',
-            '📊 Analyzing project documentation...'
-          ]
+          source = '🌐 Global Mining Databases'
+          detail = 'Searching technical report repositories...'
         }
         
-        // Display messages sequentially like Looki
-        for (const msg of messages) {
-          updateProgress({
-            stage: 'collecting',
-            message: msg,
-            currentStep: i + batch.indexOf(query) + 1,
-            totalSteps: queries.length
-          })
-          await new Promise(resolve => setTimeout(resolve, 300))
-        }
+        updateProgress({
+          stage: 'collecting',
+          message: `${source} - ${detail}`,
+          currentStep: i + batch.indexOf(query) + 1,
+          totalSteps: queries.length
+        })
+        
+        // Small delay between progress updates for visibility
+        await new Promise(resolve => setTimeout(resolve, 200))
       }
 
       const batchResults = await Promise.allSettled(
@@ -125,7 +100,7 @@ export class MiningWebScraper {
             
             updateProgress({
               stage: 'collecting',
-              message: `✨ Discovered ${docCount} ${commodity} ${docType}`,
+              message: `✅ Found ${docCount} ${commodity} ${docType}`,
               currentStep: i + index + 1,
               totalSteps: queries.length
             })
@@ -136,7 +111,7 @@ export class MiningWebScraper {
               setTimeout(() => {
                 updateProgress({
                   stage: 'collecting',
-                  message: `   → ${doc.title.substring(0, 80)}${doc.title.length > 80 ? '...' : ''}`,
+                  message: `   📄 ${doc.title.substring(0, 60)}${doc.title.length > 60 ? '...' : ''}`,
                   currentStep: i + index + 1,
                   totalSteps: queries.length
                 })
@@ -158,40 +133,6 @@ export class MiningWebScraper {
       }
     }
 
-    // If no documents found, create some mock documents to ensure agent always returns results
-    if (allDocuments.length === 0) {
-      updateProgress({
-        stage: 'collecting',
-        message: '🔄 No live results found, generating sample data...',
-        currentStep: queries.length,
-        totalSteps: queries.length
-      })
-      
-      // Create mock documents based on queries
-      const mockDocuments: ScrapedDocument[] = [
-        {
-          url: 'https://example.com/lithium-project-update',
-          title: 'Lithium Americas Announces Updated Resource Estimate for Thacker Pass',
-          content: 'Lithium Americas Corp announced an updated mineral resource estimate for its Thacker Pass lithium project in Nevada. The updated estimate shows measured and indicated resources of 13.7 million tonnes LCE at an average grade of 2,231 ppm Li.',
-          sourceUrl: 'https://example.com'
-        },
-        {
-          url: 'https://example.com/gold-feasibility-study',
-          title: 'Newmont Completes Feasibility Study for Cerro Negro Expansion',
-          content: 'Newmont Corporation has completed a positive feasibility study for the expansion of its Cerro Negro gold mine in Argentina. The study shows an NPV of $850 million at $1,800/oz gold price with an IRR of 24%.',
-          sourceUrl: 'https://example.com'
-        },
-        {
-          url: 'https://example.com/copper-discovery',
-          title: 'BHP Reports High-Grade Copper Discovery in Chile',
-          content: 'BHP has announced a significant copper discovery at its exploration project in northern Chile. Initial drilling results show 450m at 1.2% Cu from 200m depth, including 150m at 2.1% Cu.',
-          sourceUrl: 'https://example.com'
-        }
-      ]
-      
-      return mockDocuments
-    }
-    
     return allDocuments
   }
 

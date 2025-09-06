@@ -14,6 +14,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { ArrowUpDown, ChevronDown, Download, Eye, Filter, Plus, Search } from "lucide-react"
+import { ContextMenuChat } from "@/components/ui/context-menu-chat"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -211,16 +212,22 @@ export function ProjectScreener() {
       accessorKey: "project",
       header: "Project",
       cell: ({ row }) => (
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault()
-            handleProjectClick(row.original.id)
-          }}
-          className="font-medium text-blue-600 hover:underline"
+        <ContextMenuChat
+          data={row.original}
+          dataType="project"
+          context={row.original.name}
         >
-          {row.getValue("project")}
-        </a>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              handleProjectClick(row.original.id)
+            }}
+            className="font-medium text-blue-600 hover:underline"
+          >
+            {row.getValue("project")}
+          </a>
+        </ContextMenuChat>
       ),
     },
     {
@@ -274,7 +281,15 @@ export function ProjectScreener() {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         }).format(amount)
-        return <div className="text-right font-medium">{formatted}</div>
+        return (
+          <ContextMenuChat
+            data={amount}
+            dataType="metric"
+            context={`NPV of ${row.original.project} project`}
+          >
+            <div className="text-right font-medium">{formatted}</div>
+          </ContextMenuChat>
+        )
       },
     },
     {
@@ -293,9 +308,15 @@ export function ProjectScreener() {
       cell: ({ row }) => {
         const irr = parseFloat(row.getValue("irr"))
         return (
-          <div className={cn("text-center", getIRRColor(irr))}>
-            {irr.toFixed(1)}%
-          </div>
+          <ContextMenuChat
+            data={irr}
+            dataType="metric"
+            context={`IRR of ${row.original.project} project`}
+          >
+            <div className={cn("text-center", getIRRColor(irr))}>
+              {irr.toFixed(1)}%
+            </div>
+          </ContextMenuChat>
         )
       },
     },

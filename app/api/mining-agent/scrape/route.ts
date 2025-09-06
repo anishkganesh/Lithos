@@ -52,36 +52,22 @@ async function handleMiningAgent(request: NextRequest) {
             .select('*', { count: 'exact', head: true })
           
           // Step 1: Generate queries with detailed progress
-          sendProgress('🤖 Initializing Mining Intelligence Agent...')
-          await new Promise(resolve => setTimeout(resolve, 800))
-          
-          sendProgress('🔧 Loading mining data extraction models...')
-          await new Promise(resolve => setTimeout(resolve, 600))
-          
-          sendProgress('🌐 Establishing connections to regulatory databases...')
+          sendProgress('🚀 Starting Mining Discovery Agent...')
           await new Promise(resolve => setTimeout(resolve, 500))
           
-          sendProgress('📊 Analyzing market trends for strategic search...')
+          sendProgress('📊 Initializing search parameters...')
           const queryGenerator = new MiningQueryGenerator()
           const queries = queryGenerator.generateQueries()
-          await new Promise(resolve => setTimeout(resolve, 400))
           
-          sendProgress(`✨ Generated ${queries.length} intelligent search queries`)
+          sendProgress(`🔍 Generated ${queries.length} specialized search queries for:`)
           await new Promise(resolve => setTimeout(resolve, 300))
-          
-          sendProgress('🎯 Target categories identified:')
-          await new Promise(resolve => setTimeout(resolve, 200))
-          const categories = [
-            '• NI 43-101 Technical Reports',
-            '• JORC Resource Statements', 
-            '• Feasibility Studies & Economic Assessments',
-            '• Exploration Updates & Drill Results',
-            '• M&A Activity & Joint Ventures'
-          ]
-          for (const cat of categories) {
-            sendProgress(cat)
-            await new Promise(resolve => setTimeout(resolve, 150))
-          }
+          sendProgress('• NI 43-101 technical reports')
+          await new Promise(resolve => setTimeout(resolve, 300))
+          sendProgress('• JORC resource statements')
+          await new Promise(resolve => setTimeout(resolve, 300))
+          sendProgress('• Feasibility studies & PEAs')
+          await new Promise(resolve => setTimeout(resolve, 300))
+          sendProgress('• Corporate announcements')
           
           // Step 2: Search for documents with enhanced messages
           sendProgress('🌐 Connecting to mining data sources...')

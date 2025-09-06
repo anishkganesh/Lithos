@@ -1,98 +1,169 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { MessageSquare, TrendingUp, FileText, Copy } from 'lucide-react'
+import React from 'react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+} from '@/components/ui/context-menu'
 import { useGlobalChat } from '@/lib/global-chat-context'
 import { useChat } from '@/lib/chat-context'
+import { MessageSquare, TrendingUp, Search, Lightbulb, ChartBar, Database } from 'lucide-react'
 
-interface ContextMenuProps {
-  x: number
-  y: number
-  selectedText: string
-  onClose: () => void
+interface ContextMenuChatProps {
+  children: React.ReactNode
+  data: any
+  dataType: 'project' | 'metric' | 'chart' | 'cell'
+  context?: string
 }
 
-export function ContextMenuChat({ x, y, selectedText, onClose }: ContextMenuProps) {
-  const [mounted, setMounted] = useState(false)
-  const { setInput, handleSubmit } = useGlobalChat()
-  const { toggleChat, chatMode } = useChat()
+export function ContextMenuChat({ children, data, dataType, context }: ContextMenuChatProps) {
+  const { setInput, setIsOpen } = useChat()
+  const { input } = useGlobalChat()
 
-  useEffect(() => {
-    setMounted(true)
+  const generateQuery = (action: string) => {
+    let query = ''
     
-    const handleClick = () => onClose()
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+    switch (dataType) {
+      case 'project':
+        const project = data
+        query = action === 'explain' 
+          ? `Explain the ${project.name} project in ${project.location}. Why is the NPV ${project.npv}M and IRR ${project.irr}%?`
+          : action === 'compare'
+          ? `Compare ${project.name} with similar ${project.commodity} projects in the same region`
+          : action === 'analyze'
+          ? `Analyze the investment potential of ${project.name} considering its ${project.stage} stage and ${project.irr}% IRR`
+          : `What are the key risks for ${project.name} given its ${project.riskLevel} risk rating?`
+        break
+        
+      case 'metric':
+        query = action === 'explain'
+          ? `Explain why this ${context || 'metric'} is ${data}. What factors influence this value?`
+          : action === 'benchmark'
+          ? `How does ${data} compare to industry benchmarks for ${context || 'this metric'}?`
+          : `Show me trends and patterns for ${context || 'this metric'} across the mining industry`
+        break
+        
+      case 'chart':
+        query = action === 'explain'
+          ? `Explain the trends shown in this chart data: ${JSON.stringify(data).slice(0, 200)}...`
+          : action === 'forecast'
+          ? `Based on this historical data, what are the projections for the next 6 months?`
+          : `What insights can you derive from this data pattern?`
+        break
+        
+      case 'cell':
+        query = action === 'explain'
+          ? `Explain what "${data}" means in the context of ${context || 'mining projects'}`
+          : action === 'similar'
+          ? `Show me similar values or projects with "${data}" characteristics`
+          : `How is "${data}" calculated or determined in mining analysis?`
+        break
     }
     
-    document.addEventListener('click', handleClick)
-    document.addEventListener('keydown', handleEscape)
-    
-    return () => {
-      document.removeEventListener('click', handleClick)
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [onClose])
+    return query
+  }
 
-  const handleChatWithData = async (prompt: string) => {
-    if (chatMode === null) {
-      toggleChat()
-    }
-    setInput(prompt)
+  const handleAction = (action: string) => {
+    const query = generateQuery(action)
+    setInput(query)
+    setIsOpen('fullscreen')
+    
+    // Trigger the chat to open with the query
     setTimeout(() => {
-      handleSubmit(new Event('submit') as any)
+      const chatInput = document.querySelector('textarea[placeholder*="Ask about mining"]') as HTMLTextAreaElement
+      if (chatInput) {
+        chatInput.value = query
+        chatInput.dispatchEvent(new Event('input', { bubbles: true }))
+        
+        // Auto-submit the query
+        const submitButton = chatInput.parentElement?.querySelector('button[type="submit"]')
+        if (submitButton) {
+          submitButton.click()
+        }
+      }
     }, 100)
-    onClose()
   }
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(selectedText)
-    onClose()
-  }
-
-  const menuItems = [
-    {
-      icon: MessageSquare,
-      label: 'Explain this data',
-      action: () => handleChatWithData(`Explain this data: "${selectedText}"`)
-    },
-    {
-      icon: TrendingUp,
-      label: 'Analyze trends',
-      action: () => handleChatWithData(`Analyze the trends and patterns in this data: "${selectedText}"`)
-    },
-    {
-      icon: FileText,
-      label: 'Generate report',
-      action: () => handleChatWithData(`Generate a brief report about: "${selectedText}"`)
-    },
-    {
-      icon: Copy,
-      label: 'Copy',
-      action: handleCopy
-    }
-  ]
-
-  if (!mounted) return null
-
-  return createPortal(
-    <div
-      className="fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[200px]"
-      style={{ left: `${x}px`, top: `${y}px` }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {menuItems.map((item, index) => (
-        <button
-          key={index}
-          onClick={item.action}
-          className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
-        >
-          <item.icon className="w-4 h-4 text-gray-500" />
-          <span>{item.label}</span>
-        </button>
-      ))}
-    </div>,
-    document.body
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        {children}
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-64">
+        <ContextMenuItem onClick={() => handleAction('explain')}>
+          <MessageSquare className="mr-2 h-4 w-4" />
+          <span>Ask AI to explain this</span>
+        </ContextMenuItem>
+        
+        {dataType === 'project' && (
+          <>
+            <ContextMenuItem onClick={() => handleAction('compare')}>
+              <ChartBar className="mr-2 h-4 w-4" />
+              <span>Compare with similar projects</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('analyze')}>
+              <TrendingUp className="mr-2 h-4 w-4" />
+              <span>Analyze investment potential</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('risks')}>
+              <Lightbulb className="mr-2 h-4 w-4" />
+              <span>Identify key risks</span>
+            </ContextMenuItem>
+          </>
+        )}
+        
+        {dataType === 'metric' && (
+          <>
+            <ContextMenuItem onClick={() => handleAction('benchmark')}>
+              <Database className="mr-2 h-4 w-4" />
+              <span>Compare to benchmarks</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('trends')}>
+              <TrendingUp className="mr-2 h-4 w-4" />
+              <span>Show industry trends</span>
+            </ContextMenuItem>
+          </>
+        )}
+        
+        {dataType === 'chart' && (
+          <>
+            <ContextMenuItem onClick={() => handleAction('forecast')}>
+              <TrendingUp className="mr-2 h-4 w-4" />
+              <span>Forecast future trends</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('insights')}>
+              <Lightbulb className="mr-2 h-4 w-4" />
+              <span>Extract insights</span>
+            </ContextMenuItem>
+          </>
+        )}
+        
+        <ContextMenuSeparator />
+        
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Search className="mr-2 h-4 w-4" />
+            <span>Search for...</span>
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            <ContextMenuItem onClick={() => handleAction('similar')}>
+              Similar projects
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('documentation')}>
+              Related reports
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('news')}>
+              Latest news
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

@@ -2,10 +2,8 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
-import { AuthProvider } from '@/lib/auth-context'
 import { ChatProvider } from '@/lib/chat-context'
 import { GlobalChatProvider } from '@/lib/global-chat-context'
-import { ContextMenuProvider } from '@/components/context-menu-provider'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
@@ -41,15 +39,11 @@ html {
         `}</style>
       </head>
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`} suppressHydrationWarning>
-        <AuthProvider>
-          <ChatProvider>
-            <GlobalChatProvider>
-              <ContextMenuProvider>
-                {children}
-              </ContextMenuProvider>
-            </GlobalChatProvider>
-          </ChatProvider>
-        </AuthProvider>
+        <ChatProvider>
+          <GlobalChatProvider>
+            {children}
+          </GlobalChatProvider>
+        </ChatProvider>
         <Toaster />
       </body>
     </html>

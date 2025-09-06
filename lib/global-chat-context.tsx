@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react"
 import { supabase } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth-context'
 
 // Define types
 interface Message {
@@ -55,12 +54,12 @@ interface GlobalChatContextType {
   
   // User info
   currentUser: any;
+  setCurrentUser: (user: any) => void;
 }
 
 const GlobalChatContext = createContext<GlobalChatContextType | undefined>(undefined)
 
 export function GlobalChatProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
   // Initialize with system message for mining
   const getInitialMessages = (): Message[] => {
     const systemContent = `You are Lithos AI, an expert mining industry assistant with real-time web search capabilities. You specialize in:
@@ -103,7 +102,7 @@ Always provide data-driven insights and cite sources when available. Focus on ac
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
   const [chatHistory, setChatHistory] = useState<Chat[]>([])
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
-  const currentUser = user
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   // Create new chat
   const createNewChat = () => {
@@ -272,6 +271,7 @@ Always provide data-driven insights and cite sources when available. Focus on ac
     saveCurrentChat,
     loadChatHistory,
     currentUser,
+    setCurrentUser
   }
 
   return (
