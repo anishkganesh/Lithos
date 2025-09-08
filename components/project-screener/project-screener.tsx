@@ -44,8 +44,10 @@ import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { ProjectDetailPanel } from "@/components/project-detail-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MiningAgentEnhanced } from "@/components/mining-agent-enhanced"
+import { MiningAgentV2Button } from "@/components/mining-agent-v2-button"
 import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
+import { InfoTooltip, miningMetrics, stageDefinitions } from "@/components/ui/info-tooltip"
 
 const defaultVisibleColumns = [
   "select",
@@ -268,7 +270,9 @@ export function ProjectScreener() {
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            Post-tax NPV (USD M)
+            <InfoTooltip content={miningMetrics.npv.description}>
+              Post-tax NPV (USD M)
+            </InfoTooltip>
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
@@ -532,7 +536,10 @@ export function ProjectScreener() {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold tracking-tight">Projects Screener — {data.length} deposits</h2>
           <div className="flex items-center gap-2">
-            <MiningAgentEnhanced onProgressChange={handleMiningAgentProgress} />
+            <MiningAgentV2Button 
+              onComplete={refetch} 
+              onProgressChange={handleMiningAgentProgress}
+            />
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm">
                 <Eye className="mr-2 h-4 w-4" />

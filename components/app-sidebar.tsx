@@ -31,13 +31,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import { useAuth } from '@/lib/auth-context'
+import { useUserData } from '@/lib/hooks/use-user-data'
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/placeholder-user.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -150,6 +147,15 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth()
+  const { userData: dbUserData } = useUserData()
+  
+  const userData = {
+    name: dbUserData?.name || user?.user_metadata?.name || "User",
+    email: user?.email || "user@example.com",
+    avatar: "/placeholder-user.jpg",
+  }
+  
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -173,7 +179,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>
   )

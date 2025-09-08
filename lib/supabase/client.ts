@@ -1,22 +1,7 @@
+// Re-export from auth-context for backward compatibility
+export { supabase } from '@/lib/auth-context'
+
 import { createClient } from '@supabase/supabase-js'
-
-// Client-side Supabase client
-let supabaseInstance: ReturnType<typeof createClient> | null = null
-
-export const supabase = () => {
-  if (!supabaseInstance) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
-    if (!url || !key) {
-      console.warn('Missing Supabase environment variables - app will use dummy data')
-      return null
-    }
-    
-    supabaseInstance = createClient(url, key)
-  }
-  return supabaseInstance
-}
 
 // Server-side Supabase client with service role key
 // Only create this on the server side

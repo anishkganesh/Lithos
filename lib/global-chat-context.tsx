@@ -172,9 +172,9 @@ Always provide data-driven insights and cite sources when available. Focus on ac
     }))
     
     // If Supabase is available, save to database
-    if (currentUser && supabase()) {
+    if (currentUser && supabase) {
       try {
-        const supabaseClient = supabase()
+        const supabaseClient = supabase
         if (supabaseClient) {
           await supabaseClient
             .from('chat_history')
@@ -194,10 +194,10 @@ Always provide data-driven insights and cite sources when available. Focus on ac
 
   // Load chat history
   const loadChatHistory = async () => {
-    if (!currentUser || !supabase()) return
+    if (!currentUser || !supabase) return
     
     try {
-      const supabaseClient = supabase()
+      const supabaseClient = supabase
       if (supabaseClient) {
         const { data, error } = await supabaseClient
           .from('chat_history')

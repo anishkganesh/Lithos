@@ -11,7 +11,7 @@ export function useProjects() {
     fetchProjects()
 
     // Subscribe to realtime changes if Supabase is available
-    const client = supabase()
+    const client = supabase
     if (client) {
       const subscription = client
         .channel('projects')
@@ -34,7 +34,7 @@ export function useProjects() {
     try {
       setLoading(true)
       
-      const client = supabase()
+      const client = supabase
       if (!client) {
         // Use dummy data if Supabase is not available
         const { dummyProjects } = await import('@/lib/data/dummy-projects')

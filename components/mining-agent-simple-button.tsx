@@ -14,7 +14,7 @@ export function MiningAgentSimpleButton() {
 
   const runMiningAgent = async () => {
     // Check if Supabase is available
-    if (!supabase()) {
+    if (!supabase) {
       toast.info('Mining agent requires database configuration')
       return
     }

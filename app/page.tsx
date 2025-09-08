@@ -1,9 +1,12 @@
+'use client'
+
 import { AppSidebar } from '@/components/app-sidebar'
 import { ChartAreaInteractive } from '@/components/chart-area-interactive'
 import { ProjectScreener } from '@/components/project-screener'
 import { SectionCards } from '@/components/section-cards'
 import { SiteHeader } from '@/components/site-header'
 import { ChatLayout } from '@/components/chat-layout'
+import { useRequireAuth } from '@/lib/auth-utils'
 
 import {
   SidebarInset,
@@ -11,6 +14,20 @@ import {
 } from '@/components/ui/sidebar'
 
 export default function Page() {
+  const { user, isLoading } = useRequireAuth()
+  
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
+  
+  if (!user) {
+    return null // Will redirect to login
+  }
+
   return (
     <ChatLayout>
       <SidebarProvider

@@ -108,7 +108,7 @@ export function MiningAgentEnhanced({ onProgressChange }: MiningAgentEnhancedPro
   }, [])
 
   const handleRunAgent = async () => {
-    if (!supabase()) {
+    if (!supabase) {
       return
     }
 
@@ -205,7 +205,7 @@ export function MiningAgentEnhanced({ onProgressChange }: MiningAgentEnhancedPro
           <TooltipTrigger asChild>
             <Button
               onClick={handleRunAgent}
-              disabled={isRunning || !supabase()}
+              disabled={isRunning || !supabase}
               size="sm"
               className="gap-2 bg-black hover:bg-black/90 text-white border-black"
             >

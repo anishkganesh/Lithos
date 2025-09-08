@@ -9,13 +9,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
 
 export function SectionCards() {
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Projects</CardDescription>
+          <CardDescription>
+            <InfoTooltip content="Total number of mining projects currently tracked across all stages from exploration to production">
+              Projects
+            </InfoTooltip>
+          </CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             8,432
           </CardTitle>
@@ -37,7 +42,11 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Reporting Issuers</CardDescription>
+          <CardDescription>
+            <InfoTooltip content="Mining companies that are publicly traded and required to file regulatory reports with securities commissions">
+              Reporting Issuers
+            </InfoTooltip>
+          </CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             1,234
           </CardTitle>
@@ -59,7 +68,11 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Filings</CardDescription>
+          <CardDescription>
+            <InfoTooltip content="Technical reports including NI 43-101, JORC, and other regulatory filings submitted to securities commissions">
+              Filings
+            </InfoTooltip>
+          </CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             45,678
           </CardTitle>
@@ -79,7 +92,11 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>M&A/JVs</CardDescription>
+          <CardDescription>
+            <InfoTooltip content="Mergers, acquisitions, and joint venture agreements between mining companies for project development">
+              M&A/JVs
+            </InfoTooltip>
+          </CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
             326
           </CardTitle>

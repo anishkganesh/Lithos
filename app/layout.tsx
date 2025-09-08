@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { ChatProvider } from '@/lib/chat-context'
 import { GlobalChatProvider } from '@/lib/global-chat-context'
+import { AuthProvider } from '@/lib/auth-context'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
@@ -39,11 +40,13 @@ html {
         `}</style>
       </head>
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`} suppressHydrationWarning>
-        <ChatProvider>
-          <GlobalChatProvider>
-            {children}
-          </GlobalChatProvider>
-        </ChatProvider>
+        <AuthProvider>
+          <ChatProvider>
+            <GlobalChatProvider>
+              {children}
+            </GlobalChatProvider>
+          </ChatProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
