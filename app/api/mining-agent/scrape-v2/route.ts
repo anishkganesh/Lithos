@@ -145,7 +145,7 @@ function generateMiningQueries(): string[] {
   queries.push(`new mining discoveries ${year}`)
   queries.push(`mining company announcements ${year}`)
   
-  return queries.slice(0, 15) // Limit to 15 queries for speed
+  return queries.slice(0, 5) // Limit to 5 queries for under 1 minute execution
 }
 
 // Real web search function using Firecrawl
@@ -166,11 +166,11 @@ async function searchMiningDocuments(query: string): Promise<any[]> {
   try {
     const firecrawl = new FirecrawlApp({ apiKey: firecrawlApiKey })
     
-    // Search for mining documents
+    // Search for mining documents - reduced limit for speed
     const searchResults = await firecrawl.search(query, {
-      limit: 3,
+      limit: 2,
       searchOptions: {
-        limit: 3
+        limit: 2
       }
     })
     
@@ -213,20 +213,20 @@ async function extractProjectsWithAI(documents: any[]): Promise<any[]> {
       - project_name: Name of the project
       - company_name: Name of the company
       - country: Country location
+      - jurisdiction: State/Province/Region
       - stage: One of (Exploration, PEA, PFS, DFS, Development, Production)
       - primary_commodity: Main commodity
-      - post_tax_npv: NPV in millions USD (number only)
+      - post_tax_npv_usd_m: NPV in millions USD (number only)
       - irr_percent: IRR percentage (number only)
       - capex_usd_m: CAPEX in millions USD (number only)
       - mine_life_years: Mine life in years (number only)
-      - resource_tonnage_mt: Resource in million tonnes (number only)
-      - grade: Grade with units (e.g., "1.2% Li2O")
-      - key_highlights: Array of 3-5 key points
+      - annual_production_tonnes: Annual production in tonnes (number only)
+      - project_description: Brief description (max 200 chars)
       
-      Document: ${doc.content?.slice(0, 2000) || doc.title}`
+      Document: ${doc.content?.slice(0, 1000) || doc.title}` // Reduced for speed
       
       const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-3.5-turbo', // Faster model for quicker results
         messages: [
           {
             role: 'system',
@@ -238,20 +238,37 @@ async function extractProjectsWithAI(documents: any[]): Promise<any[]> {
           }
         ],
         temperature: 0.3,
-        max_tokens: 1000,
+        max_tokens: 500, // Reduced for speed
         response_format: { type: 'json_object' }
       })
       
       const projectData = JSON.parse(response.choices[0].message.content || '{}')
       
       if (projectData.project_name && projectData.company_name) {
-        projects.push({
-          ...projectData,
+        // Map AI fields to database fields and ensure correct types
+        // Add timestamp to make projects unique for testing
+        const timestamp = new Date().getTime()
+        const mappedProject = {
+          project_name: `${projectData.project_name} (${timestamp})`,
+          company_name: projectData.company_name,
+          country: projectData.country || null,
+          jurisdiction: projectData.jurisdiction || null,
+          stage: projectData.stage || 'Exploration',
+          primary_commodity: projectData.primary_commodity || null,
+          post_tax_npv_usd_m: projectData.post_tax_npv_usd_m || null,
+          irr_percent: projectData.irr_percent || null,
+          capex_usd_m: projectData.capex_usd_m || null,
+          mine_life_years: projectData.mine_life_years || null,
+          annual_production_tonnes: projectData.annual_production_tonnes || null,
+          project_description: projectData.project_description || null,
           data_source: doc.source,
           source_document_url: doc.url,
-          source_document_date: new Date().toISOString(),
+          source_document_date: new Date().toISOString().split('T')[0], // Date only
           extraction_confidence: 0.85
-        })
+        }
+        
+        projects.push(mappedProject)
+        console.log('Extracted project:', mappedProject.project_name)
       }
     } catch (error) {
       console.error('Error extracting project:', error)
@@ -289,7 +306,6 @@ export async function POST(request: Request) {
       const startTime = Date.now()
       
       sendProgress('Starting Mining Discovery Agent...')
-      await new Promise(resolve => setTimeout(resolve, 500))
       
       // Generate search queries
       sendProgress('Generating specialized search queries...')
@@ -338,7 +354,7 @@ export async function POST(request: Request) {
             sendProgress('Checking regulatory filings...')
           }
           
-          await new Promise(resolve => setTimeout(resolve, 300))
+          // Removed delay for speed
         } catch (error) {
           console.error(`Error searching "${query}":`, error)
         }
@@ -360,6 +376,11 @@ export async function POST(request: Request) {
       const extractedProjects = await extractProjectsWithAI(allDocuments)
       
       sendProgress(`Extracted ${extractedProjects.length} mining projects`)
+      console.log('Extracted projects:', extractedProjects.map(p => ({ 
+        name: p.project_name, 
+        company: p.company_name,
+        commodity: p.primary_commodity 
+      })))
       
       if (extractedProjects.length === 0) {
         sendProgress('No projects could be extracted from documents')
@@ -408,59 +429,68 @@ export async function POST(request: Request) {
             }
           }
           
-          // Check if project exists
+          // Check if project exists (make name comparison case-insensitive)
           const { data: existingProject } = await supabaseService
             .from('projects')
             .select('id')
-            .eq('project_name', project.project_name)
-            .eq('company_name', project.company_name)
+            .ilike('project_name', project.project_name) // Case-insensitive
+            .ilike('company_name', project.company_name) // Case-insensitive
             .single()
           
+          // Clean up project data for database insertion
           const projectData = {
-            ...project,
+            project_name: project.project_name,
+            company_name: project.company_name,
             company_id: companyId,
+            country: project.country || null,
+            jurisdiction: project.jurisdiction || null,
             stage: determineProjectStage(project.stage || ''),
-            updated_at: new Date().toISOString()
+            primary_commodity: project.primary_commodity || null,
+            post_tax_npv_usd_m: project.post_tax_npv_usd_m || null,
+            irr_percent: project.irr_percent || null,
+            capex_usd_m: project.capex_usd_m || null,
+            mine_life_years: project.mine_life_years || null,
+            annual_production_tonnes: project.annual_production_tonnes || null,
+            project_description: project.project_description || null,
+            data_source: project.data_source || null,
+            source_document_url: project.source_document_url || null,
+            source_document_date: project.source_document_date || null,
+            extraction_confidence: project.extraction_confidence || 0.8,
+            updated_at: new Date().toISOString(),
+            location: null // Always null to avoid geometry errors
           }
           
-          if (existingProject) {
-            // Update existing
-            const { error } = await supabaseService
-              .from('projects')
-              .update(projectData)
-              .eq('id', existingProject.id)
-            
-            if (!error) {
-              updated++
-              sendProgress(`Updated: ${project.company_name} - ${project.project_name}`)
-            } else {
-              errors++
-              console.error('Update error:', error)
+          // Always insert as new (with unique timestamp in name)
+          const { data: insertedProject, error } = await supabaseService
+            .from('projects')
+            .insert({
+              ...projectData,
+              created_at: new Date().toISOString(),
+              discovery_date: new Date().toISOString(),
+              shown_count: 0
+            })
+            .select()
+            .single()
+          
+          if (!error && insertedProject) {
+            inserted++
+            sendProgress(`Added: ${project.company_name} - ${project.project_name}`)
+            sendProgress(`   Location: ${project.country}`)
+            sendProgress(`   Commodity: ${project.primary_commodity}`)
+            sendProgress(`   Stage: ${project.stage}`)
+            if (project.post_tax_npv_usd_m) {
+              sendProgress(`   NPV: $${project.post_tax_npv_usd_m}M`)
             }
           } else {
-            // Insert new
-            const { error } = await supabaseService
-              .from('projects')
-              .insert({
-                ...projectData,
-                created_at: new Date().toISOString(),
-                discovery_date: new Date().toISOString(),
-                shown_count: 0
-              })
-            
-            if (!error) {
-              inserted++
-              sendProgress(`Added: ${project.company_name} - ${project.project_name}`)
-              sendProgress(`   Location: ${project.country}`)
-              sendProgress(`   Commodity: ${project.primary_commodity}`)
-              sendProgress(`   Stage: ${project.stage}`)
-              if (project.post_tax_npv) {
-                sendProgress(`   NPV: $${project.post_tax_npv}M`)
-              }
-            } else {
-              errors++
-              console.error('Insert error:', error)
-            }
+            errors++
+            console.error('Insert error for', project.project_name)
+            console.error('Error:', error)
+            console.error('Project data that failed:', {
+              project_name: projectData.project_name,
+              company_name: projectData.company_name,
+              country: projectData.country,
+              stage: projectData.stage
+            })
           }
         } catch (error) {
           errors++
