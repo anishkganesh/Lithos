@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { supabaseService } from '@/lib/supabase-service'
 import { supabase } from '@/lib/supabase'
 
 export async function POST(request: Request) {
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
     await new Promise(resolve => setTimeout(resolve, 1000))
 
     // Check if email already exists in usr table
-    const { data: existingUsers, error: queryError } = await supabaseService
+    const { data: existingUsers, error: queryError } = await supabase
       .from('usr')
       .select('email')
       .eq('email', email)
@@ -64,7 +63,7 @@ export async function POST(request: Request) {
     const brandCode = userData.brand.toLowerCase().replace(/[^a-z0-9]+/g, '-')
     
     // First try to find existing brand by code
-    const { data: existingBrand, error: brandQueryError } = await supabaseService
+    const { data: existingBrand, error: brandQueryError } = await supabase
       .from('brands')
       .select('brand_id')
       .eq('brand_code', brandCode)
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
       brandId = existingBrand.brand_id
     } else {
       // Create new brand
-      const { data: newBrand, error: brandError } = await supabaseService
+      const { data: newBrand, error: brandError } = await supabase
         .from('brands')
         .insert({
           brand_name: userData.brand,
@@ -124,7 +123,7 @@ export async function POST(request: Request) {
     }
 
     // Insert user data into the usr table with brand_id
-    const { data: newUser, error: insertError } = await supabaseService
+    const { data: newUser, error: insertError } = await supabase
       .from('usr')
       .insert({
         email,
