@@ -210,18 +210,21 @@ async function extractProjectsWithAI(documents: any[]): Promise<any[]> {
   for (const doc of documents) {
     try {
       const prompt = `Extract mining project information from this document. Return a JSON object with:
-      - project_name: Name of the project
-      - company_name: Name of the company
+      - project_name: Name of the project (required, must be specific)
+      - company_name: Name of the company (required, must be the actual company name, not "unknown")
       - country: Country location
       - jurisdiction: State/Province/Region
       - stage: One of (Exploration, PEA, PFS, DFS, Development, Production)
-      - primary_commodity: Main commodity
-      - post_tax_npv_usd_m: NPV in millions USD (number only)
-      - irr_percent: IRR percentage (number only)
-      - capex_usd_m: CAPEX in millions USD (number only)
-      - mine_life_years: Mine life in years (number only)
-      - annual_production_tonnes: Annual production in tonnes (number only)
+      - primary_commodity: Main commodity (gold, silver, copper, lithium, etc.)
+      - post_tax_npv_usd_m: NPV in millions USD (number only, can be null)
+      - irr_percent: IRR percentage (number only, can be null)
+      - capex_usd_m: CAPEX in millions USD (number only, can be null)
+      - mine_life_years: Mine life in years (number only, can be null)
+      - annual_production_tonnes: Annual production in tonnes (number only, can be null)
       - project_description: Brief description (max 200 chars)
+      
+      IMPORTANT: Only return data if you can identify a specific project and company name. 
+      If the company name is not clearly stated, return an empty object {}
       
       Document: ${doc.content?.slice(0, 1000) || doc.title}` // Reduced for speed
       
@@ -244,7 +247,13 @@ async function extractProjectsWithAI(documents: any[]): Promise<any[]> {
       
       const projectData = JSON.parse(response.choices[0].message.content || '{}')
       
-      if (projectData.project_name && projectData.company_name) {
+      // Validate that we have valid project and company names
+      if (projectData.project_name && 
+          projectData.company_name && 
+          !projectData.company_name.toLowerCase().includes('unknown') &&
+          !projectData.company_name.toLowerCase().includes('not provided') &&
+          projectData.project_name.length > 3 &&
+          projectData.company_name.length > 3) {
         // Map AI fields to database fields and ensure correct types
         // Add timestamp to make projects unique for testing
         const timestamp = new Date().getTime()
@@ -278,22 +287,10 @@ async function extractProjectsWithAI(documents: any[]): Promise<any[]> {
   return projects
 }
 
-// Determine project stage from text
+// Determine project stage from text - only return 'Exploration' as it's the only valid enum
 function determineProjectStage(text: string): string {
-  const lowerText = text.toLowerCase()
-  
-  for (const [stage, keywords] of Object.entries(projectStages)) {
-    if (keywords.some(keyword => lowerText.includes(keyword))) {
-      return stage === 'exploration' ? 'Exploration' :
-             stage === 'PEA' ? 'PEA' :
-             stage === 'PFS' ? 'PFS' :
-             stage === 'DFS' ? 'DFS' :
-             stage === 'development' ? 'Development' :
-             'Production'
-    }
-  }
-  
-  return 'Exploration' // Default
+  // For now, always return 'Exploration' since it's the only valid enum value in the database
+  return 'Exploration'
 }
 
 // Main mining agent handler

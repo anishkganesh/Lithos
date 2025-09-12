@@ -201,3 +201,4 @@ CREATE POLICY "Service role full access projects" ON projects
 
 -- Verify the migration
 SELECT 'Migration completed successfully!' as status;
+
