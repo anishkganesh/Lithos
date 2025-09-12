@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { config } from '@/lib/config'
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: config.auth.emailRedirectTo,
+      }
     })
 
     if (signUpError) {
