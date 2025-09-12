@@ -29,7 +29,7 @@ export function SignupForm({
 }: React.ComponentPropsWithoutRef<"div">) {
   const [step, setStep] = useState<"account" | "company">("account")
   const router = useRouter()
-  const auth = useAuth()
+  const { signUp } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "info" | null;
@@ -101,16 +101,7 @@ export function SignupForm({
     setIsSubmitting(true)
     
     try {
-      if (!auth || !auth.signUp) {
-        setAlert({
-          type: "error",
-          message: "Authentication service is not available. Please refresh the page."
-        })
-        setIsSubmitting(false)
-        return
-      }
-      
-      const { error, success, message } = await auth.signUp(
+      const { error, success, message } = await signUp(
         formData.email, 
         formData.password,
         {
@@ -320,16 +311,15 @@ export function SignupForm({
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full"
                       onClick={() => setStep("account")}
                     >
                       Back
                     </Button>
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? "Creating Account..." : "Complete Setup"}
                     </Button>
                   </div>
