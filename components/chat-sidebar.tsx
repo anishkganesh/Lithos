@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState } from "react"
 import { Loader2, PaperclipIcon, PenSquare, SendHorizonal, TrendingUpIcon, ImageIcon, Globe, Search, X, CheckCircle2, Brain, Sparkles, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2, Check, PickaxeIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -12,63 +13,81 @@ import { useChat as useChatContext } from "@/lib/chat-context"
 import { useGlobalChat } from "@/lib/global-chat-context"
 import { Toggle } from "@/components/ui/toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { toast } from "sonner"
+// Removed toast import - using inline feedback instead
 
 // Function to format message content
 const formatMessageContent = (content: string): React.ReactNode => {
   if (!content) return null;
   
   // First, let's handle numbered lists properly
-  // Match numbered lists (1. 2. 3. etc) and convert to proper HTML
-  let inNumberedList = false;
-  let expectedNextNumber = 1;
-  let processedContent = content.split('\n').map(line => {
-    // Check if this line starts with a number followed by a period
-    const numberMatch = line.match(/^(\d+)\.\s+(.+)$/);
-    if (numberMatch) {
-      const listNumber = parseInt(numberMatch[1]);
-      const listContent = numberMatch[2];
-      
-      // Start a new list if we're not in one OR if the number restarts at 1
-      if (!inNumberedList || (listNumber === 1 && expectedNextNumber > 1)) {
-        inNumberedList = true;
-        expectedNextNumber = 2;
-        return `<ol class="list-decimal ml-5 mb-3"><li>${listContent}</li>`;
-      } 
-      // Continue the list if the number is sequential
-      else if (listNumber === expectedNextNumber) {
-        expectedNextNumber++;
-        return `<li>${listContent}</li>`;
-      }
-      // If number is not sequential, close current list and start new one
-      else {
-        expectedNextNumber = listNumber + 1;
-        return `</ol><ol class="list-decimal ml-5 mb-3"><li>${listContent}</li>`;
-      }
-    } else if (inNumberedList && line.trim() === '') {
-      // Empty line ends the list
-      inNumberedList = false;
-      expectedNextNumber = 1;
-      return '</ol>';
-    } else if (inNumberedList) {
-      // Non-list line ends the list
-      inNumberedList = false;
-      expectedNextNumber = 1;
-      return `</ol>${line}`;
-    }
-    
-    // Handle bullet points
-    if (line.match(/^[-•]\s+/)) {
-      return line.replace(/^[-•]\s+(.+)$/, '<ul class="list-disc ml-5 mb-3"><li>$1</li></ul>');
-    }
-    
-    return line;
-  }).join('\n');
+  // Collect all consecutive numbered items into single lists
+  const lines = content.split('\n');
+  let processedLines = [];
+  let i = 0;
   
-  // Close any unclosed lists
-  if (inNumberedList) {
-    processedContent += '</ol>';
+  while (i < lines.length) {
+    const line = lines[i];
+    const numberMatch = line.match(/^(\d+)\.\s+(.+)$/);
+    
+    if (numberMatch) {
+      // Start collecting list items
+      let listItems = [];
+      let currentNum = parseInt(numberMatch[1]);
+      
+      // Add first item
+      listItems.push(numberMatch[2]);
+      i++;
+      
+      // Continue collecting consecutive numbered items
+      while (i < lines.length) {
+        const nextLine = lines[i];
+        const nextMatch = nextLine.match(/^(\d+)\.\s+(.+)$/);
+        
+        if (nextMatch) {
+          const nextNum = parseInt(nextMatch[1]);
+          // Check if it's the next number in sequence OR if all items are "1."
+          if (nextNum === currentNum + 1 || nextNum === 1) {
+            listItems.push(nextMatch[2]);
+            currentNum = nextNum === 1 ? currentNum + 1 : nextNum;
+            i++;
+          } else {
+            break;
+          }
+        } else if (nextLine.trim() === '') {
+          // Empty line might be part of the list formatting
+          i++;
+          // Check if next non-empty line continues the list
+          let j = i;
+          while (j < lines.length && lines[j].trim() === '') j++;
+          if (j < lines.length && lines[j].match(/^(\d+)\.\s+/)) {
+            continue;
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+      
+      // Create the complete list
+      if (listItems.length > 0) {
+        processedLines.push('<ol class="list-decimal ml-5 mb-3">');
+        listItems.forEach(item => {
+          processedLines.push(`<li>${item}</li>`);
+        });
+        processedLines.push('</ol>');
+      }
+    } else if (line.match(/^[-•]\s+/)) {
+      // Handle bullet points
+      processedLines.push(line.replace(/^[-•]\s+(.+)$/, '<ul class="list-disc ml-5 mb-3"><li>$1</li></ul>'));
+      i++;
+    } else {
+      processedLines.push(line);
+      i++;
+    }
   }
+  
+  let processedContent = processedLines.join('\n');
   
   // Clean up multiple consecutive ul/ol tags
   processedContent = processedContent.replace(/<\/ul>\n<ul class="list-disc ml-5 mb-3">/g, '');
@@ -78,7 +97,10 @@ const formatMessageContent = (content: string): React.ReactNode => {
   // Convert ** bold ** to <strong>
   processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   
-  // Handle headers
+  // Handle headers (match 1-6 # symbols)
+  processedContent = processedContent.replace(/^#{6}\s+(.*?)$/gm, '<h6 class="text-sm font-semibold mt-2 mb-1">$1</h6>');
+  processedContent = processedContent.replace(/^#{5}\s+(.*?)$/gm, '<h5 class="text-sm font-semibold mt-2 mb-1">$1</h5>');
+  processedContent = processedContent.replace(/^#{4}\s+(.*?)$/gm, '<h4 class="text-base font-semibold mt-3 mb-1">$1</h4>');
   processedContent = processedContent.replace(/^#{3}\s+(.*?)$/gm, '<h3 class="text-lg font-bold mt-3 mb-1">$1</h3>');
   processedContent = processedContent.replace(/^#{2}\s+(.*?)$/gm, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>');
   processedContent = processedContent.replace(/^#{1}\s+(.*?)$/gm, '<h1 class="text-2xl font-bold mt-5 mb-3">$1</h1>');
@@ -201,22 +223,25 @@ export function ChatSidebar({
     e.preventDefault();
     if (input.trim() === "" || isLoading) return;
     
-    // Add user message to the chat
+    // Store the current files
+    const currentUploadedFiles = [...uploadedFiles];
+    
+    // Add user message to the chat with file info
     const userMessage = {
       id: Date.now().toString(),
       role: "user" as const,
       content: input,
-      createdAt: new Date()
+      createdAt: new Date(),
+      files: currentUploadedFiles.map(f => ({
+        name: f.file.name,
+        type: f.file.type,
+        size: f.file.size
+      }))
     };
     
     setMessages([...messages, userMessage]);
     setInput("");
     setIsLoading(true);
-    
-    // Store the current files and then reset the file state
-    const currentUploadedFiles = [...uploadedFiles];
-    // Don't reset immediately - we'll reset after the response
-    // setUploadedFiles([]);
     
     try {
       let response;
@@ -429,9 +454,7 @@ export function ChatSidebar({
           // Show special message for large PDFs
           if (file.type === 'application/pdf' && file.size > 5000000) {
             console.log(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
-            toast.info(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, {
-              duration: 5000
-            });
+            // Large PDF info is now shown inline with the file
           }
         } else {
           // For text files, read as text
@@ -478,10 +501,10 @@ export function ChatSidebar({
     try {
       await navigator.clipboard.writeText(content)
       setCopiedMessageId(messageId)
-      toast.success("Copied to clipboard")
+      // Show inline "Copied!" feedback instead of toast
       setTimeout(() => setCopiedMessageId(null), 2000)
     } catch (error) {
-      toast.error("Failed to copy")
+      console.error("Failed to copy:", error)
     }
   }
 
@@ -611,12 +634,25 @@ export function ChatSidebar({
     }
   }
 
+  const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(null)
+  const [feedbackType, setFeedbackType] = useState<'up' | 'down' | null>(null)
+  
   const handleThumbsUp = async (messageId: string) => {
-    toast.success("Thanks for your feedback!")
+    setFeedbackMessageId(messageId)
+    setFeedbackType('up')
+    setTimeout(() => {
+      setFeedbackMessageId(null)
+      setFeedbackType(null)
+    }, 2000)
   }
 
   const handleThumbsDown = async (messageId: string) => {
-    toast.info("Thanks for your feedback. We'll improve!")
+    setFeedbackMessageId(messageId)
+    setFeedbackType('down')
+    setTimeout(() => {
+      setFeedbackMessageId(null)
+      setFeedbackType(null)
+    }, 2000)
   }
 
   // Login view when user is not logged in
@@ -791,6 +827,24 @@ export function ChatSidebar({
                       </div>
                     ) : (
                       <>
+                        {/* Show attached files for user messages */}
+                        {message.role === "user" && (message as any).files && (message as any).files.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {(message as any).files.map((file: any, index: number) => (
+                              <div 
+                                key={index}
+                                className={cn(
+                                  "text-xs py-0.5 px-2 rounded-full flex items-center gap-1 bg-background/20",
+                                  message.role === "user" ? "text-primary-foreground/80" : ""
+                                )}
+                              >
+                                <PaperclipIcon className="h-3 w-3" />
+                                <span>{file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
                         {/* Support for markdown content including images */}
                         {message.content.startsWith("![Generated image]") ? (
                           <div>
@@ -904,6 +958,20 @@ export function ChatSidebar({
                             </Tooltip>
                           </TooltipProvider>
                         </>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Inline feedback message */}
+                  {feedbackMessageId === message.id && (
+                    <div className={cn(
+                      "text-xs mt-1 animate-in fade-in-0 duration-200",
+                      message.role === "user" ? "text-right" : "text-left"
+                    )}>
+                      {feedbackType === 'up' ? (
+                        <span className="text-green-600 dark:text-green-400">✓ Thanks for your feedback!</span>
+                      ) : (
+                        <span className="text-blue-600 dark:text-blue-400">✓ We'll use this to improve</span>
                       )}
                     </div>
                   )}

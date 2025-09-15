@@ -5,7 +5,7 @@ import './globals.css'
 import { ChatProvider } from '@/lib/chat-context'
 import { GlobalChatProvider } from '@/lib/global-chat-context'
 import { AuthProvider } from '@/lib/auth-context'
-import { Toaster } from 'sonner'
+// Removed Toaster - using inline feedback instead
 
 export const metadata: Metadata = {
   title: 'Lithos',
@@ -47,7 +47,6 @@ html {
             </GlobalChatProvider>
           </ChatProvider>
         </AuthProvider>
-        <Toaster />
       </body>
     </html>
   )

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
 import OpenAI from 'openai'
 
+// Configure for edge runtime on Vercel
+export const runtime = 'nodejs' // Use Node.js runtime instead of edge for PDF parsing
+export const maxDuration = 60 // Allow up to 60 seconds for PDF processing
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
 })
@@ -9,13 +13,104 @@ const openai = new OpenAI({
 // Dynamic import for pdf-parse to avoid build issues
 async function extractPDFText(buffer: Buffer): Promise<{ text: string; numpages: number; info: any }> {
   try {
-    const pdfParse = require('../../../lib/pdf-parse-wrapper.js');
-    const data = await pdfParse(buffer);
-    return data;
+    // Use different parser based on environment
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      // For Vercel/production, use the edge-compatible version
+      const pdfParse = await import('../../../lib/pdf-parse-edge.js');
+      const parser = pdfParse.default || pdfParse;
+      const data = await parser(buffer);
+      return data;
+    } else {
+      // For local development, use the wrapper
+      const pdfParse = require('../../../lib/pdf-parse-wrapper.js');
+      const data = await pdfParse(buffer);
+      return data;
+    }
   } catch (error) {
     console.error('PDF parse error:', error);
-    throw error;
+    
+    // Fallback: Return basic info if parsing fails
+    return {
+      text: '[PDF parsing failed on this environment. The document was uploaded but text extraction is not available.]',
+      numpages: 0,
+      info: {
+        Title: 'PDF Document',
+        error: error.message
+      }
+    };
   }
+}
+
+// Helper function to extract specific mining metrics from text
+function extractMiningMetrics(text: string): { [key: string]: string | number | null } {
+  const metrics: { [key: string]: string | number | null } = {};
+  
+  // NPV extraction patterns
+  const npvPatterns = [
+    /NPV[^:]*:\s*\$?([\d,]+(?:\.\d+)?)\s*(?:million|M)/i,
+    /Net Present Value[^:]*:\s*\$?([\d,]+(?:\.\d+)?)\s*(?:million|M)/i,
+    /NPV.*?\$?([\d,]+(?:\.\d+)?)\s*(?:million|M)/i
+  ];
+  
+  // IRR extraction patterns
+  const irrPatterns = [
+    /IRR[^:]*:\s*([\d.]+)%/i,
+    /Internal Rate of Return[^:]*:\s*([\d.]+)%/i,
+    /IRR.*?([\d.]+)%/i
+  ];
+  
+  // CAPEX extraction patterns
+  const capexPatterns = [
+    /CAPEX[^:]*:\s*\$?([\d,]+(?:\.\d+)?)\s*(?:million|M)/i,
+    /Capital (?:Cost|Expenditure)[^:]*:\s*\$?([\d,]+(?:\.\d+)?)\s*(?:million|M)/i,
+    /Initial Capital[^:]*:\s*\$?([\d,]+(?:\.\d+)?)\s*(?:million|M)/i
+  ];
+  
+  // OPEX extraction patterns
+  const opexPatterns = [
+    /OPEX[^:]*:\s*\$?([\d,]+(?:\.\d+)?)\s*(?:\/t|per tonne)/i,
+    /Operating (?:Cost|Expenditure)[^:]*:\s*\$?([\d,]+(?:\.\d+)?)\s*(?:\/t|per tonne)/i
+  ];
+  
+  // Resource/Reserve extraction patterns
+  const resourcePatterns = [
+    /(?:Total|Measured|Indicated|Inferred)\s+(?:Resource|Reserve)[^:]*:\s*([\d,]+(?:\.\d+)?)\s*(?:Mt|million tonnes|oz|Moz)/i
+  ];
+  
+  // Try to extract each metric
+  for (const pattern of npvPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      metrics.npv = `$${match[1]}M`;
+      break;
+    }
+  }
+  
+  for (const pattern of irrPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      metrics.irr = `${match[1]}%`;
+      break;
+    }
+  }
+  
+  for (const pattern of capexPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      metrics.capex = `$${match[1]}M`;
+      break;
+    }
+  }
+  
+  for (const pattern of opexPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      metrics.opex = `$${match[1]}/t`;
+      break;
+    }
+  }
+  
+  return metrics;
 }
 
 
@@ -200,11 +295,26 @@ Always provide data-driven insights and cite specific details from uploaded docu
               console.log(`PDF has ${pageCount} pages and ${extractedText.length} characters`);
               console.log(`First 200 chars of extracted text: ${extractedText.substring(0, 200)}`);
               
+              // Extract key metrics from the PDF
+              const extractedMetrics = extractMiningMetrics(extractedText);
+              console.log('Extracted metrics:', extractedMetrics);
+              
               fileAnalysisPrompt += `\n### PDF Document: "${file.fileName}" (NI 43-101 Technical Report)\n\n`;
               fileAnalysisPrompt += `**Document Info:**\n`;
               fileAnalysisPrompt += `- Pages: ${pageCount}\n`;
               fileAnalysisPrompt += `- Title: ${pdfData.info?.Title || file.fileName}\n`;
               fileAnalysisPrompt += `- Author: ${pdfData.info?.Author || 'N/A'}\n\n`;
+              
+              // Add extracted metrics if found
+              if (Object.keys(extractedMetrics).length > 0) {
+                fileAnalysisPrompt += `**Key Metrics Extracted:**\n`;
+                for (const [key, value] of Object.entries(extractedMetrics)) {
+                  if (value) {
+                    fileAnalysisPrompt += `- ${key.toUpperCase()}: ${value}\n`;
+                  }
+                }
+                fileAnalysisPrompt += '\n';
+              }
               
               // Handle text based on length
               if (extractedText.length > 100000) {
