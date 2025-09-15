@@ -1,10 +1,139 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
 import { PDFDocument } from 'pdf-lib'
+import pdf from 'pdf-parse'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
-})
+// AIMLAPI configuration for gpt-5-nano
+const AIMLAPI_KEY = process.env.AIMLAPI_KEY || process.env.OPENAI_API_KEY // Fallback to OpenAI key if AIMLAPI not set
+const AIMLAPI_URL = 'https://api.aimlapi.com/v1/chat/completions'
+const MODEL = 'openai/gpt-5-nano-2025-08-07'
+
+// Helper function to call AIMLAPI
+async function callAIMLAPI(messages: any[], maxTokens: number = 4096, temperature: number = 0.7) {
+  const response = await fetch(AIMLAPI_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${AIMLAPI_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: messages,
+      max_tokens: maxTokens,
+      temperature: temperature,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('AIMLAPI Error:', errorText);
+    throw new Error(`AIMLAPI request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+// Helper function to summarize long text
+async function summarizeText(text: string, maxLength: number = 8000): Promise<string> {
+  // If text is short enough, return as is
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  // Split text into chunks for summarization
+  const chunkSize = 30000; // Process in 30k character chunks
+  const chunks: string[] = [];
+  
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize));
+  }
+
+  console.log(`Summarizing ${chunks.length} chunks of text`);
+
+  // Summarize each chunk
+  const summaries: string[] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are an expert at summarizing technical mining documents. Extract and preserve all key information including: project names, locations, commodity types, resource estimates, grades, financial metrics, dates, company names, and technical specifications.'
+      },
+      {
+        role: 'user',
+        content: `Please provide a detailed summary of this section (part ${i + 1} of ${chunks.length}) of a mining document. Preserve all important technical details, numbers, and names:\n\n${chunk}`
+      }
+    ];
+
+    try {
+      const response = await callAIMLAPI(messages, 2000, 0.3);
+      summaries.push(response.choices[0]?.message?.content || '');
+    } catch (error) {
+      console.error(`Error summarizing chunk ${i + 1}:`, error);
+      summaries.push(`[Error summarizing chunk ${i + 1}]`);
+    }
+  }
+
+  // If we have multiple summaries, combine them
+  if (summaries.length > 1) {
+    const combinedSummary = summaries.join('\n\n---\n\n');
+    
+    // If combined summary is still too long, do a final summarization
+    if (combinedSummary.length > maxLength) {
+      const finalMessages = [
+        {
+          role: 'system',
+          content: 'You are an expert at consolidating mining document summaries. Create a comprehensive summary that preserves all critical information.'
+        },
+        {
+          role: 'user',
+          content: `Please consolidate these section summaries into one comprehensive summary. Preserve all key project details, technical specifications, and financial metrics:\n\n${combinedSummary}`
+        }
+      ];
+
+      try {
+        const response = await callAIMLAPI(finalMessages, 3000, 0.3);
+        return response.choices[0]?.message?.content || combinedSummary;
+      } catch (error) {
+        console.error('Error creating final summary:', error);
+        return combinedSummary.slice(0, maxLength);
+      }
+    }
+    
+    return combinedSummary;
+  }
+
+  return summaries[0] || text.slice(0, maxLength);
+}
+
+// Helper function to extract text from PDF
+async function extractPDFText(base64Data: string): Promise<{ text: string; pageCount: number; metadata: any }> {
+  try {
+    // Remove the data URL prefix if present
+    const base64Clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+    const pdfBuffer = Buffer.from(base64Clean, 'base64');
+    
+    // Extract text using pdf-parse
+    const data = await pdf(pdfBuffer);
+    
+    return {
+      text: data.text,
+      pageCount: data.numpages,
+      metadata: {
+        title: data.info?.Title || 'N/A',
+        author: data.info?.Author || 'N/A',
+        subject: data.info?.Subject || 'N/A',
+        creator: data.info?.Creator || 'N/A',
+        producer: data.info?.Producer || 'N/A',
+        creationDate: data.info?.CreationDate || 'N/A',
+        modificationDate: data.info?.ModDate || 'N/A'
+      }
+    };
+  } catch (error) {
+    console.error('Error extracting PDF text:', error);
+    throw error;
+  }
+}
 
 export async function POST(req: Request) {
   console.log("Chat API called");
@@ -21,43 +150,20 @@ export async function POST(req: Request) {
         console.log("Processing image generation request");
         const lastMessage = messages[messages.length - 1].content;
         
-        // Create a mining-focused prompt
-        const miningPrompt = `Create a professional mining industry visualization: ${lastMessage}. 
-        The image should be technical, accurate, and suitable for mining industry presentations.
-        Focus on realistic depictions of mining operations, geological features, equipment, or data visualizations.`;
-        
-        const response = await openai.images.generate({
-          model: "dall-e-3",
-          prompt: miningPrompt,
-          n: 1,
-          size: "1024x1024",
-        });
-        
-        // Get the image URL from the response
-        const imageUrl = response.data?.[0]?.url;
-        
-        if (!imageUrl) {
-          throw new Error("Failed to generate image: No URL returned");
-        }
-        
-        // Create the response object
-        const responseBody = {
+        // For image generation, we'll use a different endpoint or fallback
+        // Since gpt-5-nano doesn't support image generation, we'll return a message
+        return NextResponse.json({
           id: Date.now().toString(),
           role: "assistant",
-          content: `![Generated image](${imageUrl})`,
+          content: "Image generation is not available with the current model. Please describe what you'd like to visualize and I can provide detailed descriptions or data instead.",
           createdAt: new Date()
-        };
-        
-        console.log("Image response:", JSON.stringify(responseBody));
-        
-        // Return the response
-        return NextResponse.json(responseBody);
+        });
       } catch (error) {
         console.error("Image generation error:", error);
         return NextResponse.json({
           id: Date.now().toString(),
           role: "assistant",
-          content: "I'm sorry, I couldn't generate that image. Please try a different prompt.",
+          content: "I'm sorry, I couldn't generate that image. Please try a different request.",
           createdAt: new Date()
         });
       }
@@ -70,7 +176,7 @@ export async function POST(req: Request) {
     if (!systemMessageExists) {
       finalMessages.unshift({
         role: 'system',
-        content: `You are Lithos AI, an expert mining industry assistant with real-time web search capabilities. You specialize in:
+        content: `You are Lithos AI, an expert mining industry assistant with real-time capabilities. You specialize in:
 
 - Mining project analysis and discovery
 - Commodity market trends and pricing
@@ -78,10 +184,11 @@ export async function POST(req: Request) {
 - Environmental and ESG considerations in mining
 - Geological and resource estimation
 - Mining finance and investment analysis
+- PDF document analysis and summarization
 
-You can search the web for current mining news, analyze technical documents and spreadsheets, generate mining-related visualizations, and provide up-to-date industry insights. When web search is enabled, you have access to current information from mining news sites, technical report databases (SEDAR, EDGAR), commodity exchanges, and industry sources.
+You can analyze technical documents, spreadsheets, and PDFs including lengthy technical reports. When analyzing documents, you extract key information such as project details, resource estimates, financial metrics, and technical specifications.
 
-Always provide data-driven insights and cite sources when available. Focus on accuracy and technical precision while remaining accessible.`
+Always provide data-driven insights and cite specific details from uploaded documents when available. Focus on accuracy and technical precision while remaining accessible.`
       });
     }
     
@@ -97,61 +204,54 @@ Always provide data-driven insights and cite sources when available. Focus on ac
         console.log("Processing file:", file.fileName, "type:", file.fileType);
         
         if (file.fileType && file.fileType.startsWith('image/')) {
-          // For image files, add to messages with vision
+          // For image files, we'll add a description since gpt-5-nano doesn't have vision
           finalMessages.push({
             role: 'system',
-            content: `Image file: ${file.fileName} - Analyze this for mining-related content, geological features, equipment, or data visualizations.`
-          });
-          
-          finalMessages.push({
-            role: 'user',
-            content: [
-              { type: 'text', text: `Analyze this image (${file.fileName}):` },
-              { type: 'image_url', image_url: { url: file.fileContent } }
-            ]
+            content: `Image file uploaded: ${file.fileName}. Note: Image analysis is not available with the current model. Please ask the user to describe the image content or provide text-based information instead.`
           });
         } else if (file.fileType === 'application/pdf') {
-          // Extract metadata from PDF using pdf-lib
+          // Extract text from PDF
           try {
-            // Remove the data:application/pdf;base64, prefix
-            const base64Data = file.fileContent.split(',')[1];
-            const pdfBuffer = Buffer.from(base64Data, 'base64');
+            console.log(`Extracting text from PDF: ${file.fileName}`);
+            const pdfData = await extractPDFText(file.fileContent);
             
-            // Load the PDF document
-            const pdfDoc = await PDFDocument.load(pdfBuffer);
+            console.log(`PDF has ${pdfData.pageCount} pages and ${pdfData.text.length} characters`);
             
-            // Get metadata
-            const pageCount = pdfDoc.getPageCount();
-            const title = pdfDoc.getTitle() || 'N/A';
-            const author = pdfDoc.getAuthor() || 'N/A';
-            const subject = pdfDoc.getSubject() || 'N/A';
-            const creator = pdfDoc.getCreator() || 'N/A';
-            const creationDate = pdfDoc.getCreationDate();
-            const modificationDate = pdfDoc.getModificationDate();
+            // Add metadata
+            fileAnalysisPrompt += `\n### PDF Document: "${file.fileName}"\n`;
+            fileAnalysisPrompt += `**Metadata:**\n`;
+            fileAnalysisPrompt += `- Pages: ${pdfData.pageCount}\n`;
+            fileAnalysisPrompt += `- Title: ${pdfData.metadata.title}\n`;
+            fileAnalysisPrompt += `- Author: ${pdfData.metadata.author}\n`;
+            fileAnalysisPrompt += `- Subject: ${pdfData.metadata.subject}\n\n`;
             
-            // Note: pdf-lib doesn't extract text content, only metadata
-            // For now, we'll provide metadata and ask the user to copy relevant text
-            fileAnalysisPrompt += `PDF Document "${file.fileName}" (likely a mining technical report - NI 43-101, JORC, feasibility study, etc.):\n\n`;
-            fileAnalysisPrompt += `Metadata:\n`;
-            fileAnalysisPrompt += `- Pages: ${pageCount}\n`;
-            fileAnalysisPrompt += `- Title: ${title}\n`;
-            fileAnalysisPrompt += `- Author: ${author}\n`;
-            fileAnalysisPrompt += `- Subject: ${subject}\n`;
-            fileAnalysisPrompt += `- Creator: ${creator}\n`;
-            fileAnalysisPrompt += `- Creation Date: ${creationDate ? creationDate.toISOString() : 'N/A'}\n`;
-            fileAnalysisPrompt += `- Modification Date: ${modificationDate ? modificationDate.toISOString() : 'N/A'}\n\n`;
-            fileAnalysisPrompt += `Note: This PDF has ${pageCount} pages. To analyze specific content, please copy and paste the relevant sections from the PDF.\n\n`;
-            
-            finalMessages.push({
-              role: 'system',
-              content: `PDF Document uploaded: ${file.fileName}. This appears to be a technical document with ${pageCount} pages. The document metadata has been extracted. For detailed content analysis, the user should copy relevant sections from the PDF.`
-            });
+            // Handle long PDFs (e.g., 400+ pages)
+            if (pdfData.text.length > 50000) {
+              console.log('PDF is very long, summarizing...');
+              fileAnalysisPrompt += `**Document Summary** (Original: ${pdfData.text.length} characters):\n\n`;
+              
+              const summary = await summarizeText(pdfData.text, 10000);
+              fileAnalysisPrompt += summary;
+              
+              finalMessages.push({
+                role: 'system',
+                content: `Large PDF document "${file.fileName}" (${pdfData.pageCount} pages) has been processed and summarized. The summary preserves key technical details, project information, and financial metrics. Use this summary to answer questions about the document.`
+              });
+            } else {
+              // For shorter PDFs, include the full text
+              fileAnalysisPrompt += `**Full Document Content:**\n\n${pdfData.text}\n\n`;
+              
+              finalMessages.push({
+                role: 'system',
+                content: `PDF document "${file.fileName}" (${pdfData.pageCount} pages) has been fully extracted and is available for analysis.`
+              });
+            }
           } catch (error) {
-            console.error('Error parsing PDF:', error);
-            fileAnalysisPrompt += `PDF File "${file.fileName}": [Error reading PDF: ${error}]\n\n`;
+            console.error('Error processing PDF:', error);
+            fileAnalysisPrompt += `PDF File "${file.fileName}": [Error extracting text: ${error}]\n\n`;
             finalMessages.push({
               role: 'system',
-              content: `PDF Document: ${file.fileName}. Unable to read the PDF file. The document may be corrupted or password-protected.`
+              content: `PDF Document: ${file.fileName}. Unable to extract text from the PDF. The document may be corrupted, password-protected, or contain only images.`
             });
           }
         } else if (file.fileType === 'application/json' || file.fileName.endsWith('.json')) {
@@ -169,9 +269,8 @@ Always provide data-driven insights and cite sources when available. Focus on ac
           } catch (e) {
             fileAnalysisPrompt += `JSON File "${file.fileName}": [Error parsing JSON: ${e}]\n\n`;
           }
-        } else if (file.fileType === 'text/csv' || file.fileName.endsWith('.csv') || 
-                   file.fileType.includes('sheet') || file.fileName.endsWith('.xlsx')) {
-          // Handle CSV and Excel files (common for mining data)
+        } else if (file.fileType === 'text/csv' || file.fileName.endsWith('.csv')) {
+          // Handle CSV files
           let csvContent = file.fileContent;
           // If it's base64 encoded, decode it
           if (file.fileContent.includes('base64,')) {
@@ -179,18 +278,17 @@ Always provide data-driven insights and cite sources when available. Focus on ac
             csvContent = Buffer.from(base64Data, 'base64').toString('utf-8');
           }
           
-          if (file.fileName.endsWith('.xlsx')) {
-            fileAnalysisPrompt += `Excel File "${file.fileName}": [Excel parsing will be implemented - for mining data, please export as CSV]\n\n`;
-          } else {
-            // Parse CSV
-            const lines = csvContent.split('\n').filter((line: string) => line.trim());
-            const headers = lines[0]?.split(',').map((h: string) => h.trim());
-            
-            fileAnalysisPrompt += `CSV File "${file.fileName}" (likely contains mining project data, assay results, or financial models):\n`;
-            fileAnalysisPrompt += `Headers: ${headers?.join(', ') || 'No headers found'}\n`;
-            fileAnalysisPrompt += `Total rows: ${lines.length - 1}\n`;
-            fileAnalysisPrompt += `Sample data (first 10 rows):\n\`\`\`\n${lines.slice(0, 11).join('\n')}\n\`\`\`\n\n`;
-          }
+          // Parse CSV
+          const lines = csvContent.split('\n').filter((line: string) => line.trim());
+          const headers = lines[0]?.split(',').map((h: string) => h.trim());
+          
+          fileAnalysisPrompt += `CSV File "${file.fileName}" (mining data/assay results/financial model):\n`;
+          fileAnalysisPrompt += `Headers: ${headers?.join(', ') || 'No headers found'}\n`;
+          fileAnalysisPrompt += `Total rows: ${lines.length - 1}\n`;
+          
+          // Include more rows for analysis
+          const sampleSize = Math.min(50, lines.length);
+          fileAnalysisPrompt += `Sample data (first ${sampleSize} rows):\n\`\`\`\n${lines.slice(0, sampleSize).join('\n')}\n\`\`\`\n\n`;
         } else {
           // For other text files
           let textContent = file.fileContent;
@@ -200,11 +298,17 @@ Always provide data-driven insights and cite sources when available. Focus on ac
             textContent = Buffer.from(base64Data, 'base64').toString('utf-8');
           }
           
-          fileAnalysisPrompt += `Text File "${file.fileName}":\n\`\`\`\n${textContent.substring(0, 3000)}${textContent.length > 3000 ? '\n... (truncated)' : ''}\n\`\`\`\n\n`;
+          // For long text files, summarize if needed
+          if (textContent.length > 10000) {
+            const summary = await summarizeText(textContent, 5000);
+            fileAnalysisPrompt += `Text File "${file.fileName}" (summarized from ${textContent.length} characters):\n\`\`\`\n${summary}\n\`\`\`\n\n`;
+          } else {
+            fileAnalysisPrompt += `Text File "${file.fileName}":\n\`\`\`\n${textContent}\n\`\`\`\n\n`;
+          }
         }
       }
       
-      // Add the file analysis prompt if we have non-image files
+      // Add the file analysis prompt if we have content
       if (fileAnalysisPrompt !== 'The user has uploaded the following files:\n\n') {
         finalMessages.push({
           role: 'system',
@@ -226,25 +330,20 @@ Always provide data-driven insights and cite sources when available. Focus on ac
       });
     }
     
-    console.log("Sending OpenAI request with message count:", finalMessages.length);
+    console.log("Sending AIMLAPI request with message count:", finalMessages.length);
     
-    // Use GPT-4o for all requests (it has vision capabilities)
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: finalMessages.map(m => {
-        // Handle special case for images
-        if (m.content && typeof m.content !== 'string') {
-          return { role: m.role, content: m.content };
-        }
-        return { role: m.role, content: m.content };
-      }),
-      stream: false,
-      max_tokens: 4096,
-      temperature: 0.7,
-    });
+    // Call AIMLAPI with gpt-5-nano
+    const response = await callAIMLAPI(
+      finalMessages.map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
+      })),
+      4096,
+      0.7
+    );
     
     const content = response.choices[0]?.message?.content || "No response generated";
-    console.log("OpenAI response received, content length:", content.length);
+    console.log("AIMLAPI response received, content length:", content.length);
     
     // Create the response object
     const responseBody = {
@@ -268,4 +367,4 @@ Always provide data-driven insights and cite sources when available. Focus on ac
       createdAt: new Date()
     }, { status: 500 });
   }
-} 
+}

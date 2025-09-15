@@ -379,6 +379,11 @@ export function ChatSidebar({
             reader.onload = (event) => resolve(event.target?.result as string)
             reader.readAsDataURL(file)
           })
+          
+          // Show special message for large PDFs
+          if (file.type === 'application/pdf' && file.size > 5000000) {
+            console.log(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+          }
         } else {
           // For text files, read as text
           content = await file.text()
