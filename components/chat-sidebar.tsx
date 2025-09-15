@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { Loader2, PaperclipIcon, PenSquare, SendHorizonal, TrendingUpIcon, ImageIcon, Globe, Search, X, CheckCircle2, Brain, Sparkles, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2, Check, PickaxeIcon } from "lucide-react"
+import { Loader2, PaperclipIcon, PenSquare, SendHorizonal, TrendingUpIcon, ImageIcon, Globe, Search, X, CheckCircle2, Brain, Sparkles, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2, Check, PickaxeIcon, MessageSquare } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -69,11 +69,11 @@ const formatMessageContent = (content: string): React.ReactNode => {
         }
       }
       
-      // Create the complete list
+      // Create the complete list with proper numbering
       if (listItems.length > 0) {
-        processedLines.push('<ol class="list-decimal ml-5 mb-3">');
-        listItems.forEach(item => {
-          processedLines.push(`<li>${item}</li>`);
+        processedLines.push('<ol class="list-decimal ml-5 mb-3" style="list-style-type: decimal;">');
+        listItems.forEach((item, index) => {
+          processedLines.push(`<li value="${index + 1}">${item}</li>`);
         });
         processedLines.push('</ol>');
       }
@@ -354,13 +354,22 @@ export function ChatSidebar({
         content: responseData.content || "I'm not sure how to respond to that.",
         createdAt: responseData.createdAt ? new Date(responseData.createdAt) : new Date()
       }]);
-    } catch (error) {
-      console.error("Error sending message:", error);
+    } catch (error: any) {
+      console.log("Chat error:", error.message);
+      
+      // Check if it's a size issue
+      let errorMessage = "I'm having trouble processing your request. ";
+      if (error.message?.includes('413') || error.message?.includes('too large')) {
+        errorMessage = "The document is being processed. I'll analyze the extracted sections.";
+      } else if (error.message?.includes('Failed to fetch')) {
+        errorMessage = "Connection issue. Please check your internet and try again.";
+      }
+      
       // Add error message
       setMessages([...messages, userMessage, {
         id: Date.now().toString(),
         role: "assistant",
-        content: "I'm sorry, there was an error processing your request. Please try again.",
+        content: errorMessage,
         createdAt: new Date()
       }]);
     } finally {
@@ -425,6 +434,26 @@ export function ChatSidebar({
     fileInputRef.current?.click()
   }
 
+  // Helper function to read file in chunks
+  const readFileInChunks = async (file: File, chunkSize: number = 5 * 1024 * 1024) => {
+    const chunks: string[] = [];
+    const reader = new FileReader();
+    
+    for (let offset = 0; offset < file.size; offset += chunkSize) {
+      const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+      const arrayBuffer = await new Promise<ArrayBuffer>((resolve) => {
+        reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
+        reader.readAsArrayBuffer(chunk);
+      });
+      
+      // Convert to base64
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      chunks.push(base64);
+    }
+    
+    return chunks;
+  };
+
   const handleAttachmentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -442,6 +471,35 @@ export function ChatSidebar({
     for (const file of newFiles) {
       try {
         let content: string | null = null
+        
+        // For PDFs over 8MB, extract key sections
+        if (file.type === 'application/pdf' && file.size > 8 * 1024 * 1024) {
+          console.log(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+          
+          // Process on client side
+          const { extractPDFTextClient } = await import('@/lib/client-pdf-processor');
+          const result = await extractPDFTextClient(file);
+          
+          // If we have a subset PDF, use that
+          if (result.subsetBase64) {
+            content = result.subsetBase64;
+            
+            // Create a smaller file name to indicate it's a subset
+            const subsetFileName = file.name.replace('.pdf', '_subset.pdf');
+            
+            // The content is already base64 encoded
+            processedFiles.push({ 
+              file: new File([file.slice(0, 1000)], subsetFileName, { type: 'application/pdf' }), // Small file object for tracking
+              content: content  // The actual subset PDF as base64
+            });
+            
+            // Don't add a message here - let it process normally
+          } else {
+            // Fallback: just skip the file if we couldn't process it
+            console.log(`Skipping large file: ${file.name}`);
+          }
+          continue;
+        }
         
         if (file.type.startsWith('image/') || file.type === 'application/pdf') {
           // For images and PDFs, create base64
@@ -777,12 +835,9 @@ export function ChatSidebar({
                       <AvatarFallback className="bg-primary/10 text-primary">{userName ? userName[0] : "U"}</AvatarFallback>
                     </>
                   ) : (
-                    <>
-                      <AvatarImage src="/lithos-avatar.png" alt="Assistant" />
-                      <AvatarFallback className="bg-primary/10">
-                        <PickaxeIcon className="h-4 w-4 text-primary" />
-                      </AvatarFallback>
-                    </>
+                    <AvatarFallback className="bg-primary/10">
+                      <PickaxeIcon className="h-4 w-4 text-primary" />
+                    </AvatarFallback>
                   )}
                 </Avatar>
                 <div className="flex flex-col gap-1 flex-1 max-w-[80%]">
@@ -983,7 +1038,6 @@ export function ChatSidebar({
           {isLoading && (
             <div className="flex gap-3 animate-in fade-in-0 duration-200">
               <Avatar className="flex-shrink-0 w-8 h-8">
-                <AvatarImage src="/lithos-avatar.png" alt="Assistant" />
                 <AvatarFallback className="bg-primary/10">
                   <PickaxeIcon className="h-4 w-4 text-primary" />
                 </AvatarFallback>

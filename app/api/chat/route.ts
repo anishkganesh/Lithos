@@ -6,6 +6,15 @@ import OpenAI from 'openai'
 export const runtime = 'nodejs' // Use Node.js runtime instead of edge for PDF parsing
 export const maxDuration = 60 // Allow up to 60 seconds for PDF processing
 
+// Next.js 13+ App Router body size configuration
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!
 })
@@ -195,6 +204,29 @@ export async function POST(req: Request) {
     
     const { messages, tool, webSearch, fileContents } = body;
     
+    // Check if user is asking for specific metrics
+    const lastUserMessage = messages[messages.length - 1]?.content || '';
+    const metricsToSearch = [];
+    
+    // Common mining metrics patterns
+    const metricPatterns = {
+      npv: /\b(npv|net present value)\b/i,
+      irr: /\b(irr|internal rate of return)\b/i,
+      capex: /\b(capex|capital expenditure|capital cost)\b/i,
+      opex: /\b(opex|operating cost|operating expenditure)\b/i,
+      payback: /\b(payback period|payback)\b/i,
+      resource: /\b(resource estimate|mineral resource|ore reserve)\b/i,
+      grade: /\b(grade|ore grade|cut-off grade)\b/i,
+      production: /\b(production rate|annual production|lom|life of mine)\b/i
+    };
+    
+    // Check which metrics the user is asking about
+    for (const [metric, pattern] of Object.entries(metricPatterns)) {
+      if (pattern.test(lastUserMessage)) {
+        metricsToSearch.push(metric);
+      }
+    }
+    
     // Handle image generation request
     if (tool === 'image') {
       try {
@@ -321,45 +353,103 @@ Always provide data-driven insights and cite specific details from uploaded docu
                 // For very large documents, take key sections
                 console.log('Large PDF detected, extracting key sections...');
                 
-                // Extract first 20k chars (usually contains executive summary)
-                const beginning = extractedText.substring(0, 20000);
-                
-                // Try to find and extract key sections
-                const sections = {
-                  'executive summary': extractedText.match(/executive\s+summary[\s\S]{0,10000}/i)?.[0] || '',
-                  'mineral resource': extractedText.match(/mineral\s+resource[\s\S]{0,10000}/i)?.[0] || '',
-                  'economic analysis': extractedText.match(/economic\s+analysis[\s\S]{0,10000}/i)?.[0] || '',
-                  'conclusions': extractedText.match(/conclusions?[\s\S]{0,5000}/i)?.[0] || ''
-                };
-                
-                fileAnalysisPrompt += `**Document Content** (Key sections from ${extractedText.length} total characters):\n\n`;
-                fileAnalysisPrompt += `**Beginning of Document:**\n${beginning}\n\n`;
-                
-                Object.entries(sections).forEach(([section, content]) => {
-                  if (content) {
-                    fileAnalysisPrompt += `**${section.toUpperCase()}:**\n${content.substring(0, 5000)}\n\n`;
-                  }
-                });
+                // If user is asking for specific metrics, search for those
+                if (metricsToSearch.length > 0) {
+                  console.log('Searching for specific metrics:', metricsToSearch);
+                  
+                  fileAnalysisPrompt += `**Document Content** (Searched for: ${metricsToSearch.join(', ')}):\n\n`;
+                  
+                  // Search for each metric in the document
+                  metricsToSearch.forEach(metric => {
+                    const searchPattern = metricPatterns[metric as keyof typeof metricPatterns];
+                    const matches = [];
+                    let match;
+                    const regex = new RegExp(searchPattern.source + '[\\s\\S]{0,500}', 'gi');
+                    
+                    while ((match = regex.exec(extractedText)) !== null) {
+                      const context = extractedText.substring(Math.max(0, match.index - 200), Math.min(extractedText.length, match.index + 500));
+                      matches.push(context);
+                      if (matches.length >= 3) break; // Limit to 3 matches per metric
+                    }
+                    
+                    if (matches.length > 0) {
+                      fileAnalysisPrompt += `**${metric.toUpperCase()} References:**\n`;
+                      matches.forEach((context, i) => {
+                        fileAnalysisPrompt += `\n[Match ${i + 1}]\n${context}\n`;
+                      });
+                      fileAnalysisPrompt += '\n';
+                    }
+                  });
+                } else {
+                  // Extract first 20k chars (usually contains executive summary)
+                  const beginning = extractedText.substring(0, 20000);
+                  
+                  // Try to find and extract key sections
+                  const sections = {
+                    'executive summary': extractedText.match(/executive\s+summary[\s\S]{0,10000}/i)?.[0] || '',
+                    'mineral resource': extractedText.match(/mineral\s+resource[\s\S]{0,10000}/i)?.[0] || '',
+                    'economic analysis': extractedText.match(/economic\s+analysis[\s\S]{0,10000}/i)?.[0] || '',
+                    'conclusions': extractedText.match(/conclusions?[\s\S]{0,5000}/i)?.[0] || ''
+                  };
+                  
+                  fileAnalysisPrompt += `**Document Content** (Key sections from ${extractedText.length} total characters):\n\n`;
+                  fileAnalysisPrompt += `**Beginning of Document:**\n${beginning}\n\n`;
+                  
+                  Object.entries(sections).forEach(([section, content]) => {
+                    if (content) {
+                      fileAnalysisPrompt += `**${section.toUpperCase()}:**\n${content.substring(0, 5000)}\n\n`;
+                    }
+                  });
+                }
                 
                 finalMessages.push({
                   role: 'system',
-                  content: `Large NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been processed. Key sections including executive summary, mineral resources, economic analysis, and conclusions have been extracted for analysis.`
+                  content: `Large NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been processed. ${metricsToSearch.length > 0 ? `Searched for: ${metricsToSearch.join(', ')}` : 'Key sections including executive summary, mineral resources, economic analysis, and conclusions have been extracted for analysis.'}`
                 });
               } else if (extractedText.length > 30000) {
-                // For medium documents, include more content
-                fileAnalysisPrompt += `**Document Content** (First 30,000 characters):\n\n${extractedText.substring(0, 30000)}\n\n... (Document continues)`;
+                // For medium documents
+                if (metricsToSearch.length > 0) {
+                  // Search for specific metrics
+                  fileAnalysisPrompt += `**Document Content** (Searched for: ${metricsToSearch.join(', ')}):\n\n`;
+                  
+                  metricsToSearch.forEach(metric => {
+                    const searchPattern = metricPatterns[metric as keyof typeof metricPatterns];
+                    const matches = [];
+                    let match;
+                    const regex = new RegExp(searchPattern.source + '[\\s\\S]{0,300}', 'gi');
+                    
+                    while ((match = regex.exec(extractedText)) !== null) {
+                      const context = extractedText.substring(Math.max(0, match.index - 100), Math.min(extractedText.length, match.index + 300));
+                      matches.push(context);
+                      if (matches.length >= 2) break;
+                    }
+                    
+                    if (matches.length > 0) {
+                      fileAnalysisPrompt += `**${metric.toUpperCase()}:**\n`;
+                      matches.forEach((context, i) => {
+                        fileAnalysisPrompt += `${context}\n\n`;
+                      });
+                    }
+                  });
+                } else {
+                  fileAnalysisPrompt += `**Document Content** (First 30,000 characters):\n\n${extractedText.substring(0, 30000)}\n\n... (Document continues)`;
+                }
                 
                 finalMessages.push({
                   role: 'system',
-                  content: `NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been processed. The first portion of the document is available for analysis.`
+                  content: `NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been processed. ${metricsToSearch.length > 0 ? `Found references to: ${metricsToSearch.join(', ')}` : 'The first portion of the document is available for analysis.'}`
                 });
               } else {
-                // For smaller PDFs, include full text
-                fileAnalysisPrompt += `**Full Document Content:**\n\n${extractedText}\n\n`;
+                // For smaller PDFs, include full text but highlight searched metrics
+                if (metricsToSearch.length > 0) {
+                  fileAnalysisPrompt += `**Full Document Content** (highlighting: ${metricsToSearch.join(', ')}):\n\n${extractedText}\n\n`;
+                } else {
+                  fileAnalysisPrompt += `**Full Document Content:**\n\n${extractedText}\n\n`;
+                }
                 
                 finalMessages.push({
                   role: 'system',
-                  content: `NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been fully extracted and is available for comprehensive analysis.`
+                  content: `NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been fully extracted and is available for comprehensive analysis.${metricsToSearch.length > 0 ? ` Searching for: ${metricsToSearch.join(', ')}` : ''}`
                 });
               }
             } catch (textError) {
@@ -398,7 +488,21 @@ Always provide data-driven insights and cite specific details from uploaded docu
             }
             
             const jsonData = JSON.parse(jsonContent);
-            fileAnalysisPrompt += `JSON File "${file.fileName}":\n\`\`\`json\n${JSON.stringify(jsonData, null, 2)}\n\`\`\`\n\n`;
+            
+            // Check if this is large PDF metadata
+            if (jsonData.type === 'large-pdf-metadata') {
+              fileAnalysisPrompt += `\n### Large PDF Document: "${jsonData.fileName}"\n\n`;
+              fileAnalysisPrompt += `**Document Info:**\n`;
+              fileAnalysisPrompt += `- Original Size: ${(jsonData.fileSize / 1024 / 1024).toFixed(2)} MB\n`;
+              fileAnalysisPrompt += `- Pages: ${jsonData.pageCount}\n`;
+              if (jsonData.metadata) {
+                fileAnalysisPrompt += `- Title: ${jsonData.metadata.title || 'N/A'}\n`;
+                fileAnalysisPrompt += `- Author: ${jsonData.metadata.author || 'N/A'}\n`;
+              }
+              fileAnalysisPrompt += `\n**Available Information:**\n${jsonData.extractedText}\n\n`;
+            } else {
+              fileAnalysisPrompt += `JSON File "${file.fileName}":\n\`\`\`json\n${JSON.stringify(jsonData, null, 2)}\n\`\`\`\n\n`;
+            }
           } catch (e) {
             fileAnalysisPrompt += `JSON File "${file.fileName}": [Error parsing JSON: ${e}]\n\n`;
           }
