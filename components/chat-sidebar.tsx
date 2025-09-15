@@ -18,39 +18,83 @@ import { toast } from "sonner"
 const formatMessageContent = (content: string): React.ReactNode => {
   if (!content) return null;
   
-  // Handle lists with numbers (1., 2., etc.)
-  content = content.replace(/(\d+)\.\s+([^\n]+)/g, '<li class="ml-5 list-decimal">$2</li>');
+  // First, let's handle numbered lists properly
+  // Match numbered lists (1. 2. 3. etc) and convert to proper HTML
+  let inNumberedList = false;
+  let expectedNextNumber = 1;
+  let processedContent = content.split('\n').map(line => {
+    // Check if this line starts with a number followed by a period
+    const numberMatch = line.match(/^(\d+)\.\s+(.+)$/);
+    if (numberMatch) {
+      const listNumber = parseInt(numberMatch[1]);
+      const listContent = numberMatch[2];
+      
+      // Start a new list if we're not in one OR if the number restarts at 1
+      if (!inNumberedList || (listNumber === 1 && expectedNextNumber > 1)) {
+        inNumberedList = true;
+        expectedNextNumber = 2;
+        return `<ol class="list-decimal ml-5 mb-3"><li>${listContent}</li>`;
+      } 
+      // Continue the list if the number is sequential
+      else if (listNumber === expectedNextNumber) {
+        expectedNextNumber++;
+        return `<li>${listContent}</li>`;
+      }
+      // If number is not sequential, close current list and start new one
+      else {
+        expectedNextNumber = listNumber + 1;
+        return `</ol><ol class="list-decimal ml-5 mb-3"><li>${listContent}</li>`;
+      }
+    } else if (inNumberedList && line.trim() === '') {
+      // Empty line ends the list
+      inNumberedList = false;
+      expectedNextNumber = 1;
+      return '</ol>';
+    } else if (inNumberedList) {
+      // Non-list line ends the list
+      inNumberedList = false;
+      expectedNextNumber = 1;
+      return `</ol>${line}`;
+    }
+    
+    // Handle bullet points
+    if (line.match(/^[-•]\s+/)) {
+      return line.replace(/^[-•]\s+(.+)$/, '<ul class="list-disc ml-5 mb-3"><li>$1</li></ul>');
+    }
+    
+    return line;
+  }).join('\n');
   
-  // Handle bullet points
-  content = content.replace(/[-•]\s+([^\n]+)/g, '<li class="ml-5 list-disc">$1</li>');
+  // Close any unclosed lists
+  if (inNumberedList) {
+    processedContent += '</ol>';
+  }
+  
+  // Clean up multiple consecutive ul/ol tags
+  processedContent = processedContent.replace(/<\/ul>\n<ul class="list-disc ml-5 mb-3">/g, '');
+  processedContent = processedContent.replace(/<\/ol>\n<ol class="list-decimal ml-5 mb-3">/g, '');
+  processedContent = processedContent.replace(/<\/li>\n<li>/g, '</li><li>');
   
   // Convert ** bold ** to <strong>
-  content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   
   // Handle headers
-  content = content.replace(/#{3}\s+(.*?)(?:\n|$)/g, '<h3 class="text-lg font-bold mt-3 mb-1">$1</h3>');
-  content = content.replace(/#{2}\s+(.*?)(?:\n|$)/g, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>');
-  content = content.replace(/#{1}\s+(.*?)(?:\n|$)/g, '<h1 class="text-2xl font-bold mt-5 mb-3">$1</h1>');
+  processedContent = processedContent.replace(/^#{3}\s+(.*?)$/gm, '<h3 class="text-lg font-bold mt-3 mb-1">$1</h3>');
+  processedContent = processedContent.replace(/^#{2}\s+(.*?)$/gm, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>');
+  processedContent = processedContent.replace(/^#{1}\s+(.*?)$/gm, '<h1 class="text-2xl font-bold mt-5 mb-3">$1</h1>');
   
   // Convert paragraphs (double newlines)
-  content = content.replace(/\n\n/g, '</p><p class="mb-2">');
+  processedContent = processedContent.replace(/\n\n/g, '</p><p class="mb-2">');
   
-  // Wrap the content in a paragraph
-  content = `<p class="mb-2">${content}</p>`;
+  // Wrap content that's not already wrapped
+  if (!processedContent.startsWith('<')) {
+    processedContent = `<p class="mb-2">${processedContent}</p>`;
+  }
   
-  // Fix nested tags from replacements
-  content = content.replace(/<p class="mb-2"><(h[1-3])/g, '<$1');
-  content = content.replace(/<\/(h[1-3])><\/p>/g, '</$1>');
+  // Clean up empty paragraphs
+  processedContent = processedContent.replace(/<p class="mb-2"><\/p>/g, '');
   
-  // Fix list items
-  content = content.replace(/<p class="mb-2"><li/g, '<li');
-  content = content.replace(/<\/li><\/p>/g, '</li>');
-  
-  // Group adjacent list items into proper lists
-  content = content.replace(/(<li class="ml-5 list-decimal">.*?<\/li>)+/g, '<ol class="list-decimal ml-5 mb-3">$&</ol>');
-  content = content.replace(/(<li class="ml-5 list-disc">.*?<\/li>)+/g, '<ul class="list-disc ml-5 mb-3">$&</ul>');
-  
-  return <div dangerouslySetInnerHTML={{ __html: content }} />;
+  return <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: processedContent }} />;
 };
 
 export function ChatSidebar({
@@ -171,7 +215,8 @@ export function ChatSidebar({
     
     // Store the current files and then reset the file state
     const currentUploadedFiles = [...uploadedFiles];
-    setUploadedFiles([]);
+    // Don't reset immediately - we'll reset after the response
+    // setUploadedFiles([]);
     
     try {
       let response;
@@ -298,6 +343,7 @@ export function ChatSidebar({
       setIsGeneratingImage(false);
       setIsSearchingWeb(false);
       setSearchResults(null);
+      setUploadedFiles([]); // Reset files after processing
     }
     
     // Reset textarea height
@@ -383,6 +429,9 @@ export function ChatSidebar({
           // Show special message for large PDFs
           if (file.type === 'application/pdf' && file.size > 5000000) {
             console.log(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+            toast.info(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, {
+              duration: 5000
+            });
           }
         } else {
           // For text files, read as text
@@ -878,6 +927,9 @@ export function ChatSidebar({
                     <span className="text-sm text-muted-foreground animate-pulse">
                       {isSearchingWeb ? "Searching the web..." : 
                        isGeneratingImage ? "Generating image..." :
+                       uploadedFiles.some(f => f.file.type === 'application/pdf' && f.file.size > 5000000) ? 
+                         "Processing large PDF document..." :
+                       uploadedFiles.length > 0 ? "Analyzing uploaded files..." :
                        "Thinking..."}
                     </span>
                   </div>
@@ -902,7 +954,29 @@ export function ChatSidebar({
                       <span>Creating mining visualization...</span>
                     </div>
                   )}
-                  {!isSearchingWeb && !isGeneratingImage && (
+                  {!isSearchingWeb && !isGeneratingImage && uploadedFiles.length > 0 && (
+                    <>
+                      {uploadedFiles.some(f => f.file.type === 'application/pdf') && (
+                        <>
+                          <div className="flex items-center gap-2 animate-in slide-in-from-left-2">
+                            <PaperclipIcon className="w-3 h-3" />
+                            <span>Extracting text from PDF...</span>
+                          </div>
+                          {uploadedFiles.some(f => f.file.type === 'application/pdf' && f.file.size > 10000000) && (
+                            <div className="flex items-center gap-2 animate-in slide-in-from-left-2 delay-75">
+                              <Brain className="w-3 h-3" />
+                              <span>Summarizing technical content...</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <div className="flex items-center gap-2 animate-in slide-in-from-left-2 delay-150">
+                        <Sparkles className="w-3 h-3" />
+                        <span>Analyzing document content...</span>
+                      </div>
+                    </>
+                  )}
+                  {!isSearchingWeb && !isGeneratingImage && uploadedFiles.length === 0 && (
                     <>
                       <div className="flex items-center gap-2 animate-in slide-in-from-left-2">
                         <Brain className="w-3 h-3" />

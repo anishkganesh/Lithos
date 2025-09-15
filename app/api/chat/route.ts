@@ -1,137 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
-import pdf from 'pdf-parse'
+import OpenAI from 'openai'
 
-// AIMLAPI configuration for gpt-5-nano
-const AIMLAPI_KEY = process.env.AIMLAPI_KEY || process.env.OPENAI_API_KEY // Fallback to OpenAI key if AIMLAPI not set
-const AIMLAPI_URL = 'https://api.aimlapi.com/v1/chat/completions'
-const MODEL = 'openai/gpt-5-nano-2025-08-07'
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!
+})
 
-// Helper function to call AIMLAPI
-async function callAIMLAPI(messages: any[], maxTokens: number = 4096, temperature: number = 0.7) {
-  const response = await fetch(AIMLAPI_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${AIMLAPI_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: messages,
-      max_tokens: maxTokens,
-      temperature: temperature,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('AIMLAPI Error:', errorText);
-    throw new Error(`AIMLAPI request failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data;
-}
-
-// Helper function to summarize long text
-async function summarizeText(text: string, maxLength: number = 8000): Promise<string> {
-  // If text is short enough, return as is
-  if (text.length <= maxLength) {
-    return text;
-  }
-
-  // Split text into chunks for summarization
-  const chunkSize = 30000; // Process in 30k character chunks
-  const chunks: string[] = [];
-  
-  for (let i = 0; i < text.length; i += chunkSize) {
-    chunks.push(text.slice(i, i + chunkSize));
-  }
-
-  console.log(`Summarizing ${chunks.length} chunks of text`);
-
-  // Summarize each chunk
-  const summaries: string[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    const messages = [
-      {
-        role: 'system',
-        content: 'You are an expert at summarizing technical mining documents. Extract and preserve all key information including: project names, locations, commodity types, resource estimates, grades, financial metrics, dates, company names, and technical specifications.'
-      },
-      {
-        role: 'user',
-        content: `Please provide a detailed summary of this section (part ${i + 1} of ${chunks.length}) of a mining document. Preserve all important technical details, numbers, and names:\n\n${chunk}`
-      }
-    ];
-
-    try {
-      const response = await callAIMLAPI(messages, 2000, 0.3);
-      summaries.push(response.choices[0]?.message?.content || '');
-    } catch (error) {
-      console.error(`Error summarizing chunk ${i + 1}:`, error);
-      summaries.push(`[Error summarizing chunk ${i + 1}]`);
-    }
-  }
-
-  // If we have multiple summaries, combine them
-  if (summaries.length > 1) {
-    const combinedSummary = summaries.join('\n\n---\n\n');
-    
-    // If combined summary is still too long, do a final summarization
-    if (combinedSummary.length > maxLength) {
-      const finalMessages = [
-        {
-          role: 'system',
-          content: 'You are an expert at consolidating mining document summaries. Create a comprehensive summary that preserves all critical information.'
-        },
-        {
-          role: 'user',
-          content: `Please consolidate these section summaries into one comprehensive summary. Preserve all key project details, technical specifications, and financial metrics:\n\n${combinedSummary}`
-        }
-      ];
-
-      try {
-        const response = await callAIMLAPI(finalMessages, 3000, 0.3);
-        return response.choices[0]?.message?.content || combinedSummary;
-      } catch (error) {
-        console.error('Error creating final summary:', error);
-        return combinedSummary.slice(0, maxLength);
-      }
-    }
-    
-    return combinedSummary;
-  }
-
-  return summaries[0] || text.slice(0, maxLength);
-}
-
-// Helper function to extract text from PDF
-async function extractPDFText(base64Data: string): Promise<{ text: string; pageCount: number; metadata: any }> {
+// Dynamic import for pdf-parse to avoid build issues
+async function extractPDFText(buffer: Buffer): Promise<{ text: string; numpages: number; info: any }> {
   try {
-    // Remove the data URL prefix if present
-    const base64Clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-    const pdfBuffer = Buffer.from(base64Clean, 'base64');
-    
-    // Extract text using pdf-parse
-    const data = await pdf(pdfBuffer);
-    
-    return {
-      text: data.text,
-      pageCount: data.numpages,
-      metadata: {
-        title: data.info?.Title || 'N/A',
-        author: data.info?.Author || 'N/A',
-        subject: data.info?.Subject || 'N/A',
-        creator: data.info?.Creator || 'N/A',
-        producer: data.info?.Producer || 'N/A',
-        creationDate: data.info?.CreationDate || 'N/A',
-        modificationDate: data.info?.ModDate || 'N/A'
-      }
-    };
+    const pdfParse = require('../../../lib/pdf-parse-wrapper.js');
+    const data = await pdfParse(buffer);
+    return data;
   } catch (error) {
-    console.error('Error extracting PDF text:', error);
+    console.error('PDF parse error:', error);
     throw error;
+  }
+}
+
+
+// Helper function to fetch project context
+async function getProjectContext(): Promise<string> {
+  try {
+    // Use the correct port based on the environment
+    const baseUrl = process.env.NEXT_PUBLIC_URL || 
+                   (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
+    
+    const response = await fetch(`${baseUrl}/api/chat/projects`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch projects:', response.status);
+      return '';
+    }
+    
+    const data = await response.json();
+    
+    if (!data.projects || data.projects.length === 0) {
+      return '';
+    }
+    
+    // Create a concise summary of projects
+    let context = `\n\n### Current Mining Projects Database (${data.stats.totalProjects} projects):\n\n`;
+    
+    // Add summary stats
+    context += `**Overview:**\n`;
+    context += `- Total Projects: ${data.stats.totalProjects}\n`;
+    context += `- Average IRR: ${data.stats.avgIRR?.toFixed(1)}%\n`;
+    context += `- Total NPV: $${(data.stats.totalNPV / 1000).toFixed(1)}B\n\n`;
+    
+    // Add stage distribution
+    context += `**By Stage:**\n`;
+    Object.entries(data.stats.byStage || {}).forEach(([stage, count]) => {
+      context += `- ${stage}: ${count}\n`;
+    });
+    context += '\n';
+    
+    // Add commodity distribution
+    context += `**By Commodity:**\n`;
+    Object.entries(data.stats.byCommodity || {}).forEach(([commodity, count]) => {
+      context += `- ${commodity}: ${count}\n`;
+    });
+    context += '\n';
+    
+    // Add top projects by NPV
+    const topProjects = data.projects
+      .filter((p: any) => p.npv !== 'N/A')
+      .sort((a: any, b: any) => {
+        const npvA = parseFloat(a.npv.replace('$', '').replace('M', ''));
+        const npvB = parseFloat(b.npv.replace('$', '').replace('M', ''));
+        return npvB - npvA;
+      })
+      .slice(0, 5);
+    
+    if (topProjects.length > 0) {
+      context += `**Top Projects by NPV:**\n`;
+      topProjects.forEach((p: any) => {
+        context += `- ${p.name} (${p.company}): ${p.npv}, ${p.irr} IRR, ${p.location}\n`;
+      });
+    }
+    
+    return context;
+  } catch (error) {
+    console.error('Error getting project context:', error);
+    return '';
   }
 }
 
@@ -150,12 +106,28 @@ export async function POST(req: Request) {
         console.log("Processing image generation request");
         const lastMessage = messages[messages.length - 1].content;
         
-        // For image generation, we'll use a different endpoint or fallback
-        // Since gpt-5-nano doesn't support image generation, we'll return a message
+        // Create a mining-focused prompt
+        const miningPrompt = `Create a professional mining industry visualization: ${lastMessage}. 
+        The image should be technical, accurate, and suitable for mining industry presentations.
+        Focus on realistic depictions of mining operations, geological features, equipment, or data visualizations.`;
+        
+        const imageResponse = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: miningPrompt,
+          n: 1,
+          size: "1024x1024",
+        });
+        
+        const imageUrl = imageResponse.data?.[0]?.url;
+        
+        if (!imageUrl) {
+          throw new Error("Failed to generate image: No URL returned");
+        }
+        
         return NextResponse.json({
           id: Date.now().toString(),
           role: "assistant",
-          content: "Image generation is not available with the current model. Please describe what you'd like to visualize and I can provide detailed descriptions or data instead.",
+          content: `![Generated image](${imageUrl})`,
           createdAt: new Date()
         });
       } catch (error) {
@@ -185,10 +157,11 @@ export async function POST(req: Request) {
 - Geological and resource estimation
 - Mining finance and investment analysis
 - PDF document analysis and summarization
+- Real-time access to mining project database
 
-You can analyze technical documents, spreadsheets, and PDFs including lengthy technical reports. When analyzing documents, you extract key information such as project details, resource estimates, financial metrics, and technical specifications.
+You have access to a comprehensive database of mining projects with detailed metrics including NPV, IRR, CAPEX, production rates, and ESG scores. When analyzing documents, you extract key information such as project details, resource estimates, financial metrics, and technical specifications.
 
-Always provide data-driven insights and cite specific details from uploaded documents when available. Focus on accuracy and technical precision while remaining accessible.`
+Always provide data-driven insights and cite specific details from uploaded documents and the project database when available. Focus on accuracy and technical precision while remaining accessible.`
       });
     }
     
@@ -212,46 +185,96 @@ Always provide data-driven insights and cite specific details from uploaded docu
         } else if (file.fileType === 'application/pdf') {
           // Extract text from PDF
           try {
-            console.log(`Extracting text from PDF: ${file.fileName}`);
-            const pdfData = await extractPDFText(file.fileContent);
+            console.log(`Processing PDF: ${file.fileName}`);
             
-            console.log(`PDF has ${pdfData.pageCount} pages and ${pdfData.text.length} characters`);
+            // Remove the data:application/pdf;base64, prefix
+            const base64Data = file.fileContent.split(',')[1];
+            const pdfBuffer = Buffer.from(base64Data, 'base64');
             
-            // Add metadata
-            fileAnalysisPrompt += `\n### PDF Document: "${file.fileName}"\n`;
-            fileAnalysisPrompt += `**Metadata:**\n`;
-            fileAnalysisPrompt += `- Pages: ${pdfData.pageCount}\n`;
-            fileAnalysisPrompt += `- Title: ${pdfData.metadata.title}\n`;
-            fileAnalysisPrompt += `- Author: ${pdfData.metadata.author}\n`;
-            fileAnalysisPrompt += `- Subject: ${pdfData.metadata.subject}\n\n`;
-            
-            // Handle long PDFs (e.g., 400+ pages)
-            if (pdfData.text.length > 50000) {
-              console.log('PDF is very long, summarizing...');
-              fileAnalysisPrompt += `**Document Summary** (Original: ${pdfData.text.length} characters):\n\n`;
+            // Try to extract text using pdf-parse
+            try {
+              const pdfData = await extractPDFText(pdfBuffer);
+              const pageCount = pdfData.numpages;
+              const extractedText = pdfData.text;
               
-              const summary = await summarizeText(pdfData.text, 10000);
-              fileAnalysisPrompt += summary;
+              console.log(`PDF has ${pageCount} pages and ${extractedText.length} characters`);
+              console.log(`First 200 chars of extracted text: ${extractedText.substring(0, 200)}`);
+              
+              fileAnalysisPrompt += `\n### PDF Document: "${file.fileName}" (NI 43-101 Technical Report)\n\n`;
+              fileAnalysisPrompt += `**Document Info:**\n`;
+              fileAnalysisPrompt += `- Pages: ${pageCount}\n`;
+              fileAnalysisPrompt += `- Title: ${pdfData.info?.Title || file.fileName}\n`;
+              fileAnalysisPrompt += `- Author: ${pdfData.info?.Author || 'N/A'}\n\n`;
+              
+              // Handle text based on length
+              if (extractedText.length > 100000) {
+                // For very large documents, take key sections
+                console.log('Large PDF detected, extracting key sections...');
+                
+                // Extract first 20k chars (usually contains executive summary)
+                const beginning = extractedText.substring(0, 20000);
+                
+                // Try to find and extract key sections
+                const sections = {
+                  'executive summary': extractedText.match(/executive\s+summary[\s\S]{0,10000}/i)?.[0] || '',
+                  'mineral resource': extractedText.match(/mineral\s+resource[\s\S]{0,10000}/i)?.[0] || '',
+                  'economic analysis': extractedText.match(/economic\s+analysis[\s\S]{0,10000}/i)?.[0] || '',
+                  'conclusions': extractedText.match(/conclusions?[\s\S]{0,5000}/i)?.[0] || ''
+                };
+                
+                fileAnalysisPrompt += `**Document Content** (Key sections from ${extractedText.length} total characters):\n\n`;
+                fileAnalysisPrompt += `**Beginning of Document:**\n${beginning}\n\n`;
+                
+                Object.entries(sections).forEach(([section, content]) => {
+                  if (content) {
+                    fileAnalysisPrompt += `**${section.toUpperCase()}:**\n${content.substring(0, 5000)}\n\n`;
+                  }
+                });
+                
+                finalMessages.push({
+                  role: 'system',
+                  content: `Large NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been processed. Key sections including executive summary, mineral resources, economic analysis, and conclusions have been extracted for analysis.`
+                });
+              } else if (extractedText.length > 30000) {
+                // For medium documents, include more content
+                fileAnalysisPrompt += `**Document Content** (First 30,000 characters):\n\n${extractedText.substring(0, 30000)}\n\n... (Document continues)`;
+                
+                finalMessages.push({
+                  role: 'system',
+                  content: `NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been processed. The first portion of the document is available for analysis.`
+                });
+              } else {
+                // For smaller PDFs, include full text
+                fileAnalysisPrompt += `**Full Document Content:**\n\n${extractedText}\n\n`;
+                
+                finalMessages.push({
+                  role: 'system',
+                  content: `NI 43-101 Technical Report "${file.fileName}" (${pageCount} pages) has been fully extracted and is available for comprehensive analysis.`
+                });
+              }
+            } catch (textError) {
+              console.error('Text extraction failed, falling back to metadata:', textError);
+              
+              // Fallback to pdf-lib for metadata
+              const pdfDoc = await PDFDocument.load(pdfBuffer);
+              const pageCount = pdfDoc.getPageCount();
+              
+              fileAnalysisPrompt += `PDF Document "${file.fileName}":\n`;
+              fileAnalysisPrompt += `- Pages: ${pageCount}\n`;
+              fileAnalysisPrompt += `- Type: Likely NI 43-101 Technical Report\n`;
+              fileAnalysisPrompt += `Note: Text extraction encountered an issue. Please ensure the PDF is not encrypted or corrupted.\n\n`;
               
               finalMessages.push({
                 role: 'system',
-                content: `Large PDF document "${file.fileName}" (${pdfData.pageCount} pages) has been processed and summarized. The summary preserves key technical details, project information, and financial metrics. Use this summary to answer questions about the document.`
-              });
-            } else {
-              // For shorter PDFs, include the full text
-              fileAnalysisPrompt += `**Full Document Content:**\n\n${pdfData.text}\n\n`;
-              
-              finalMessages.push({
-                role: 'system',
-                content: `PDF document "${file.fileName}" (${pdfData.pageCount} pages) has been fully extracted and is available for analysis.`
+                content: `PDF Document: ${file.fileName} (${pageCount} pages). Text extraction failed, but this appears to be a mining technical report based on the filename.`
               });
             }
           } catch (error) {
             console.error('Error processing PDF:', error);
-            fileAnalysisPrompt += `PDF File "${file.fileName}": [Error extracting text: ${error}]\n\n`;
+            fileAnalysisPrompt += `PDF File "${file.fileName}": [Error: ${error}]\n\n`;
             finalMessages.push({
               role: 'system',
-              content: `PDF Document: ${file.fileName}. Unable to extract text from the PDF. The document may be corrupted, password-protected, or contain only images.`
+              content: `PDF Document: ${file.fileName}. Unable to process the file.`
             });
           }
         } else if (file.fileType === 'application/json' || file.fileName.endsWith('.json')) {
@@ -269,8 +292,9 @@ Always provide data-driven insights and cite specific details from uploaded docu
           } catch (e) {
             fileAnalysisPrompt += `JSON File "${file.fileName}": [Error parsing JSON: ${e}]\n\n`;
           }
-        } else if (file.fileType === 'text/csv' || file.fileName.endsWith('.csv')) {
-          // Handle CSV files
+        } else if (file.fileType === 'text/csv' || file.fileName.endsWith('.csv') || 
+                   file.fileType.includes('sheet') || file.fileName.endsWith('.xlsx')) {
+          // Handle CSV and Excel files (common for mining data)
           let csvContent = file.fileContent;
           // If it's base64 encoded, decode it
           if (file.fileContent.includes('base64,')) {
@@ -278,17 +302,18 @@ Always provide data-driven insights and cite specific details from uploaded docu
             csvContent = Buffer.from(base64Data, 'base64').toString('utf-8');
           }
           
-          // Parse CSV
-          const lines = csvContent.split('\n').filter((line: string) => line.trim());
-          const headers = lines[0]?.split(',').map((h: string) => h.trim());
-          
-          fileAnalysisPrompt += `CSV File "${file.fileName}" (mining data/assay results/financial model):\n`;
-          fileAnalysisPrompt += `Headers: ${headers?.join(', ') || 'No headers found'}\n`;
-          fileAnalysisPrompt += `Total rows: ${lines.length - 1}\n`;
-          
-          // Include more rows for analysis
-          const sampleSize = Math.min(50, lines.length);
-          fileAnalysisPrompt += `Sample data (first ${sampleSize} rows):\n\`\`\`\n${lines.slice(0, sampleSize).join('\n')}\n\`\`\`\n\n`;
+          if (file.fileName.endsWith('.xlsx')) {
+            fileAnalysisPrompt += `Excel File "${file.fileName}": [Excel parsing will be implemented - for mining data, please export as CSV]\n\n`;
+          } else {
+            // Parse CSV
+            const lines = csvContent.split('\n').filter((line: string) => line.trim());
+            const headers = lines[0]?.split(',').map((h: string) => h.trim());
+            
+            fileAnalysisPrompt += `CSV File "${file.fileName}" (likely contains mining project data, assay results, or financial models):\n`;
+            fileAnalysisPrompt += `Headers: ${headers?.join(', ') || 'No headers found'}\n`;
+            fileAnalysisPrompt += `Total rows: ${lines.length - 1}\n`;
+            fileAnalysisPrompt += `Sample data (first 10 rows):\n\`\`\`\n${lines.slice(0, 11).join('\n')}\n\`\`\`\n\n`;
+          }
         } else {
           // For other text files
           let textContent = file.fileContent;
@@ -298,18 +323,14 @@ Always provide data-driven insights and cite specific details from uploaded docu
             textContent = Buffer.from(base64Data, 'base64').toString('utf-8');
           }
           
-          // For long text files, summarize if needed
-          if (textContent.length > 10000) {
-            const summary = await summarizeText(textContent, 5000);
-            fileAnalysisPrompt += `Text File "${file.fileName}" (summarized from ${textContent.length} characters):\n\`\`\`\n${summary}\n\`\`\`\n\n`;
-          } else {
-            fileAnalysisPrompt += `Text File "${file.fileName}":\n\`\`\`\n${textContent}\n\`\`\`\n\n`;
-          }
+          fileAnalysisPrompt += `Text File "${file.fileName}":\n\`\`\`\n${textContent.substring(0, 3000)}${textContent.length > 3000 ? '\n... (truncated)' : ''}\n\`\`\`\n\n`;
         }
       }
       
       // Add the file analysis prompt if we have content
       if (fileAnalysisPrompt !== 'The user has uploaded the following files:\n\n') {
+        console.log('Adding file analysis prompt to messages, length:', fileAnalysisPrompt.length);
+        console.log('File analysis prompt preview:', fileAnalysisPrompt.substring(0, 500) + '...');
         finalMessages.push({
           role: 'system',
           content: fileAnalysisPrompt
@@ -330,20 +351,39 @@ Always provide data-driven insights and cite specific details from uploaded docu
       });
     }
     
-    console.log("Sending AIMLAPI request with message count:", finalMessages.length);
+    // Add project database context
+    const projectContext = await getProjectContext();
+    if (projectContext) {
+      finalMessages.push({
+        role: 'system',
+        content: `You have access to the following mining project database information:${projectContext}\n\nUse this data to provide context and comparisons when discussing mining projects, feasibility, or investment opportunities.`
+      });
+    }
     
-    // Call AIMLAPI with gpt-5-nano
-    const response = await callAIMLAPI(
-      finalMessages.map(m => ({
-        role: m.role,
-        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
-      })),
-      4096,
-      0.7
-    );
+    console.log("Sending chat completion request with message count:", finalMessages.length);
+    console.log("Final messages:", finalMessages.map(m => ({
+      role: m.role,
+      contentLength: m.content.length,
+      contentPreview: m.content.substring(0, 100) + '...'
+    })));
+    
+    // Use GPT-4o-mini for all requests
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: finalMessages.map(m => {
+        // Handle special case for images
+        if (m.content && typeof m.content !== 'string') {
+          return { role: m.role, content: m.content };
+        }
+        return { role: m.role, content: m.content };
+      }),
+      stream: false,
+      max_tokens: 4096,
+      temperature: 0.7,
+    });
     
     const content = response.choices[0]?.message?.content || "No response generated";
-    console.log("AIMLAPI response received, content length:", content.length);
+    console.log("Chat completion response received, content length:", content.length);
     
     // Create the response object
     const responseBody = {
@@ -356,14 +396,27 @@ Always provide data-driven insights and cite specific details from uploaded docu
     console.log("Sending response:", JSON.stringify(responseBody).substring(0, 200) + "...");
     
     return NextResponse.json(responseBody);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Chat error:", error);
+    
+    // Provide more specific error messages
+    let errorMessage = "I'm sorry, there was an error processing your request.";
+    
+    if (error?.message?.includes('API key')) {
+      errorMessage = "There's an issue with the API configuration. Please check your API keys in the environment settings.";
+    } else if (error?.message?.includes('rate limit')) {
+      errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
+    } else if (error?.message?.includes('timeout')) {
+      errorMessage = "The request timed out. This might be due to processing large files. Please try again with a smaller file or simpler query.";
+    } else if (error?.response?.data?.error) {
+      errorMessage = `API Error: ${error.response.data.error.message || error.response.data.error}`;
+    }
     
     // Return an error response
     return NextResponse.json({
       id: Date.now().toString(),
       role: "assistant", 
-      content: "I'm sorry, there was an error processing your request. Please try again later.",
+      content: errorMessage,
       createdAt: new Date()
     }, { status: 500 });
   }

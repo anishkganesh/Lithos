@@ -51,6 +51,7 @@
     "@supabase/supabase-js": "^2.53.0",
     "@tabler/icons-react": "latest",
     "@tanstack/react-table": "latest",
+    "@types/pdf-parse": "^1.1.5",
     "autoprefixer": "^10.4.20",
     "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",

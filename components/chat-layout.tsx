@@ -46,7 +46,7 @@ export function ChatLayout({ children }: ChatLayoutProps) {
       <div 
         className={cn(
           "transition-all duration-300 ease-in-out flex-grow h-full",
-          isFullscreen ? "hidden" : isOpen ? "md:pr-[518px]" : ""
+          isFullscreen ? "hidden" : isOpen ? "md:pr-[600px]" : ""
         )}
         style={{ 
           width: isFullscreen ? "0" : "100%",
@@ -148,7 +148,7 @@ export function ChatLayout({ children }: ChatLayoutProps) {
       <div 
         className={cn(
           "fixed right-0 top-0 z-40 h-full transition-all duration-300 ease-in-out",
-          chatMode === "sidebar" ? "translate-x-0 opacity-100 w-[518px] max-w-[85vw]" : "translate-x-full opacity-0 pointer-events-none w-0"
+          chatMode === "sidebar" ? "translate-x-0 opacity-100 w-[600px] max-w-[90vw]" : "translate-x-full opacity-0 pointer-events-none w-0"
         )}
         style={{ backgroundColor: "hsl(var(--background))" }} // Match background color
       >
