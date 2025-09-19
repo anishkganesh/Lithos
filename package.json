@@ -12,7 +12,17 @@
     "test:scraper:real": "tsx scripts/test-real-scraper.ts",
     "populate:projects": "tsx scripts/populate-real-projects.ts",
     "demo:scraper": "tsx scripts/demo-scraper-pipeline.ts",
-    "test:agent-v2": "tsx scripts/test-mining-agent-v2.ts"
+    "test:agent-v2": "tsx scripts/test-mining-agent-v2.ts",
+    "test:edgar": "tsx scripts/test-edgar-scraper.ts",
+    "edgar:stream": "tsx scripts/real-time-edgar-stream.ts",
+    "edgar:technical": "tsx scripts/ni43-101-stream.ts",
+    "edgar:docs": "tsx scripts/sec-mining-docs-stream.ts",
+    "edgar:safe": "tsx scripts/sec-compliant-stream.ts",
+    "mining:docs": "tsx scripts/mining-docs-alternative.ts",
+    "edgar:ex96": "tsx scripts/ex96-scraper.ts",
+    "edgar:continuous": "tsx scripts/edgar-ex96-continuous.ts",
+    "edgar:realtime": "tsx scripts/edgar-ex96-realtime.ts",
+    "edgar:fast": "tsx scripts/edgar-ex96-fast.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "latest",
@@ -80,6 +90,7 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
+    "xlsx": "^0.18.5",
     "zod": "3.25.67"
   },
   "devDependencies": {

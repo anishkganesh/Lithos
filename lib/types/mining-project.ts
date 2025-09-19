@@ -55,6 +55,12 @@ export interface MiningProject {
   // Additional metadata
   lastUpdated: string;
   dataQuality: 'High' | 'Medium' | 'Low';
+
+  // Watchlist
+  watchlist?: boolean;
+  watchlisted_at?: string;
+  generated_image_url?: string;
+  company?: string;
 }
 
 export interface ProjectFilter {

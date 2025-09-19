@@ -19,6 +19,15 @@ interface Chat {
   updatedAt: string;
 }
 
+interface AppContext {
+  projects: any[];
+  totalProjects: number;
+  totalCompanies: number;
+  totalFilings: number;
+  totalDeals: number;
+  lastUpdated: string;
+}
+
 interface GlobalChatContextType {
   // Current chat state
   messages: Message[];
@@ -29,7 +38,7 @@ interface GlobalChatContextType {
   setInput: React.Dispatch<React.SetStateAction<string>>;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  
+
   // Tool states
   isGeneratingImage: boolean;
   setIsGeneratingImage: (generating: boolean) => void;
@@ -39,30 +48,36 @@ interface GlobalChatContextType {
   setSearchResults: (results: any[] | null) => void;
   uploadedFiles: any[];
   setUploadedFiles: (files: any[]) => void;
-  
+
   // Chat history
   chatHistory: Chat[];
   setChatHistory: (history: Chat[]) => void;
   selectedChatId: string | null;
   setSelectedChatId: (id: string) => void;
-  
+
   // Functions
   createNewChat: () => void;
   loadChat: (chatId: string) => Promise<void>;
   saveCurrentChat: () => Promise<void>;
   loadChatHistory: () => Promise<void>;
-  
+
   // User info
   currentUser: any;
   setCurrentUser: (user: any) => void;
+
+  // App context
+  appContext: AppContext | null;
 }
 
 const GlobalChatContext = createContext<GlobalChatContextType | undefined>(undefined)
 
 export function GlobalChatProvider({ children }: { children: React.ReactNode }) {
+  // State for app context (needed before getInitialMessages)
+  const [appContext, setAppContext] = useState<AppContext | null>(null)
+
   // Initialize with system message for mining
   const getInitialMessages = (): Message[] => {
-    const systemContent = `You are Lithos AI, an expert mining industry assistant with real-time web search capabilities. You specialize in:
+    let systemContent = `You are Lithos AI, an expert mining industry assistant with real-time web search capabilities. You specialize in:
 
 - Mining project analysis and discovery
 - Commodity market trends and pricing
@@ -74,7 +89,21 @@ export function GlobalChatProvider({ children }: { children: React.ReactNode }) 
 You can search the web for current mining news, analyze technical documents and spreadsheets, generate mining-related visualizations, and provide up-to-date industry insights. When web search is enabled, you have access to current information from mining news sites, technical report databases (SEDAR, EDGAR), commodity exchanges, and industry sources.
 
 Always provide data-driven insights and cite sources when available. Focus on accuracy and technical precision while remaining accessible.`;
-    
+
+    // Add app context if available
+    if (appContext) {
+      systemContent += `\n\n**Current Lithos Database Context** (use when relevant to user queries):
+- Total Projects: ${appContext.totalProjects}
+- Mining Companies: ${appContext.totalCompanies}
+- Technical Filings: ${appContext.totalFilings}
+- M&A/JV Deals: ${appContext.totalDeals}
+- Last Updated: ${new Date(appContext.lastUpdated).toLocaleString()}
+
+Top projects in database include: ${appContext.projects.slice(0, 5).map(p => `${p.project_name} (${p.company_name})`).join(', ')}, and many more.
+
+Note: This context is available for reference but should only be mentioned when directly relevant to the user's query.`;
+    }
+
     return [
       {
         id: "1",
@@ -245,6 +274,82 @@ Always provide data-driven insights and cite sources when available. Focus on ac
     }
   }, [])
 
+  // Fetch app context
+  useEffect(() => {
+    const fetchAppContext = async () => {
+      try {
+        // Fetch projects with key fields
+        const { data: projects, count: projectCount } = await supabase
+          .from('projects')
+          .select('id, project_name, company_name, jurisdiction, country, stage, primary_commodity, post_tax_npv_usd_m, irr_percent, capex_usd_m, mine_life_years')
+          .limit(100) // Get top 100 projects for context
+
+        // Fetch unique companies
+        const { data: companies } = await supabase
+          .from('projects')
+          .select('company_name')
+
+        const uniqueCompanies = new Set(companies?.map((c: any) => c.company_name).filter(Boolean))
+
+        // Mock filing and deal counts based on projects
+        const filingsCount = (projectCount || 0) * 3
+        const dealsCount = Math.floor((projectCount || 0) * 0.15)
+
+        const newContext = {
+          projects: projects || [],
+          totalProjects: projectCount || 0,
+          totalCompanies: uniqueCompanies.size,
+          totalFilings: filingsCount,
+          totalDeals: dealsCount,
+          lastUpdated: new Date().toISOString()
+        }
+
+        setAppContext(newContext)
+
+        // Update system message with context if messages exist
+        setMessages(prev => {
+          if (prev.length > 0 && prev[0].role === 'system') {
+            const updatedMessages = [...prev]
+            let systemContent = `You are Lithos AI, an expert mining industry assistant with real-time web search capabilities. You specialize in:
+
+- Mining project analysis and discovery
+- Commodity market trends and pricing
+- Technical mining reports and feasibility studies (NI 43-101, JORC, etc.)
+- Environmental and ESG considerations in mining
+- Geological and resource estimation
+- Mining finance and investment analysis
+
+You can search the web for current mining news, analyze technical documents and spreadsheets, generate mining-related visualizations, and provide up-to-date industry insights. When web search is enabled, you have access to current information from mining news sites, technical report databases (SEDAR, EDGAR), commodity exchanges, and industry sources.
+
+Always provide data-driven insights and cite sources when available. Focus on accuracy and technical precision while remaining accessible.
+
+**Current Lithos Database Context** (use when relevant to user queries):
+- Total Projects: ${newContext.totalProjects}
+- Mining Companies: ${newContext.totalCompanies}
+- Technical Filings: ${newContext.totalFilings}
+- M&A/JV Deals: ${newContext.totalDeals}
+- Last Updated: ${new Date(newContext.lastUpdated).toLocaleString()}
+
+Top projects in database include: ${newContext.projects.slice(0, 5).map((p: any) => `${p.project_name} (${p.company_name})`).join(', ')}, and many more.
+
+Note: This context is available for reference but should only be mentioned when directly relevant to the user's query.`;
+
+            updatedMessages[0] = { ...updatedMessages[0], content: systemContent }
+            return updatedMessages
+          }
+          return prev
+        })
+      } catch (error) {
+        console.error('Error fetching app context:', error)
+      }
+    }
+
+    fetchAppContext()
+    // Refresh context every 5 minutes
+    const interval = setInterval(fetchAppContext, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   const value = {
     messages,
     setMessages,
@@ -271,7 +376,8 @@ Always provide data-driven insights and cite sources when available. Focus on ac
     saveCurrentChat,
     loadChatHistory,
     currentUser,
-    setCurrentUser
+    setCurrentUser,
+    appContext
   }
 
   return (

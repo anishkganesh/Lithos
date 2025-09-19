@@ -14,6 +14,7 @@ interface ProjectDetailPanelProps {
   projects: MiningProject[]
   mode: "single" | "comparison"
   onProjectSelect?: (projectId: string) => void
+  onUpdate?: () => void
 }
 
 export function ProjectDetailPanel({
@@ -102,9 +103,10 @@ export function ProjectDetailPanel({
         {/* Content */}
         <div className="h-[calc(100%-73px)] overflow-y-auto">
           {mode === "single" ? (
-            <SingleProjectView 
-              project={projects[0]} 
+            <SingleProjectView
+              project={projects[0]}
               onProjectSelect={onProjectSelect}
+              onClose={onClose}
             />
           ) : (
             <ProjectComparisonView projects={projects} />

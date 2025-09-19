@@ -23,16 +23,16 @@ interface ContextMenuChatProps {
 }
 
 export function ContextMenuChat({ children, data, dataType, context }: ContextMenuChatProps) {
-  const { setInput, setIsOpen } = useChat()
-  const { input } = useGlobalChat()
+  const { toggleChat } = useChat()
+  const { setInput } = useGlobalChat()
 
   const generateQuery = (action: string) => {
     let query = ''
-    
+
     switch (dataType) {
       case 'project':
         const project = data
-        query = action === 'explain' 
+        query = action === 'explain'
           ? `Explain the ${project.name} project in ${project.location}. Why is the NPV ${project.npv}M and IRR ${project.irr}%?`
           : action === 'compare'
           ? `Compare ${project.name} with similar ${project.commodity} projects in the same region`
@@ -40,12 +40,16 @@ export function ContextMenuChat({ children, data, dataType, context }: ContextMe
           ? `Analyze the investment potential of ${project.name} considering its ${project.stage} stage and ${project.irr}% IRR`
           : `What are the key risks for ${project.name} given its ${project.riskLevel} risk rating?`
         break
-        
+
       case 'metric':
+        // Extract the actual value from the data object
+        const metricValue = typeof data === 'object' ?
+          (data.totalProjects || data.totalCompanies || data.totalFilings || data.totalDeals || JSON.stringify(data)) :
+          data
         query = action === 'explain'
-          ? `Explain why this ${context || 'metric'} is ${data}. What factors influence this value?`
+          ? `Explain why the ${context || 'metric'} is ${metricValue}. What factors influence this value?`
           : action === 'benchmark'
-          ? `How does ${data} compare to industry benchmarks for ${context || 'this metric'}?`
+          ? `How does ${metricValue} compare to industry benchmarks for ${context || 'this metric'}?`
           : `Show me trends and patterns for ${context || 'this metric'} across the mining industry`
         break
         
@@ -72,22 +76,7 @@ export function ContextMenuChat({ children, data, dataType, context }: ContextMe
   const handleAction = (action: string) => {
     const query = generateQuery(action)
     setInput(query)
-    setIsOpen('fullscreen')
-    
-    // Trigger the chat to open with the query
-    setTimeout(() => {
-      const chatInput = document.querySelector('textarea[placeholder*="Ask about mining"]') as HTMLTextAreaElement
-      if (chatInput) {
-        chatInput.value = query
-        chatInput.dispatchEvent(new Event('input', { bubbles: true }))
-        
-        // Auto-submit the query
-        const submitButton = chatInput.parentElement?.querySelector('button[type="submit"]')
-        if (submitButton) {
-          submitButton.click()
-        }
-      }
-    }, 100)
+    toggleChat()  // Open the chat panel
   }
 
   return (

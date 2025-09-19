@@ -16,6 +16,7 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconWorld,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from '@/components/nav-documents'
@@ -38,8 +39,13 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/",
       icon: IconDashboard,
+    },
+    {
+      title: "Global Projects",
+      url: "/global-projects",
+      icon: IconWorld,
     },
     {
       title: "Lifecycle",

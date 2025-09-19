@@ -1,19 +1,27 @@
 'use client'
 
-import React from "react"
+import React, { useState } from "react"
 import { MiningProject } from "@/lib/types/mining-project"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { ExternalLink, AlertTriangle, FileText, Users } from "lucide-react"
+import { ExternalLink, AlertTriangle, FileText, Users, Bookmark, BookmarkCheck, ImageIcon, MessageSquare, Loader2 } from "lucide-react"
 import { SensitivityAnalysis } from "./sensitivity-analysis"
 import { cn } from "@/lib/utils"
+import { ExportDropdown, ExportFormat } from "@/components/ui/export-dropdown"
+import { exportProjects } from "@/lib/export-utils"
+import { toast } from "sonner"
+import { Toaster } from "@/components/ui/toaster"
+import { supabase } from "@/lib/supabase/client"
+import { useGlobalChat } from "@/lib/global-chat-context"
+import { useChat } from "@/lib/chat-context"
 
 interface SingleProjectViewProps {
   project: MiningProject
   onProjectSelect?: (projectId: string) => void
+  onClose?: () => void
 }
 
 const getRiskBadgeColor = (risk: string) => {
@@ -29,13 +37,137 @@ const getRiskBadgeColor = (risk: string) => {
   }
 }
 
-export function SingleProjectView({ project, onProjectSelect }: SingleProjectViewProps) {
+export function SingleProjectView({ project, onProjectSelect, onClose }: SingleProjectViewProps) {
+  const [updatingWatchlist, setUpdatingWatchlist] = useState(false)
+  const [generatingImage, setGeneratingImage] = useState(false)
+  const [isWatchlisted, setIsWatchlisted] = useState(project.watchlist || false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(project.generated_image_url || null)
+  const { setInput } = useGlobalChat()
+  const { toggleChat } = useChat()
+
+  // Update local state when project prop changes
+  React.useEffect(() => {
+    setIsWatchlisted(project.watchlist || false)
+    setGeneratedImageUrl(project.generated_image_url || null)
+  }, [project.watchlist, project.generated_image_url])
+
   const similarProjects = [
     { id: '1', name: 'Similar Project 1', npv: 3200, irr: 28 },
     { id: '2', name: 'Similar Project 2', npv: 2800, irr: 24 },
     { id: '3', name: 'Similar Project 3', npv: 4100, irr: 31 },
     { id: '4', name: 'Similar Project 4', npv: 2500, irr: 22 }
   ]
+
+  const handleToggleWatchlist = async () => {
+    try {
+      setUpdatingWatchlist(true)
+      const newWatchlistStatus = !isWatchlisted
+
+      console.log('Updating watchlist for project:', project.id, 'to:', newWatchlistStatus)
+
+      const { data, error } = await supabase
+        .from('projects')
+        .update({
+          watchlist: newWatchlistStatus,
+          watchlisted_at: newWatchlistStatus ? new Date().toISOString() : null
+        })
+        .eq('id', project.id)
+        .select()
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      console.log('Update successful:', data)
+
+      // Update local state immediately for visual feedback
+      setIsWatchlisted(newWatchlistStatus)
+
+      toast.success(newWatchlistStatus ? 'Added to watchlist' : 'Removed from watchlist')
+
+      // Trigger refresh
+      window.dispatchEvent(new CustomEvent('refreshProjects'))
+    } catch (error: any) {
+      console.error('Error updating watchlist:', error)
+      toast.error(`Failed to update watchlist: ${error.message || 'Unknown error'}`)
+    } finally {
+      setUpdatingWatchlist(false)
+    }
+  }
+
+  const handleExport = (format: ExportFormat) => {
+    exportProjects([project], format, `${project.project}-details`)
+    toast.success(`Exported project as ${format.toUpperCase()}`)
+  }
+
+  const handleGenerateImage = async () => {
+    try {
+      setGeneratingImage(true)
+
+      const response = await fetch('/api/projects/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectId: project.id })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('API Error:', data)
+        throw new Error(data.error || data.details || 'Failed to generate image')
+      }
+
+      const { imageUrl } = data
+
+      // Update local state with the generated image
+      setGeneratedImageUrl(imageUrl)
+
+      toast.success('Image generated successfully')
+
+      // Trigger refresh after a small delay to ensure database is updated
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('refreshProjects'))
+      }, 500)
+    } catch (error: any) {
+      console.error('Error generating image:', error)
+      toast.error(error.message || 'Failed to generate image')
+    } finally {
+      setGeneratingImage(false)
+    }
+  }
+
+  const handleAddToChat = () => {
+    const projectContext = `Analyze this mining project:
+
+Project: ${project.project}
+Company: ${project.company || 'N/A'}
+Stage: ${project.stage}
+Location: ${project.jurisdiction}
+Commodities: ${project.primaryCommodity}
+NPV: $${project.postTaxNPV?.toLocaleString() || 'N/A'}M
+IRR: ${project.irr || 'N/A'}%
+CAPEX: $${project.capex?.toLocaleString() || 'N/A'}M
+Mine Life: ${project.mineLife} years
+AISC: $${project.aisc}/t
+
+What is your assessment of this project?`
+
+    // Set the input in the chat
+    setInput(projectContext)
+
+    // Close the detail panel if there's an onClose handler
+    if (onClose) {
+      onClose()
+    }
+
+    // Open the chat panel
+    toggleChat()
+
+    toast.success('Project added to chat')
+  }
 
   return (
     <div className="space-y-4 p-6">
@@ -45,13 +177,73 @@ export function SingleProjectView({ project, onProjectSelect }: SingleProjectVie
           <div>
             <h2 className="text-xl font-medium">{project.project}</h2>
             <p className="text-sm text-muted-foreground">
-              {project.investorsOwnership.split("(")[0].trim()} • {project.jurisdiction}
+              {String(project.investorsOwnership || 'Unknown').split("(")[0].trim() || 'Unknown'} • {project.jurisdiction}
             </p>
           </div>
           <Badge className={cn("text-xs", getRiskBadgeColor(project.riskLevel))}>
             {project.riskLevel} Risk
           </Badge>
         </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button
+            variant={isWatchlisted ? "default" : "outline"}
+            size="sm"
+            onClick={handleToggleWatchlist}
+            disabled={updatingWatchlist}
+          >
+            {updatingWatchlist ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : isWatchlisted ? (
+              <BookmarkCheck className="h-4 w-4 mr-2 fill-current" />
+            ) : (
+              <Bookmark className="h-4 w-4 mr-2" />
+            )}
+            {isWatchlisted ? 'Remove from Watchlist' : 'Add to Watchlist'}
+          </Button>
+
+          <ExportDropdown onExport={handleExport} size="sm" />
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateImage}
+            disabled={generatingImage}
+          >
+            {generatingImage ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <ImageIcon className="h-4 w-4 mr-2" />
+            )}
+            Generate Image
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddToChat}
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Add to Chat
+          </Button>
+        </div>
+
+        {/* Generated Image Display */}
+        {generatedImageUrl && (
+          <div className="mt-4">
+            <div className="relative rounded-lg overflow-hidden border">
+              <img
+                src={generatedImageUrl}
+                alt={`AI visualization for ${project.project}`}
+                className="w-full h-auto"
+              />
+              <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                AI Generated
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <Separator />
@@ -147,7 +339,7 @@ export function SingleProjectView({ project, onProjectSelect }: SingleProjectVie
       </div>
 
       {/* Risk Alerts */}
-      {project.redFlags && typeof project.redFlags === 'number' && project.redFlags > 0 && (
+      {typeof project.redFlags === 'number' && project.redFlags > 0 ? (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -156,7 +348,7 @@ export function SingleProjectView({ project, onProjectSelect }: SingleProjectVie
             </span>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="w-full">
@@ -288,6 +480,7 @@ export function SingleProjectView({ project, onProjectSelect }: SingleProjectVie
           <Button className="flex-1" variant="outline" size="sm">Export Analysis</Button>
         </div>
       </div>
+      <Toaster />
     </div>
   )
 } 

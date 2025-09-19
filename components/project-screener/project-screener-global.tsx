@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, Download, Eye, Filter, Plus, Search } from "lucide-react"
+import { ArrowUpDown, ChevronDown, Download, Eye, Filter, Plus, Search, Bookmark, BookmarkCheck } from "lucide-react"
 import { ContextMenuChat } from "@/components/ui/context-menu-chat"
 
 import { Button } from "@/components/ui/button"
@@ -38,8 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { MiningProject, ProjectStage, Commodity, RiskLevel } from "@/lib/types/mining-project"
-import { useWatchlistProjects } from "@/lib/hooks/use-watchlist-projects"
-import Link from 'next/link'
+import { useProjects } from "@/lib/hooks/use-projects"
 import { ProjectFilters } from "./project-filters"
 import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { ProjectDetailPanel } from "@/components/project-detail-panel"
@@ -49,6 +48,11 @@ import { MiningAgentV2Button } from "@/components/mining-agent-v2-button"
 import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { InfoTooltip, miningMetrics, stageDefinitions } from "@/components/ui/info-tooltip"
+import { ExportDropdown, ExportFormat } from "@/components/ui/export-dropdown"
+import { exportProjects } from "@/lib/export-utils"
+import { toast } from "sonner"
+import { Toaster } from "@/components/ui/toaster"
+import { supabase } from "@/lib/supabase/client"
 
 const defaultVisibleColumns = [
   "select",
@@ -116,8 +120,8 @@ interface DetailPanelState {
   selectedProjects: MiningProject[];
 }
 
-export function ProjectScreener() {
-  const { projects: data, loading, error, refetch } = useWatchlistProjects()
+export function ProjectScreenerGlobal() {
+  const { projects: data, loading, error, refetch } = useProjects()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -130,6 +134,9 @@ export function ProjectScreener() {
   const [detailPanelMode, setDetailPanelMode] = useState<"single" | "comparison">("single")
   const [miningAgentRunning, setMiningAgentRunning] = useState(false)
   const [miningAgentProgress, setMiningAgentProgress] = useState<string>("")
+
+  // Additional state for global projects features
+  const [updatingWatchlist, setUpdatingWatchlist] = useState<string | null>(null)
 
   // Listen for refresh events
   useEffect(() => {
@@ -188,6 +195,45 @@ export function ProjectScreener() {
     setMiningAgentProgress(message || "")
   }
 
+  // Watchlist handler
+  const handleToggleWatchlist = async (project: MiningProject) => {
+    try {
+      setUpdatingWatchlist(project.id)
+
+      console.log('Updating watchlist for project:', project.id, 'to:', !project.watchlist)
+
+      const { data, error } = await supabase
+        .from('projects')
+        .update({
+          watchlist: !project.watchlist,
+          watchlisted_at: !project.watchlist ? new Date().toISOString() : null
+        })
+        .eq('id', project.id)
+        .select()
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      console.log('Update successful:', data)
+
+      toast.success(project.watchlist ? 'Removed from watchlist' : 'Added to watchlist')
+      await refetch()
+    } catch (error: any) {
+      console.error('Error updating watchlist:', error)
+      toast.error(`Failed to update watchlist: ${error.message || 'Unknown error'}`)
+    } finally {
+      setUpdatingWatchlist(null)
+    }
+  }
+
+  const handleExport = (format: ExportFormat) => {
+    const dataToExport = table.getFilteredRowModel().rows.map(row => row.original)
+    exportProjects(dataToExport, format, 'global-projects')
+    toast.success(`Exported ${dataToExport.length} projects as ${format.toUpperCase()}`)
+  }
+
   const columns: ColumnDef<MiningProject>[] = [
     {
       id: "select",
@@ -212,13 +258,43 @@ export function ProjectScreener() {
       enableHiding: false,
     },
     {
+      id: "watchlist",
+      header: "",
+      cell: ({ row }) => {
+        const project = row.original
+        const isUpdating = updatingWatchlist === project.id
+
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleToggleWatchlist(project)
+            }}
+            disabled={isUpdating}
+            className="hover:bg-transparent"
+          >
+            {isUpdating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : project.watchlist ? (
+              <BookmarkCheck className="h-4 w-4 fill-foreground" />
+            ) : (
+              <Bookmark className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            )}
+          </Button>
+        )
+      },
+      size: 50,
+    },
+    {
       accessorKey: "project",
       header: "Project",
       cell: ({ row }) => (
         <ContextMenuChat
           data={row.original}
           dataType="project"
-          context={row.original.name}
+          context={row.original.project || row.original.name || 'Project'}
         >
           <a
             href="#"
@@ -228,7 +304,7 @@ export function ProjectScreener() {
             }}
             className="font-medium text-blue-600 hover:underline"
           >
-            {row.getValue("project")}
+            {row.getValue("project") || 'Unknown'}
           </a>
         </ContextMenuChat>
       ),
@@ -246,7 +322,7 @@ export function ProjectScreener() {
           </Button>
         )
       },
-      cell: ({ row }) => <div className="text-center">{row.getValue("stage")}</div>,
+      cell: ({ row }) => <div className="text-center">{row.getValue("stage") || 'Unknown'}</div>,
     },
     {
       accessorKey: "mineLife",
@@ -261,7 +337,7 @@ export function ProjectScreener() {
           </Button>
         )
       },
-      cell: ({ row }) => <div className="text-center">{row.getValue("mineLife")}</div>,
+      cell: ({ row }) => <div className="text-center">{row.getValue("mineLife") || 0}</div>,
     },
     {
       accessorKey: "postTaxNPV",
@@ -270,25 +346,26 @@ export function ProjectScreener() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="flex items-center"
           >
-            <InfoTooltip content={miningMetrics.npv.description}>
-              Post-tax NPV (USD M)
-            </InfoTooltip>
+            <span>Post-tax NPV (USD M)</span>
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("postTaxNPV"))
+        const value = row.getValue("postTaxNPV")
+        const amount = parseFloat(String(value || 0))
+        const safeAmount = isNaN(amount) ? 0 : amount
         const formatted = new Intl.NumberFormat("en-US", {
           style: "currency",
           currency: "USD",
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
-        }).format(amount)
+        }).format(safeAmount)
         return (
           <ContextMenuChat
-            data={amount}
+            data={safeAmount}
             dataType="metric"
             context={`NPV of ${row.original.project} project`}
           >
@@ -311,15 +388,17 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => {
-        const irr = parseFloat(row.getValue("irr"))
+        const value = row.getValue("irr")
+        const irr = parseFloat(String(value || 0))
+        const safeIrr = isNaN(irr) ? 0 : irr
         return (
           <ContextMenuChat
-            data={irr}
+            data={safeIrr}
             dataType="metric"
             context={`IRR of ${row.original.project} project`}
           >
-            <div className={cn("text-center", getIRRColor(irr))}>
-              {irr.toFixed(1)}%
+            <div className={cn("text-center", getIRRColor(safeIrr))}>
+              {safeIrr.toFixed(1)}%
             </div>
           </ContextMenuChat>
         )
@@ -338,9 +417,11 @@ export function ProjectScreener() {
           </Button>
         )
       },
-      cell: ({ row }) => (
-        <div className="text-center">{parseFloat(row.getValue("paybackYears")).toFixed(1)}</div>
-      ),
+      cell: ({ row }) => {
+        const value = row.getValue("paybackYears")
+        const parsed = parseFloat(String(value || 0))
+        return <div className="text-center">{isNaN(parsed) ? 0 : parsed.toFixed(1)}</div>
+      },
     },
     {
       accessorKey: "capex",
@@ -356,11 +437,13 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("capex"))
+        const value = row.getValue("capex")
+        const amount = parseFloat(String(value || 0))
+        const safeAmount = isNaN(amount) ? 0 : amount
         const formatted = new Intl.NumberFormat("en-US", {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
-        }).format(amount)
+        }).format(safeAmount)
         return <div className="text-right">${formatted}</div>
       },
     },
@@ -378,27 +461,32 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("aisc"))
-        return <div className="text-right">${amount.toFixed(2)}/t</div>
+        const value = row.getValue("aisc")
+        const amount = parseFloat(String(value || 0))
+        const safeAmount = isNaN(amount) ? 0 : amount
+        return <div className="text-right">${safeAmount.toFixed(2)}/t</div>
       },
     },
     {
       accessorKey: "primaryCommodity",
       header: "Primary Commodity",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="font-normal">
-          {row.getValue("primaryCommodity")}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const commodity = row.getValue("primaryCommodity")
+        return (
+          <Badge variant="outline" className="font-normal">
+            {commodity || 'Unknown'}
+          </Badge>
+        )
+      },
     },
     {
       accessorKey: "jurisdiction",
       header: "Jurisdiction & Risk",
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-          <span className="text-sm">{row.original.jurisdiction}</span>
-          <Badge className={cn("w-fit", getRiskBadgeColor(row.original.riskLevel))}>
-            {row.original.riskLevel}
+          <span className="text-sm">{row.original.jurisdiction || 'Unknown'}</span>
+          <Badge className={cn("w-fit", getRiskBadgeColor(row.original.riskLevel || 'Medium'))}>
+            {row.original.riskLevel || 'Medium'}
           </Badge>
         </div>
       ),
@@ -406,28 +494,40 @@ export function ProjectScreener() {
     {
       accessorKey: "investorsOwnership",
       header: "Investors/Ownership",
-      cell: ({ row }) => (
-        <div className="max-w-[200px] truncate" title={row.getValue("investorsOwnership")}>
-          {row.getValue("investorsOwnership")}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const value = row.getValue("investorsOwnership")
+        const displayValue = String(value || 'N/A')
+        return (
+          <div className="max-w-[200px] truncate" title={displayValue}>
+            {displayValue}
+          </div>
+        )
+      },
     },
     // Hidden columns
     {
       accessorKey: "resourceGrade",
       header: "Resource Grade",
-      cell: ({ row }) => (
-        <div className="text-center">
-          {row.getValue("resourceGrade")} {row.original.gradeUnit}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const grade = row.getValue("resourceGrade")
+        const unit = row.original.gradeUnit
+        const gradeValue = grade ? String(grade) : 'N/A'
+        if (gradeValue === 'N/A') return <div className="text-center">N/A</div>
+        return (
+          <div className="text-center">
+            {gradeValue} {unit || '%'}
+          </div>
+        )
+      },
     },
     {
       accessorKey: "containedMetal",
       header: "Contained Metal",
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("containedMetal") || "0")
-        const formatted = new Intl.NumberFormat("en-US").format(amount)
+        const value = row.getValue("containedMetal")
+        const amount = parseFloat(String(value || "0"))
+        const safeAmount = isNaN(amount) ? 0 : amount
+        const formatted = new Intl.NumberFormat("en-US").format(safeAmount)
         return <div className="text-right">{formatted} t</div>
       },
     },
@@ -444,17 +544,24 @@ export function ProjectScreener() {
       accessorKey: "redFlags",
       header: "Red Flags",
       cell: ({ row }) => {
-        const flags = row.getValue("redFlags") as string[] | undefined
-        if (!flags || flags.length === 0) return <span className="text-gray-400">None</span>
-        return (
-          <div className="flex flex-col gap-1">
-            {flags.map((flag, i) => (
-              <Badge key={i} variant="destructive" className="text-xs">
-                {flag}
-              </Badge>
-            ))}
-          </div>
-        )
+        const flags = row.getValue("redFlags")
+        // Handle both number and array formats
+        if (!flags || flags === 0) return <span className="text-gray-400">None</span>
+        if (typeof flags === 'number') {
+          return <Badge variant="destructive" className="text-xs">{flags} flags</Badge>
+        }
+        if (Array.isArray(flags)) {
+          return (
+            <div className="flex flex-col gap-1">
+              {flags.map((flag, i) => (
+                <Badge key={i} variant="destructive" className="text-xs">
+                  {flag}
+                </Badge>
+              ))}
+            </div>
+          )
+        }
+        return <span className="text-gray-400">None</span>
       },
     },
     {
@@ -482,9 +589,16 @@ export function ProjectScreener() {
       accessorKey: "offtakeAgreements",
       header: "Off-take Agreements",
       cell: ({ row }) => {
-        const agreements = row.getValue("offtakeAgreements") as string[] | undefined
-        if (!agreements || agreements.length === 0) return <span className="text-gray-400">None</span>
-        return <div className="text-sm">{agreements.join(", ")}</div>
+        const agreements = row.getValue("offtakeAgreements")
+        // Handle both number and array formats
+        if (!agreements || agreements === 0) return <span className="text-gray-400">None</span>
+        if (typeof agreements === 'number') {
+          return <div className="text-sm">{agreements} agreements</div>
+        }
+        if (Array.isArray(agreements)) {
+          return <div className="text-sm">{agreements.join(", ")}</div>
+        }
+        return <span className="text-gray-400">None</span>
       },
     },
   ]
@@ -535,18 +649,14 @@ export function ProjectScreener() {
     <>
       <div className="w-full space-y-4 relative">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Watchlisted Projects — {data.length} deposits</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Showing your watchlisted projects. <Link href="/global-projects" className="text-primary hover:underline">Browse all projects →</Link>
-            </p>
-          </div>
+          <h2 className="text-2xl font-semibold tracking-tight">Global Projects — {data.length} deposits</h2>
           <div className="flex items-center gap-2">
             <MiningAgentV2Button 
               onComplete={refetch} 
               onProgressChange={handleMiningAgentProgress}
             />
             <div className="flex items-center gap-2">
+              <ExportDropdown onExport={handleExport} />
               <Button variant="outline" size="sm">
                 <Eye className="mr-2 h-4 w-4" />
                 View Data in Public Company Search
@@ -715,6 +825,7 @@ export function ProjectScreener() {
           }
         }}
       />
+      <Toaster />
     </>
   )
 } 
