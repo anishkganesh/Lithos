@@ -53,6 +53,7 @@ import { exportProjects } from "@/lib/export-utils"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/toaster"
 import { supabase } from "@/lib/supabase/client"
+import { formatNumber, formatCurrency, formatPercent } from "@/lib/format-utils"
 
 const defaultVisibleColumns = [
   "select",
@@ -199,30 +200,31 @@ export function ProjectScreenerGlobal() {
   const handleToggleWatchlist = async (project: MiningProject) => {
     try {
       setUpdatingWatchlist(project.id)
+      const newWatchlistStatus = !project.watchlist
 
-      console.log('Updating watchlist for project:', project.id, 'to:', !project.watchlist)
+      console.log('Updating watchlist for project:', project.id, 'to:', newWatchlistStatus)
 
       const { data, error } = await supabase
         .from('projects')
         .update({
-          watchlist: !project.watchlist,
-          watchlisted_at: !project.watchlist ? new Date().toISOString() : null
+          watchlist: newWatchlistStatus,
+          watchlisted_at: newWatchlistStatus ? new Date().toISOString() : null
         })
         .eq('id', project.id)
         .select()
 
       if (error) {
-        console.error('Supabase error:', error)
-        throw error
+        console.error('Supabase error:', JSON.stringify(error, null, 2))
+        throw new Error(error.message || 'Database update failed')
       }
 
       console.log('Update successful:', data)
 
-      toast.success(project.watchlist ? 'Removed from watchlist' : 'Added to watchlist')
+      toast.success(newWatchlistStatus ? 'Added to watchlist' : 'Removed from watchlist')
       await refetch()
     } catch (error: any) {
-      console.error('Error updating watchlist:', error)
-      toast.error(`Failed to update watchlist: ${error.message || 'Unknown error'}`)
+      console.error('Error updating watchlist:', error?.message || error)
+      toast.error(`Failed to update watchlist: ${error?.message || 'Unknown error'}`)
     } finally {
       setUpdatingWatchlist(null)
     }
@@ -337,7 +339,7 @@ export function ProjectScreenerGlobal() {
           </Button>
         )
       },
-      cell: ({ row }) => <div className="text-center">{row.getValue("mineLife") || 0}</div>,
+      cell: ({ row }) => <div className="text-center">{formatNumber(row.getValue("mineLife"), { decimals: 0, suffix: ' yrs' })}</div>,
     },
     {
       accessorKey: "postTaxNPV",
@@ -354,18 +356,11 @@ export function ProjectScreenerGlobal() {
         )
       },
       cell: ({ row }) => {
-        const value = row.getValue("postTaxNPV")
-        const amount = parseFloat(String(value || 0))
-        const safeAmount = isNaN(amount) ? 0 : amount
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(safeAmount)
+        const amount = row.getValue("postTaxNPV") as number | null
+        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
         return (
           <ContextMenuChat
-            data={safeAmount}
+            data={amount}
             dataType="metric"
             context={`NPV of ${row.original.project} project`}
           >
@@ -388,17 +383,16 @@ export function ProjectScreenerGlobal() {
         )
       },
       cell: ({ row }) => {
-        const value = row.getValue("irr")
-        const irr = parseFloat(String(value || 0))
-        const safeIrr = isNaN(irr) ? 0 : irr
+        const irr = row.getValue("irr") as number | null
+        const formatted = formatPercent(irr, { decimals: 1 })
         return (
           <ContextMenuChat
-            data={safeIrr}
+            data={irr}
             dataType="metric"
             context={`IRR of ${row.original.project} project`}
           >
-            <div className={cn("text-center", getIRRColor(safeIrr))}>
-              {safeIrr.toFixed(1)}%
+            <div className={cn("text-center", irr ? getIRRColor(irr) : "")}>
+              {formatted}
             </div>
           </ContextMenuChat>
         )
@@ -417,11 +411,9 @@ export function ProjectScreenerGlobal() {
           </Button>
         )
       },
-      cell: ({ row }) => {
-        const value = row.getValue("paybackYears")
-        const parsed = parseFloat(String(value || 0))
-        return <div className="text-center">{isNaN(parsed) ? 0 : parsed.toFixed(1)}</div>
-      },
+      cell: ({ row }) => (
+        <div className="text-center">{formatNumber(row.getValue("paybackYears"), { decimals: 1 })}</div>
+      ),
     },
     {
       accessorKey: "capex",
@@ -437,14 +429,9 @@ export function ProjectScreenerGlobal() {
         )
       },
       cell: ({ row }) => {
-        const value = row.getValue("capex")
-        const amount = parseFloat(String(value || 0))
-        const safeAmount = isNaN(amount) ? 0 : amount
-        const formatted = new Intl.NumberFormat("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(safeAmount)
-        return <div className="text-right">${formatted}</div>
+        const amount = row.getValue("capex") as number | null
+        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
+        return <div className="text-right">{formatted}</div>
       },
     },
     {
@@ -461,10 +448,9 @@ export function ProjectScreenerGlobal() {
         )
       },
       cell: ({ row }) => {
-        const value = row.getValue("aisc")
-        const amount = parseFloat(String(value || 0))
-        const safeAmount = isNaN(amount) ? 0 : amount
-        return <div className="text-right">${safeAmount.toFixed(2)}/t</div>
+        const amount = row.getValue("aisc") as number | null
+        const formatted = formatNumber(amount, { decimals: 2, prefix: '$', suffix: '/t' })
+        return <div className="text-right">{formatted}</div>
       },
     },
     {
@@ -599,6 +585,29 @@ export function ProjectScreenerGlobal() {
           return <div className="text-sm">{agreements.join(", ")}</div>
         }
         return <span className="text-gray-400">None</span>
+      },
+    },
+    {
+      accessorKey: "technicalReportUrl",
+      header: "Technical Report",
+      cell: ({ row }) => {
+        const url = row.original.technicalReportUrl
+        if (!url) return <span className="text-gray-400">N/A</span>
+
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            View Report
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        )
       },
     },
   ]

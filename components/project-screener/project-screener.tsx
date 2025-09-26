@@ -49,6 +49,7 @@ import { MiningAgentV2Button } from "@/components/mining-agent-v2-button"
 import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { InfoTooltip, miningMetrics, stageDefinitions } from "@/components/ui/info-tooltip"
+import { formatNumber, formatCurrency, formatPercent, formatTonnes } from "@/lib/format-utils"
 
 const defaultVisibleColumns = [
   "select",
@@ -56,9 +57,11 @@ const defaultVisibleColumns = [
   "stage",
   "mineLife",
   "postTaxNPV",
+  "preTaxNPV",
   "irr",
   "paybackYears",
   "capex",
+  "annualRevenue",
   "aisc",
   "primaryCommodity",
   "jurisdiction",
@@ -72,6 +75,13 @@ const hiddenColumns = [
   "redFlags",
   "permitStatus",
   "offtakeAgreements",
+  "annualOpex",
+  "cashCost",
+  "stripRatio",
+  "recoveryRate",
+  "reserves",
+  "resources",
+  "discountRate",
 ]
 
 function getRiskBadgeColor(risk: RiskLevel) {
@@ -261,7 +271,7 @@ export function ProjectScreener() {
           </Button>
         )
       },
-      cell: ({ row }) => <div className="text-center">{row.getValue("mineLife")}</div>,
+      cell: ({ row }) => <div className="text-center">{formatNumber(row.getValue("mineLife"), { decimals: 0, suffix: ' yrs' })}</div>,
     },
     {
       accessorKey: "postTaxNPV",
@@ -279,13 +289,8 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("postTaxNPV"))
-        const formatted = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(amount)
+        const amount = row.getValue("postTaxNPV") as number | null
+        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
         return (
           <ContextMenuChat
             data={amount}
@@ -295,6 +300,25 @@ export function ProjectScreener() {
             <div className="text-right font-medium">{formatted}</div>
           </ContextMenuChat>
         )
+      },
+    },
+    {
+      accessorKey: "preTaxNPV",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Pre-tax NPV (USD M)
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const amount = row.getValue("preTaxNPV") as number | null
+        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
+        return <div className="text-right font-medium">{formatted}</div>
       },
     },
     {
@@ -311,15 +335,16 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => {
-        const irr = parseFloat(row.getValue("irr"))
+        const irr = row.getValue("irr") as number | null
+        const formatted = formatPercent(irr, { decimals: 1 })
         return (
           <ContextMenuChat
             data={irr}
             dataType="metric"
             context={`IRR of ${row.original.project} project`}
           >
-            <div className={cn("text-center", getIRRColor(irr))}>
-              {irr.toFixed(1)}%
+            <div className={cn("text-center", irr ? getIRRColor(irr) : "")}>
+              {formatted}
             </div>
           </ContextMenuChat>
         )
@@ -339,7 +364,7 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => (
-        <div className="text-center">{parseFloat(row.getValue("paybackYears")).toFixed(1)}</div>
+        <div className="text-center">{formatNumber(row.getValue("paybackYears"), { decimals: 1 })}</div>
       ),
     },
     {
@@ -356,12 +381,28 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("capex"))
-        const formatted = new Intl.NumberFormat("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(amount)
-        return <div className="text-right">${formatted}</div>
+        const amount = row.getValue("capex") as number | null
+        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
+        return <div className="text-right">{formatted}</div>
+      },
+    },
+    {
+      accessorKey: "annualRevenue",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Annual Revenue (USD M)
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const amount = row.getValue("annualRevenue") as number | null
+        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
+        return <div className="text-right">{formatted}</div>
       },
     },
     {
@@ -378,8 +419,9 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("aisc"))
-        return <div className="text-right">${amount.toFixed(2)}/t</div>
+        const amount = row.getValue("aisc") as number | null
+        const formatted = formatNumber(amount, { decimals: 2, prefix: '$', suffix: '/t' })
+        return <div className="text-right">{formatted}</div>
       },
     },
     {
@@ -439,6 +481,29 @@ export function ProjectScreener() {
           {row.getValue("esgScore") || "N/A"}
         </Badge>
       ),
+    },
+    {
+      accessorKey: "technicalReportUrl",
+      header: "Technical Report",
+      cell: ({ row }) => {
+        const url = row.original.technicalReportUrl
+        if (!url) return <span className="text-gray-400">N/A</span>
+
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            View Report
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        )
+      },
     },
     {
       accessorKey: "redFlags",

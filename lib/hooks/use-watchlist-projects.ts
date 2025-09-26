@@ -82,7 +82,8 @@ export function useWatchlistProjects() {
         dataQuality: 'High' as const,
         watchlist: true, // Always true for watchlisted projects
         watchlisted_at: project.watchlisted_at,
-        generated_image_url: project.generated_image_url
+        generated_image_url: project.generated_image_url,
+        technicalReportUrl: project.technical_report_url
       }))
 
       setProjects(transformedProjects)

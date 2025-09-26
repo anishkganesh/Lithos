@@ -17,6 +17,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { supabase } from "@/lib/supabase/client"
 import { useGlobalChat } from "@/lib/global-chat-context"
 import { useChat } from "@/lib/chat-context"
+import { formatNumber, formatCurrency, formatPercent, formatTonnes } from "@/lib/format-utils"
 
 interface SingleProjectViewProps {
   project: MiningProject
@@ -175,9 +176,9 @@ What is your assessment of this project?`
       <div className="space-y-3">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-medium">{project.project}</h2>
+            <h2 className="text-xl font-medium">{project.project || 'N/A'}</h2>
             <p className="text-sm text-muted-foreground">
-              {String(project.investorsOwnership || 'Unknown').split("(")[0].trim() || 'Unknown'} • {project.jurisdiction}
+              {String(project.investorsOwnership || project.company || 'Unknown').split("(")[0].trim()} • {project.jurisdiction || 'N/A'}
             </p>
           </div>
           <Badge className={cn("text-xs", getRiskBadgeColor(project.riskLevel))}>
@@ -227,6 +228,23 @@ What is your assessment of this project?`
             <MessageSquare className="h-4 w-4 mr-2" />
             Add to Chat
           </Button>
+
+          {project.technicalReportUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+            >
+              <a
+                href={project.technicalReportUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Technical Report
+              </a>
+            </Button>
+          )}
         </div>
 
         {/* Generated Image Display */}
@@ -256,13 +274,13 @@ What is your assessment of this project?`
             <div className="p-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Post-tax NPV</span>
-                <span className="text-sm">${(project.postTaxNPV / 1000).toFixed(1)}B</span>
+                <span className="text-sm">{formatCurrency(project.postTaxNPV, { decimals: 1, unit: 'M' })}</span>
               </div>
             </div>
             <div className="p-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">IRR</span>
-                <span className="text-sm">{project.irr}%</span>
+                <span className="text-sm">{formatPercent(project.irr)}</span>
               </div>
             </div>
           </div>
@@ -270,13 +288,13 @@ What is your assessment of this project?`
             <div className="p-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">CAPEX</span>
-                <span className="text-sm">${project.capex}M</span>
+                <span className="text-sm">{formatCurrency(project.capex, { decimals: 0, unit: 'M' })}</span>
               </div>
             </div>
             <div className="p-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Payback</span>
-                <span className="text-sm">{project.paybackYears} years</span>
+                <span className="text-sm">{formatNumber(project.paybackYears, { decimals: 1, suffix: ' years' })}</span>
               </div>
             </div>
           </div>
@@ -284,13 +302,13 @@ What is your assessment of this project?`
             <div className="p-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">AISC</span>
-                <span className="text-sm">${project.aisc}/t</span>
+                <span className="text-sm">{formatCurrency(project.aisc, { decimals: 0, unit: '', suffix: '/t' })}</span>
               </div>
             </div>
             <div className="p-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Mine Life</span>
-                <span className="text-sm">{project.mineLife} years</span>
+                <span className="text-sm">{formatNumber(project.mineLife, { decimals: 0, suffix: ' years' })}</span>
               </div>
             </div>
           </div>
@@ -310,14 +328,14 @@ What is your assessment of this project?`
           <div className="p-2.5">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Primary Commodity</span>
-              <span className="text-sm">{project.primaryCommodity}</span>
+              <span className="text-sm">{project.primaryCommodity || 'N/A'}</span>
             </div>
           </div>
           <div className="p-2.5">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Resource Grade</span>
               <span className="text-sm">
-                {project.resourceGrade} {project.gradeUnit || '%'}
+                {formatNumber(project.resourceGrade, { decimals: 2, suffix: ` ${project.gradeUnit || '%'}` })}
               </span>
             </div>
           </div>
@@ -325,7 +343,7 @@ What is your assessment of this project?`
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Contained Metal</span>
               <span className="text-sm">
-                {project.containedMetal ? `${(project.containedMetal / 1000).toFixed(0)}k t` : 'N/A'}
+                {formatTonnes(project.containedMetal, { decimals: 0, unit: 't' })}
               </span>
             </div>
           </div>
@@ -333,6 +351,27 @@ What is your assessment of this project?`
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">ESG Score</span>
               <Badge variant="outline" className="text-xs">{project.esgScore}</Badge>
+            </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Technical Report</span>
+              {project.technicalReportUrl ? (
+                <a
+                  href={project.technicalReportUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View Report
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              ) : (
+                <span className="text-sm text-muted-foreground">N/A</span>
+              )}
             </div>
           </div>
         </div>

@@ -12,6 +12,7 @@ import {
   IconFolder,
   IconHelp,
   IconListDetails,
+  IconNews,
   IconReport,
   IconSearch,
   IconSettings,
@@ -46,6 +47,11 @@ const data = {
       title: "Global Projects",
       url: "/global-projects",
       icon: IconWorld,
+    },
+    {
+      title: "News & Announcements",
+      url: "/news",
+      icon: IconNews,
     },
     {
       title: "Lifecycle",

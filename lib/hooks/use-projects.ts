@@ -33,7 +33,7 @@ export function useProjects() {
   const fetchProjects = async () => {
     try {
       setLoading(true)
-      
+
       const client = supabase
       if (!client) {
         // Use dummy data if Supabase is not available
@@ -44,16 +44,32 @@ export function useProjects() {
         return
       }
 
-      // Try to fetch from projects table directly
-      const { data, error } = await client
-        .from('projects')
-        .select('*')
-        .order('updated_at', { ascending: false })
+      // Fetch projects with pagination to bypass Supabase's 1000 row limit
+      let allData: any[] = []
+      let offset = 0
+      const pageSize = 1000
+      let hasMore = true
 
-      if (error) throw error
+      while (hasMore) {
+        const { data, error } = await client
+          .from('projects')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .range(offset, offset + pageSize - 1)
+
+        if (error) throw error
+
+        if (data && data.length > 0) {
+          allData = [...allData, ...data]
+          offset += pageSize
+          hasMore = data.length === pageSize
+        } else {
+          hasMore = false
+        }
+      }
 
       // Transform database data to match MiningProject interface
-      const transformedProjects: MiningProject[] = (data || []).map((project: any) => ({
+      const transformedProjects: MiningProject[] = (allData || []).map((project: any) => ({
         id: project.id,
         project: project.project_name || 'Unknown',
         company: project.company_name || 'Unknown',
@@ -80,7 +96,8 @@ export function useProjects() {
         dataQuality: 'High' as const,
         watchlist: project.watchlist || false,
         watchlisted_at: project.watchlisted_at,
-        generated_image_url: project.generated_image_url
+        generated_image_url: project.generated_image_url,
+        technicalReportUrl: project.technical_report_url
       }))
 
       setProjects(transformedProjects)

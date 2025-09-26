@@ -61,6 +61,9 @@ export interface MiningProject {
   watchlisted_at?: string;
   generated_image_url?: string;
   company?: string;
+
+  // Technical documentation
+  technicalReportUrl?: string;
 }
 
 export interface ProjectFilter {
