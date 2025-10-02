@@ -19,6 +19,18 @@ export async function POST(request: NextRequest) {
         const body = await request.json().catch(() => ({}));
         const { maxResults = 25 } = body;
 
+        // Check if Firecrawl API key is configured
+        const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+        if (!firecrawlApiKey || firecrawlApiKey === 'your_firecrawl_api_key_here') {
+          sendEvent({
+            type: 'error',
+            error: 'News scraping is not configured. Firecrawl API key is missing.',
+            message: 'To enable news scraping, please add FIRECRAWL_API_KEY to your .env.local file. You can get a free API key at https://www.firecrawl.dev/',
+            stage: 'error'
+          });
+          return;
+        }
+
         // Send initial status
         sendEvent({
           type: 'status',

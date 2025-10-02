@@ -384,13 +384,18 @@ export function NewsAnnouncements() {
                 }
 
                 if (data.type === 'error') {
-                  console.error('Stream error:', data.error);
+                  console.error('Stream error:', data.error || data.message);
+                  const errorMessage = data.message || data.error || 'An error occurred';
                   setThinkingStep({
                     stage: 'error',
-                    description: `Error: ${data.error}`,
+                    description: errorMessage,
                     progress: 0,
                     icon: getIconForStage('error')
                   });
+                  // Hide error message after 5 seconds
+                  setTimeout(() => {
+                    setThinkingStep(null);
+                  }, 5000);
                 }
               } catch (e) {
                 console.error('Error parsing SSE data:', e);

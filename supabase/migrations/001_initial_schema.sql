@@ -1,0 +1,353 @@
+-- ============================================================================
+-- INITIAL DATABASE SCHEMA FOR LITHOS
+-- ============================================================================
+-- This migration sets up the core tables needed for the application:
+-- - companies: Mining companies
+-- - projects: Mining projects
+-- - news: News and announcements
+-- - usr: User accounts
+-- - chat_history: Chat conversation history
+-- ============================================================================
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "postgis";
+
+-- ============================================================================
+-- ENUM TYPES
+-- ============================================================================
+
+DO $$ BEGIN
+    CREATE TYPE project_stage AS ENUM (
+        'Exploration',
+        'Resource Definition', 
+        'Pre-Feasibility',
+        'Feasibility',
+        'Construction',
+        'Production',
+        'Care & Maintenance',
+        'Closed'
+    );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE commodity_type AS ENUM (
+        'Lithium', 'Copper', 'Nickel', 'Cobalt', 'Rare Earths',
+        'Gold', 'Silver', 'Uranium', 'Graphite', 'Other'
+    );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE risk_level AS ENUM ('Low', 'Medium', 'High', 'Very High');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE esg_grade AS ENUM ('A', 'B', 'C', 'D', 'F');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+-- ============================================================================
+-- COMPANIES TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS companies (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    ticker VARCHAR(20),
+    exchange VARCHAR(50),
+    headquarters_location VARCHAR(255),
+    country VARCHAR(100),
+    website_url TEXT,
+    market_cap_usd DECIMAL(15,2),
+    
+    -- Metrics
+    total_projects INTEGER DEFAULT 0,
+    production_projects INTEGER DEFAULT 0,
+    development_projects INTEGER DEFAULT 0,
+    exploration_projects INTEGER DEFAULT 0,
+    total_npv_usd DECIMAL(15,2),
+    avg_irr_percent DECIMAL(5,2),
+    total_capex_usd DECIMAL(15,2),
+    
+    -- Commodities and locations
+    primary_commodities TEXT[],
+    operating_countries TEXT[],
+    
+    -- Risk and ESG
+    risk_level VARCHAR(20),
+    esg_score VARCHAR(2),
+    
+    -- Metadata
+    description TEXT,
+    logo_url TEXT,
+    founded_year INTEGER,
+    employees_count INTEGER,
+    
+    -- Watchlist
+    watchlist BOOLEAN DEFAULT FALSE,
+    watchlisted_at TIMESTAMP WITH TIME ZONE,
+    watchlisted_by UUID[],
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_companies_name ON companies(name);
+CREATE INDEX IF NOT EXISTS idx_companies_ticker ON companies(ticker);
+CREATE INDEX IF NOT EXISTS idx_companies_country ON companies(country);
+CREATE INDEX IF NOT EXISTS idx_companies_watchlist ON companies(watchlist) WHERE watchlist = TRUE;
+
+-- ============================================================================
+-- PROJECTS TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS projects (
+    project_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+    
+    -- Basic Information
+    project_name VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255),
+    project_description TEXT,
+    
+    -- Location
+    jurisdiction VARCHAR(255),
+    country VARCHAR(100),
+    location GEOGRAPHY(POINT, 4326),
+    
+    -- Stage and Timeline
+    stage project_stage DEFAULT 'Exploration',
+    mine_life_years DECIMAL(5,2),
+    production_start_date DATE,
+    
+    -- Financial Metrics
+    post_tax_npv_usd_m DECIMAL(12,2),
+    irr_percent DECIMAL(5,2),
+    payback_years DECIMAL(5,2),
+    capex_usd_m DECIMAL(12,2),
+    opex_usd_per_tonne DECIMAL(10,2),
+    
+    -- Resources
+    primary_commodity commodity_type,
+    secondary_commodities commodity_type[],
+    annual_production_tonnes DECIMAL(15,2),
+    total_resource_tonnes DECIMAL(15,2),
+    resource_grade DECIMAL(10,4),
+    
+    -- Risk
+    jurisdiction_risk risk_level DEFAULT 'Medium',
+    esg_score esg_grade DEFAULT 'C',
+    
+    -- Watchlist
+    watchlist BOOLEAN DEFAULT FALSE,
+    watchlisted_at TIMESTAMP WITH TIME ZONE,
+    watchlisted_by UUID[],
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(project_name, company_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_company_id ON projects(company_id);
+CREATE INDEX IF NOT EXISTS idx_projects_stage ON projects(stage);
+CREATE INDEX IF NOT EXISTS idx_projects_commodity ON projects(primary_commodity);
+CREATE INDEX IF NOT EXISTS idx_projects_country ON projects(country);
+CREATE INDEX IF NOT EXISTS idx_projects_watchlist ON projects(watchlist) WHERE watchlist = TRUE;
+
+-- ============================================================================
+-- NEWS TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS news (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Core fields
+    headline TEXT NOT NULL,
+    summary TEXT,
+    url TEXT UNIQUE NOT NULL,
+    published_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    -- Source
+    source_name TEXT NOT NULL,
+    source_type TEXT DEFAULT 'news',
+    
+    -- Company association
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+    company_name TEXT,
+    symbol TEXT,
+    
+    -- Categorization
+    primary_commodity TEXT,
+    commodities TEXT[],
+    topics TEXT[],
+    countries TEXT[],
+    
+    -- Sentiment
+    sentiment_score NUMERIC(3,2),
+    relevance_score INTEGER,
+    
+    -- Watchlist
+    watchlist BOOLEAN DEFAULT FALSE,
+    watchlisted_at TIMESTAMP WITH TIME ZONE,
+    watchlisted_by UUID[],
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_published ON news(published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_news_company_id ON news(company_id);
+CREATE INDEX IF NOT EXISTS idx_news_source ON news(source_name);
+CREATE INDEX IF NOT EXISTS idx_news_watchlist ON news(watchlist) WHERE watchlist = TRUE;
+
+-- ============================================================================
+-- USR TABLE (Users)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS usr (
+    user_id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
+    company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+    role VARCHAR(50) DEFAULT 'member',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_usr_email ON usr(email);
+CREATE INDEX IF NOT EXISTS idx_usr_company_id ON usr(company_id);
+
+-- ============================================================================
+-- CHAT HISTORY TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS chat_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID,
+    message TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_history_created ON chat_history(created_at DESC);
+
+-- ============================================================================
+-- JUNCTION TABLES
+-- ============================================================================
+
+-- News to Projects relationship
+CREATE TABLE IF NOT EXISTS news_projects (
+    id SERIAL PRIMARY KEY,
+    news_id UUID NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    impact_type VARCHAR(50),
+    impact_score INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(news_id, project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_projects_news ON news_projects(news_id);
+CREATE INDEX IF NOT EXISTS idx_news_projects_project ON news_projects(project_id);
+
+-- News to Companies relationship
+CREATE TABLE IF NOT EXISTS news_companies (
+    id SERIAL PRIMARY KEY,
+    news_id UUID NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    impact_type VARCHAR(50),
+    impact_score INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(news_id, company_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_companies_news ON news_companies(news_id);
+CREATE INDEX IF NOT EXISTS idx_news_companies_company ON news_companies(company_id);
+
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+-- Update timestamp function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_companies_updated_at ON companies;
+CREATE TRIGGER update_companies_updated_at
+BEFORE UPDATE ON companies
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
+CREATE TRIGGER update_projects_updated_at
+BEFORE UPDATE ON projects
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_news_updated_at ON news;
+CREATE TRIGGER update_news_updated_at
+BEFORE UPDATE ON news
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_usr_updated_at ON usr;
+CREATE TRIGGER update_usr_updated_at
+BEFORE UPDATE ON usr
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- PERMISSIONS
+-- ============================================================================
+
+-- Grant permissions for authenticated users
+GRANT SELECT, INSERT, UPDATE ON companies TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON projects TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON news TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON usr TO authenticated;
+GRANT SELECT, INSERT ON chat_history TO authenticated;
+GRANT SELECT, INSERT, DELETE ON news_projects TO authenticated;
+GRANT SELECT, INSERT, DELETE ON news_companies TO authenticated;
+
+-- Grant all permissions to service role
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+
+-- ============================================================================
+-- Enable Row Level Security
+-- ============================================================================
+
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usr ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_history ENABLE ROW LEVEL SECURITY;
+
+-- Create basic RLS policies (adjust as needed)
+CREATE POLICY "Enable read access for all users" ON companies FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON projects FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON news FOR SELECT USING (true);
+CREATE POLICY "Users can view own profile" ON usr FOR SELECT USING (auth.uid()::text = email);
+CREATE POLICY "Users can view own chat history" ON chat_history FOR SELECT USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- FINAL MESSAGE
+-- ============================================================================
+DO $$
+BEGIN
+    RAISE NOTICE 'Initial database schema created successfully!';
+    RAISE NOTICE 'Tables created: companies, projects, news, usr, chat_history';
+    RAISE NOTICE 'Junction tables: news_projects, news_companies';
+END $$;
