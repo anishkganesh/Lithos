@@ -29,6 +29,7 @@ export type ESGGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
 export interface MiningProject {
   id: string;
+  project_id?: string;  // Original database project_id for operations
   project: string;
   stage: ProjectStage;
   mineLife: number; // years

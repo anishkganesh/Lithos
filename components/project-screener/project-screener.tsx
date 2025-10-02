@@ -127,12 +127,18 @@ interface DetailPanelState {
 }
 
 export function ProjectScreener() {
-  const { projects: data, loading, error, refetch } = useWatchlistProjects()
+  const { projects: initialData, loading, error, refetch } = useWatchlistProjects()
+  const [data, setData] = useState<MiningProject[]>(initialData)
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState("")
+  
+  // Sync data with initialData when it changes
+  useEffect(() => {
+    setData(initialData)
+  }, [initialData])
   
   // Project detail panel state
   const [detailPanelOpen, setDetailPanelOpen] = useState(false)
@@ -167,7 +173,13 @@ export function ProjectScreener() {
   }, [])
 
   const handleProjectClick = (projectId: string) => {
-    const project = data.find(p => p.id === projectId)
+    // Try to find the project by either id or project_id, with string comparison
+    const project = data.find(p => {
+      const idMatch = String(p.id) === String(projectId)
+      const projectIdMatch = p.project_id && String(p.project_id) === String(projectId)
+      return idMatch || projectIdMatch
+    })
+    
     if (project) {
       setSelectedProjects([project])
       setDetailPanelMode("single")
@@ -236,7 +248,7 @@ export function ProjectScreener() {
               e.preventDefault()
               handleProjectClick(row.original.id)
             }}
-            className="font-medium text-blue-600 hover:underline"
+            className="text-sm font-medium text-blue-600 hover:underline"
           >
             {row.getValue("project")}
           </a>
@@ -256,7 +268,7 @@ export function ProjectScreener() {
           </Button>
         )
       },
-      cell: ({ row }) => <div className="text-center">{row.getValue("stage")}</div>,
+      cell: ({ row }) => <div className="text-sm text-center">{row.getValue("stage")}</div>,
     },
     {
       accessorKey: "mineLife",
@@ -271,7 +283,7 @@ export function ProjectScreener() {
           </Button>
         )
       },
-      cell: ({ row }) => <div className="text-center">{formatNumber(row.getValue("mineLife"), { decimals: 0, suffix: ' yrs' })}</div>,
+      cell: ({ row }) => <div className="text-sm text-center">{formatNumber(row.getValue("mineLife"), { decimals: 0, suffix: ' yrs' })}</div>,
     },
     {
       accessorKey: "postTaxNPV",
@@ -297,7 +309,7 @@ export function ProjectScreener() {
             dataType="metric"
             context={`NPV of ${row.original.project} project`}
           >
-            <div className="text-right font-medium">{formatted}</div>
+            <div className="text-sm text-right font-medium">{formatted}</div>
           </ContextMenuChat>
         )
       },
@@ -318,7 +330,7 @@ export function ProjectScreener() {
       cell: ({ row }) => {
         const amount = row.getValue("preTaxNPV") as number | null
         const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return <div className="text-right font-medium">{formatted}</div>
+        return <div className="text-sm text-right font-medium">{formatted}</div>
       },
     },
     {
@@ -364,7 +376,7 @@ export function ProjectScreener() {
         )
       },
       cell: ({ row }) => (
-        <div className="text-center">{formatNumber(row.getValue("paybackYears"), { decimals: 1 })}</div>
+        <div className="text-sm text-center">{formatNumber(row.getValue("paybackYears"), { decimals: 1 })}</div>
       ),
     },
     {
@@ -383,7 +395,7 @@ export function ProjectScreener() {
       cell: ({ row }) => {
         const amount = row.getValue("capex") as number | null
         const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return <div className="text-right">{formatted}</div>
+        return <div className="text-sm text-right">{formatted}</div>
       },
     },
     {
@@ -402,7 +414,7 @@ export function ProjectScreener() {
       cell: ({ row }) => {
         const amount = row.getValue("annualRevenue") as number | null
         const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return <div className="text-right">{formatted}</div>
+        return <div className="text-sm text-right">{formatted}</div>
       },
     },
     {
@@ -421,7 +433,7 @@ export function ProjectScreener() {
       cell: ({ row }) => {
         const amount = row.getValue("aisc") as number | null
         const formatted = formatNumber(amount, { decimals: 2, prefix: '$', suffix: '/t' })
-        return <div className="text-right">{formatted}</div>
+        return <div className="text-sm text-right">{formatted}</div>
       },
     },
     {
@@ -470,7 +482,7 @@ export function ProjectScreener() {
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("containedMetal") || "0")
         const formatted = new Intl.NumberFormat("en-US").format(amount)
-        return <div className="text-right">{formatted} t</div>
+        return <div className="text-sm text-right">{formatted} t</div>
       },
     },
     {
@@ -487,7 +499,7 @@ export function ProjectScreener() {
       header: "Technical Report",
       cell: ({ row }) => {
         const url = row.original.technicalReportUrl
-        if (!url) return <span className="text-gray-400">N/A</span>
+        if (!url) return <span className="text-sm text-gray-400">N/A</span>
 
         return (
           <a
@@ -510,7 +522,7 @@ export function ProjectScreener() {
       header: "Red Flags",
       cell: ({ row }) => {
         const flags = row.getValue("redFlags") as string[] | undefined
-        if (!flags || flags.length === 0) return <span className="text-gray-400">None</span>
+        if (!flags || flags.length === 0) return <span className="text-sm text-gray-400">None</span>
         return (
           <div className="flex flex-col gap-1">
             {flags.map((flag, i) => (
@@ -527,7 +539,7 @@ export function ProjectScreener() {
       header: "Permit Status",
       cell: ({ row }) => {
         const status = row.getValue("permitStatus") as string
-        if (!status) return <span className="text-gray-400">N/A</span>
+        if (!status) return <span className="text-sm text-gray-400">N/A</span>
         
         const statusColors = {
           "Granted": "bg-green-100 text-green-800",
@@ -548,7 +560,7 @@ export function ProjectScreener() {
       header: "Off-take Agreements",
       cell: ({ row }) => {
         const agreements = row.getValue("offtakeAgreements") as string[] | undefined
-        if (!agreements || agreements.length === 0) return <span className="text-gray-400">None</span>
+        if (!agreements || agreements.length === 0) return <span className="text-sm text-gray-400">None</span>
         return <div className="text-sm">{agreements.join(", ")}</div>
       },
     },
@@ -773,7 +785,11 @@ export function ProjectScreener() {
         projects={selectedProjects}
         mode={detailPanelMode}
         onProjectSelect={(projectId) => {
-          const project = data.find(p => p.id === projectId)
+          const project = data.find(p => {
+            const idMatch = String(p.id) === String(projectId)
+            const projectIdMatch = p.project_id && String(p.project_id) === String(projectId)
+            return idMatch || projectIdMatch
+          })
           if (project) {
             setSelectedProjects([project])
             setDetailPanelMode("single")

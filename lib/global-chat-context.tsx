@@ -127,7 +127,11 @@ Note: This context is available for reference but should only be mentioned when 
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   const [isSearchingWeb, setIsSearchingWeb] = useState(false)
+  const [isDatabaseContextActive, setIsDatabaseContextActive] = useState(false)
+  const [isMemoGeneratorActive, setIsMemoGeneratorActive] = useState(false)
   const [searchResults, setSearchResults] = useState<any[] | null>(null)
+  const [cachedDatabaseContext, setCachedDatabaseContext] = useState<any>(null)
+  const [isLoadingContext, setIsLoadingContext] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
   const [chatHistory, setChatHistory] = useState<Chat[]>([])
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
@@ -363,6 +367,14 @@ Note: This context is available for reference but should only be mentioned when 
     setIsGeneratingImage,
     isSearchingWeb,
     setIsSearchingWeb,
+    isDatabaseContextActive,
+    setIsDatabaseContextActive,
+    isMemoGeneratorActive,
+    setIsMemoGeneratorActive,
+    cachedDatabaseContext,
+    setCachedDatabaseContext,
+    isLoadingContext,
+    setIsLoadingContext,
     searchResults,
     setSearchResults,
     uploadedFiles,

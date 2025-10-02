@@ -20,9 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, RefreshCw, Calendar, Building, Tag, TrendingUp, TrendingDown, FileText, ExternalLink } from 'lucide-react';
+import { Search, RefreshCw, Calendar, Building, Tag, TrendingUp, TrendingDown, FileText, ExternalLink, MessageSquare } from 'lucide-react';
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react";
 import { format } from 'date-fns';
+import { FilterBox, FilterConfig, FilterValues, RangeValue } from '@/components/ui/filter-box';
+import { ContextMenuChat } from '@/components/ui/context-menu-chat';
+import { useGlobalChat } from '@/lib/global-chat-context';
+import { useChat } from '@/lib/chat-context';
+import { formatNewsForChat } from '@/lib/chat/project-context-generator';
 
 interface NewsItem {
   id: string;
@@ -681,7 +686,12 @@ export function NewsAnnouncements() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
+  const [selectedSentiment, setSelectedSentiment] = useState<string | null>(null);
+  const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const { toggleChat } = useChat();
+  const { setInput } = useGlobalChat();
 
   // Calculate statistics
   const stats = {
@@ -721,9 +731,32 @@ export function NewsAnnouncements() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetch('/api/news/refresh', { method: 'POST' });
-    await fetchNews();
-    setRefreshing(false);
+    try {
+      // Trigger the news refresh from Firecrawl
+      const refreshResponse = await fetch('/api/news/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          maxPerSource: 3  // Fetch 3 articles per source for quick refresh
+        })
+      });
+
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json();
+        console.log('News refresh results:', refreshData);
+        
+        // After refresh, fetch the updated news
+        await fetchNews();
+      } else {
+        console.error('Failed to refresh news');
+      }
+    } catch (error) {
+      console.error('Error refreshing news:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const filteredNews = news.filter(item => {
@@ -735,7 +768,23 @@ export function NewsAnnouncements() {
     const matchesCommodity = !selectedCommodity ||
       item.primary_commodity?.toLowerCase() === selectedCommodity.toLowerCase();
 
-    return matchesSearch && matchesCommodity;
+    const matchesSentiment = !selectedSentiment || (() => {
+      const score = item.sentiment_score || 0;
+      if (selectedSentiment === 'positive') return score > 0.5;
+      if (selectedSentiment === 'negative') return score < -0.5;
+      if (selectedSentiment === 'neutral') return score >= -0.5 && score <= 0.5;
+      return true;
+    })();
+
+    const matchesStage = !selectedStage || (() => {
+      // Infer stage from news content
+      if (selectedStage === 'production') return item.is_project_related && item.headline.toLowerCase().includes('production');
+      if (selectedStage === 'development') return item.is_project_related && (item.headline.toLowerCase().includes('development') || item.headline.toLowerCase().includes('construction'));
+      if (selectedStage === 'exploration') return item.is_project_related && (item.headline.toLowerCase().includes('discovery') || item.headline.toLowerCase().includes('exploration'));
+      return true;
+    })();
+
+    return matchesSearch && matchesCommodity && matchesSentiment && matchesStage;
   });
 
   const commodities = [...new Set(news.map(n => n.primary_commodity).filter(Boolean))];
@@ -745,6 +794,65 @@ export function NewsAnnouncements() {
     if (score > 0.3) return 'success';
     if (score < -0.3) return 'destructive';
     return 'default';
+  };
+
+  // Filter configuration for FilterBox
+  const filterConfigs: FilterConfig[] = [
+    {
+      id: 'commodity',
+      label: 'Commodity',
+      type: 'checkbox',
+      options: commodities.map(c => ({ label: c, value: c.toLowerCase() }))
+    },
+    {
+      id: 'sentiment',
+      label: 'Sentiment',
+      type: 'checkbox',
+      options: [
+        { label: 'Positive', value: 'positive' },
+        { label: 'Neutral', value: 'neutral' },
+        { label: 'Negative', value: 'negative' }
+      ]
+    },
+    {
+      id: 'stage',
+      label: 'Stage',
+      type: 'checkbox',
+      options: [
+        { label: 'Production', value: 'production' },
+        { label: 'Development', value: 'development' },
+        { label: 'Exploration', value: 'exploration' }
+      ]
+    }
+  ];
+
+  const savedViews = [
+    { id: '1', name: 'All News' },
+    { id: '2', name: 'Positive Sentiment' },
+    { id: '3', name: 'Production Updates' },
+    { id: '4', name: 'Technical Reports' }
+  ];
+
+  const handleApplyFilters = (values: FilterValues) => {
+    const commodityValues = values.commodity as string[];
+    const sentimentValues = values.sentiment as string[];
+    const stageValues = values.stage as string[];
+
+    setSelectedCommodity(commodityValues.length > 0 ? commodityValues[0] : null);
+    setSelectedSentiment(sentimentValues.length > 0 ? sentimentValues[0] : null);
+    setSelectedStage(stageValues.length > 0 ? stageValues[0] : null);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedCommodity(null);
+    setSelectedSentiment(null);
+    setSelectedStage(null);
+  };
+
+  const handleAddToChat = (newsItem: NewsItem) => {
+    const formattedNews = formatNewsForChat(newsItem);
+    setInput(formattedNews);
+    toggleChat();
   };
 
   return (
@@ -772,6 +880,14 @@ export function NewsAnnouncements() {
         <CardContent>
           {/* Filters */}
           <div className="mb-6 space-y-4">
+            <FilterBox
+              filters={filterConfigs}
+              savedViews={savedViews}
+              defaultViewId="1"
+              onApplyFilters={handleApplyFilters}
+              onClearFilters={handleClearFilters}
+            />
+
             <div className="flex gap-4">
               <div className="flex-1">
                 <div className="relative">
@@ -784,22 +900,6 @@ export function NewsAnnouncements() {
                   />
                 </div>
               </div>
-              <Select
-                value={selectedCommodity || 'all'}
-                onValueChange={(value) => setSelectedCommodity(value === 'all' ? null : value)}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by commodity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Commodities</SelectItem>
-                  {commodities.map(commodity => (
-                    <SelectItem key={commodity} value={commodity}>
-                      {commodity}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Quick Stats with exact dashboard structure */}
@@ -909,7 +1009,7 @@ export function NewsAnnouncements() {
                   <TableHead className="w-[120px]">Commodity</TableHead>
                   <TableHead className="w-[100px]">Tags</TableHead>
                   <TableHead className="w-[80px]">Source</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -931,21 +1031,47 @@ export function NewsAnnouncements() {
                       <TableCell className="text-xs text-gray-500">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(item.datetime), 'MMM dd, yyyy')}
+                          {format(new Date(item.published_date || item.datetime), 'MMM dd, yyyy')}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{item.symbol}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm">{item.headline}</div>
-                          {item.summary && (
-                            <div className="text-xs text-gray-500 line-clamp-2">
-                              {item.summary}
+                        <ContextMenuChat
+                          data={item}
+                          dataType="news"
+                          context={item.headline}
+                        >
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="text-xs">
+                              {item.symbol}
+                            </Badge>
+                            <div className="text-xs text-gray-500">
+                              {item.company_name}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        </ContextMenuChat>
+                      </TableCell>
+                      <TableCell>
+                        <ContextMenuChat
+                          data={item}
+                          dataType="news"
+                          context={item.headline}
+                        >
+                          <div className="space-y-1">
+                            <a
+                              href={item.url || item.story_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-semibold hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+                            >
+                              {item.headline}
+                            </a>
+                            {item.summary && (
+                              <div className="text-xs text-gray-500 line-clamp-2">
+                                {item.summary}
+                              </div>
+                            )}
+                          </div>
+                        </ContextMenuChat>
                       </TableCell>
                       <TableCell>
                         {item.primary_commodity && (
@@ -977,18 +1103,29 @@ export function NewsAnnouncements() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-gray-500">{item.source}</span>
+                        <span className="text-xs text-gray-500">{item.source_name || item.source}</span>
                       </TableCell>
                       <TableCell>
-                        {item.story_url && (
+                        <div className="flex items-center gap-1">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => window.open(item.story_url, '_blank')}
+                            onClick={() => handleAddToChat(item)}
+                            title="Add to Chat with AI Analysis"
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <MessageSquare className="h-4 w-4" />
                           </Button>
-                        )}
+                          {(item.url || item.story_url) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => window.open(item.url || item.story_url, '_blank')}
+                              title="Open article"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

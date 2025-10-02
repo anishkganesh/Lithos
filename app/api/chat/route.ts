@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
 import OpenAI from 'openai'
+import { generateMemoPDF, MemoData } from '@/lib/memo-generator'
+import { generateMemoDocx } from '@/lib/memo-generator-docx'
+
+// Check for API key
+const apiKey = process.env.OPENAI_API_KEY;
+if (!apiKey || apiKey === 'your_openai_api_key_here') {
+  console.warn('OpenAI API key not configured');
+}
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
+  apiKey: apiKey || 'sk-dummy-key' // Use dummy key to prevent initialization errors
 })
 
 // Dynamic import for pdf-parse to avoid build issues
@@ -94,11 +102,22 @@ async function getProjectContext(): Promise<string> {
 export async function POST(req: Request) {
   console.log("Chat API called");
 
+  // Check if API key is configured
+  if (!apiKey || apiKey === 'your_openai_api_key_here' || apiKey === 'sk-dummy-key') {
+    console.error("OpenAI API key not configured");
+    return NextResponse.json({
+      id: Date.now().toString(),
+      role: "assistant",
+      content: "⚠️ **Chat service is not configured**\n\nThe OpenAI API key is missing. To enable the chat functionality:\n\n1. Create a `.env.local` file in the project root\n2. Add your OpenAI API key: `OPENAI_API_KEY=your_actual_api_key`\n3. Restart the development server\n\nYou can get an API key from [OpenAI Platform](https://platform.openai.com/api-keys).",
+      createdAt: new Date()
+    });
+  }
+
   try {
     const body = await req.json();
     console.log("Request type:", body.tool ? body.tool : "chat", "Request body:", JSON.stringify(body).substring(0, 200) + "...");
     
-    const { messages, tool, webSearch, fileContents } = body;
+    const { messages, tool, webSearch, fileContents, databaseContext, generateMemo } = body;
     
     // Handle image generation request
     if (tool === 'image') {
@@ -360,6 +379,15 @@ Always provide data-driven insights and cite specific details from uploaded docu
       });
     }
     
+    // Add database context if provided
+    if (databaseContext) {
+      console.log("Including pre-cached database context");
+      finalMessages.unshift({
+        role: 'system',
+        content: `You have access to a comprehensive mining projects database. Use this information to answer questions about projects, comparisons, and investment opportunities.\n\n${databaseContext}`
+      });
+    }
+    
     console.log("Sending chat completion request with message count:", finalMessages.length);
     
     // Use GPT-4o-mini for all requests
@@ -380,6 +408,59 @@ Always provide data-driven insights and cite specific details from uploaded docu
     const content = response.choices[0]?.message?.content || "No response generated";
     console.log("Chat completion response received, content length:", content.length);
     
+    // Handle memo generation if requested
+    if (generateMemo) {
+      console.log("Generating investor memo...");
+      
+      try {
+        // Extract project info from the response if available
+        const projectMatch = content.match(/\*\*(.*?)\s+Project\*\*.*?Company:\s*(.*?)[\n\-]/);
+        const npvMatch = content.match(/NPV.*?\$?([\d.]+)\s*[MB]/i);
+        const irrMatch = content.match(/IRR.*?([\d.]+)%/i);
+        
+        const memoData: MemoData = {
+          title: 'Investment Analysis Memo',
+          date: new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          projectName: projectMatch?.[1] || undefined,
+          company: projectMatch?.[2] || undefined,
+          npv: npvMatch ? parseFloat(npvMatch[1]) : undefined,
+          irr: irrMatch ? parseFloat(irrMatch[1]) : undefined,
+          content: content,
+          recommendations: "Based on the analysis above, please review the detailed findings for investment decisions."
+        };
+        
+        // Generate both PDF and DOCX
+        const [pdfBytes, docxBytes] = await Promise.all([
+          generateMemoPDF(memoData),
+          generateMemoDocx(memoData)
+        ]);
+        
+        const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
+        const docxBase64 = Buffer.from(docxBytes).toString('base64');
+        
+        console.log("Memos generated successfully");
+        
+        return NextResponse.json({
+          id: Date.now().toString(),
+          role: "assistant",
+          content: content,
+          createdAt: new Date(),
+          memo: {
+            pdf: pdfBase64,
+            docx: docxBase64,
+            filename: `investor-memo-${Date.now()}`
+          }
+        });
+      } catch (memoError) {
+        console.error("Memo generation error:", memoError);
+        // Return response without memo if generation fails
+      }
+    }
+    
     // Create the response object
     const responseBody = {
       id: Date.now().toString(),
@@ -397,14 +478,24 @@ Always provide data-driven insights and cite specific details from uploaded docu
     // Provide more specific error messages
     let errorMessage = "I'm sorry, there was an error processing your request.";
     
-    if (error?.message?.includes('API key')) {
-      errorMessage = "There's an issue with the API configuration. Please check your API keys in the environment settings.";
+    if (error?.message?.includes('API key') || error?.message?.includes('apiKey')) {
+      errorMessage = "⚠️ **OpenAI API Key Issue**\n\nThe API key is either missing or invalid. Please:\n\n1. Create a `.env.local` file in the project root\n2. Add: `OPENAI_API_KEY=your_actual_api_key`\n3. Restart the development server\n\nGet your API key from [OpenAI Platform](https://platform.openai.com/api-keys).";
     } else if (error?.message?.includes('rate limit')) {
-      errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
+      errorMessage = "⚠️ **Rate Limit Exceeded**\n\nYou've hit the OpenAI API rate limit. Please wait a moment and try again.";
     } else if (error?.message?.includes('timeout')) {
-      errorMessage = "The request timed out. This might be due to processing large files. Please try again with a smaller file or simpler query.";
+      errorMessage = "⚠️ **Request Timeout**\n\nThe request took too long. This might be due to processing large files. Please try again with a smaller file or simpler query.";
+    } else if (error?.message?.includes('quota')) {
+      errorMessage = "⚠️ **API Quota Exceeded**\n\nYour OpenAI API quota has been exceeded. Please check your billing settings on the OpenAI platform.";
     } else if (error?.response?.data?.error) {
-      errorMessage = `API Error: ${error.response.data.error.message || error.response.data.error}`;
+      errorMessage = `⚠️ **API Error**\n\n${error.response.data.error.message || error.response.data.error}`;
+    } else {
+      // Log the full error for debugging
+      console.error("Full error details:", {
+        message: error?.message,
+        stack: error?.stack,
+        response: error?.response
+      });
+      errorMessage = `⚠️ **Chat Service Error**\n\n${error?.message || 'An unexpected error occurred'}\n\nPlease check the console for more details.`;
     }
     
     // Return an error response
@@ -413,6 +504,6 @@ Always provide data-driven insights and cite specific details from uploaded docu
       role: "assistant", 
       content: errorMessage,
       createdAt: new Date()
-    }, { status: 500 });
+    });
   }
 }

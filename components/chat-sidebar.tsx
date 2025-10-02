@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { Loader2, PaperclipIcon, PenSquare, SendHorizonal, TrendingUpIcon, ImageIcon, Globe, Search, X, CheckCircle2, Brain, Sparkles, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2, Check, PickaxeIcon, MessageSquare } from "lucide-react"
+import { Loader2, PaperclipIcon, PenSquare, SendHorizonal, TrendingUpIcon, ImageIcon, Globe, Search, X, CheckCircle2, Brain, Sparkles, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2, Check, PickaxeIcon, MessageSquare, Database, FileText } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -32,11 +32,13 @@ const formatMessageContent = (content: string): React.ReactNode => {
     if (numberMatch) {
       // Start collecting list items
       let listItems = [];
-      let currentNum = parseInt(numberMatch[1]);
+      let expectedNum = parseInt(numberMatch[1]);
+      let actualItemNumber = 1;
       
       // Add first item
       listItems.push(numberMatch[2]);
       i++;
+      actualItemNumber++;
       
       // Continue collecting consecutive numbered items
       while (i < lines.length) {
@@ -45,10 +47,10 @@ const formatMessageContent = (content: string): React.ReactNode => {
         
         if (nextMatch) {
           const nextNum = parseInt(nextMatch[1]);
-          // Check if it's the next number in sequence OR if all items are "1."
-          if (nextNum === currentNum + 1 || nextNum === 1) {
+          // Accept if it's the expected next number OR if all items are "1." (common AI pattern)
+          if (nextNum === actualItemNumber || nextNum === 1) {
             listItems.push(nextMatch[2]);
-            currentNum = nextNum === 1 ? currentNum + 1 : nextNum;
+            actualItemNumber++;
             i++;
           } else {
             break;
@@ -94,16 +96,16 @@ const formatMessageContent = (content: string): React.ReactNode => {
   processedContent = processedContent.replace(/<\/ol>\n<ol class="list-decimal ml-5 mb-3">/g, '');
   processedContent = processedContent.replace(/<\/li>\n<li>/g, '</li><li>');
   
-  // Convert ** bold ** to <strong>
-  processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Convert ** bold ** to <strong> with consistent styling
+  processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
   
-  // Handle headers (match 1-6 # symbols)
+  // Handle headers with consistent styling
   processedContent = processedContent.replace(/^#{6}\s+(.*?)$/gm, '<h6 class="text-sm font-semibold mt-2 mb-1">$1</h6>');
   processedContent = processedContent.replace(/^#{5}\s+(.*?)$/gm, '<h5 class="text-sm font-semibold mt-2 mb-1">$1</h5>');
-  processedContent = processedContent.replace(/^#{4}\s+(.*?)$/gm, '<h4 class="text-base font-semibold mt-3 mb-1">$1</h4>');
-  processedContent = processedContent.replace(/^#{3}\s+(.*?)$/gm, '<h3 class="text-lg font-bold mt-3 mb-1">$1</h3>');
-  processedContent = processedContent.replace(/^#{2}\s+(.*?)$/gm, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>');
-  processedContent = processedContent.replace(/^#{1}\s+(.*?)$/gm, '<h1 class="text-2xl font-bold mt-5 mb-3">$1</h1>');
+  processedContent = processedContent.replace(/^#{4}\s+(.*?)$/gm, '<h4 class="text-base font-semibold mt-2 mb-1">$1</h4>');
+  processedContent = processedContent.replace(/^#{3}\s+(.*?)$/gm, '<h3 class="text-base font-semibold mt-2 mb-1">$1</h3>');
+  processedContent = processedContent.replace(/^#{2}\s+(.*?)$/gm, '<h2 class="text-base font-semibold mt-2 mb-1">$1</h2>');
+  processedContent = processedContent.replace(/^#{1}\s+(.*?)$/gm, '<h1 class="text-base font-semibold mt-2 mb-1">$1</h1>');
   
   // Convert paragraphs (double newlines)
   processedContent = processedContent.replace(/\n\n/g, '</p><p class="mb-2">');
@@ -152,6 +154,14 @@ export function ChatSidebar({
     setIsGeneratingImage,
     isSearchingWeb,
     setIsSearchingWeb,
+    isDatabaseContextActive,
+    setIsDatabaseContextActive,
+    isMemoGeneratorActive,
+    setIsMemoGeneratorActive,
+    cachedDatabaseContext,
+    setCachedDatabaseContext,
+    isLoadingContext,
+    setIsLoadingContext,
     searchResults,
     setSearchResults,
     uploadedFiles,
@@ -326,15 +336,35 @@ export function ChatSidebar({
       } 
       // Default chat completion case
       else {
-        console.log("Sending regular chat request");
+        console.log("Sending regular chat request", { isDatabaseContextActive, isMemoGeneratorActive });
+        
+        const requestBody: any = {
+          messages: [...messages, userMessage]
+        };
+        
+        // Add database context if active - refresh to get latest data
+        if (isDatabaseContextActive) {
+          let contextData = cachedDatabaseContext;
+          // Refresh context to ensure we have latest data
+          if (!contextData || !isLoadingContext) {
+            contextData = await loadDatabaseContext();
+          }
+          if (contextData) {
+            requestBody.databaseContext = contextData.formattedText;
+          }
+        }
+        
+        // Add memo generator flag if active
+        if (isMemoGeneratorActive) {
+          requestBody.generateMemo = true;
+        }
+        
         response = await fetch('/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            messages: [...messages, userMessage]
-          }),
+          body: JSON.stringify(requestBody),
         });
       }
       
@@ -347,12 +377,23 @@ export function ChatSidebar({
       const responseData = await response.json();
       console.log("Response data:", responseData);
       
+      // Handle memo if present - store it for download button
+      if (responseData.memo) {
+        console.log("Memo received, storing for download");
+        // Store the memo data in the message
+        responseData.memo_data = responseData.memo;
+        
+        // Reset memo generator
+        setIsMemoGeneratorActive(false);
+      }
+      
       // Add the assistant's response to the chat
       setMessages([...messages, userMessage, {
         id: responseData.id || Date.now().toString(),
         role: responseData.role || "assistant",
         content: responseData.content || "I'm not sure how to respond to that.",
-        createdAt: responseData.createdAt ? new Date(responseData.createdAt) : new Date()
+        createdAt: responseData.createdAt ? new Date(responseData.createdAt) : new Date(),
+        memo_data: responseData.memo_data
       }]);
     } catch (error: any) {
       console.log("Chat error:", error.message);
@@ -540,14 +581,63 @@ export function ChatSidebar({
   
   // Handle image generation button click
   const handleImageGenerationClick = () => {
-    setIsGeneratingImage(true)
-    setIsSearchingWeb(false)
+    const newState = !isGeneratingImage;
+    setIsGeneratingImage(newState)
+    // Image generation is exclusive - deactivate others when enabling
+    if (newState) {
+      setIsSearchingWeb(false)
+      setIsDatabaseContextActive(false)
+      setIsMemoGeneratorActive(false)
+    }
   }
   
   // Handle web search button click
   const handleWebSearchClick = () => {
     setIsSearchingWeb(!isSearchingWeb)
-    setIsGeneratingImage(false)
+    // Don't deactivate other tools - allow multiple to be active
+  }
+  
+  const loadDatabaseContext = async () => {
+    setIsLoadingContext(true);
+    try {
+      console.log("Loading database context...");
+      const response = await fetch('/api/database-context', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Database context loaded:", data);
+        setCachedDatabaseContext(data);
+        return data;
+      } else {
+        console.error("Failed to load database context");
+      }
+    } catch (error) {
+      console.error("Error loading database context:", error);
+    } finally {
+      setIsLoadingContext(false);
+    }
+    return null;
+  };
+
+  const handleDatabaseContextClick = async () => {
+    const newState = !isDatabaseContextActive;
+    setIsDatabaseContextActive(newState)
+    // Don't deactivate other tools - allow multiple to be active
+    
+    // Always refresh context when activating (to get latest data)
+    if (newState) {
+      await loadDatabaseContext();
+    }
+  }
+  
+  const handleMemoGeneratorClick = () => {
+    setIsMemoGeneratorActive(!isMemoGeneratorActive)
+    // Don't deactivate other tools - allow multiple to be active
   }
 
   const [hoveredMessageId, setHoveredMessageId] = React.useState<string | null>(null)
@@ -916,6 +1006,89 @@ export function ChatSidebar({
                             {formatMessageContent(message.content)}
                           </div>
                         )}
+                        
+                        {/* Download Memo Buttons if available */}
+                        {message.memo_data && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                              onClick={() => {
+                                const { docx, filename } = message.memo_data;
+                                try {
+                                  // Convert base64 to blob
+                                  const byteCharacters = atob(docx);
+                                  const byteNumbers = new Array(byteCharacters.length);
+                                  for (let i = 0; i < byteCharacters.length; i++) {
+                                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                  }
+                                  const byteArray = new Uint8Array(byteNumbers);
+                                  const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                                  
+                                  // Create download link
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${filename || 'investor-memo'}.docx`;
+                                  a.style.display = 'none';
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  
+                                  // Clean up
+                                  setTimeout(() => {
+                                    document.body.removeChild(a);
+                                    window.URL.revokeObjectURL(url);
+                                  }, 100);
+                                } catch (error) {
+                                  console.error("Error downloading DOCX:", error);
+                                }
+                              }}
+                            >
+                              <FileText className="h-4 w-4" />
+                              Download as Word
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                              onClick={() => {
+                                const { pdf, filename } = message.memo_data;
+                                try {
+                                  // Convert base64 to blob
+                                  const byteCharacters = atob(pdf);
+                                  const byteNumbers = new Array(byteCharacters.length);
+                                  for (let i = 0; i < byteCharacters.length; i++) {
+                                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                  }
+                                  const byteArray = new Uint8Array(byteNumbers);
+                                  const blob = new Blob([byteArray], { type: 'application/pdf' });
+                                  
+                                  // Create download link
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${filename || 'investor-memo'}.pdf`;
+                                  a.style.display = 'none';
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  
+                                  // Clean up
+                                  setTimeout(() => {
+                                    document.body.removeChild(a);
+                                    window.URL.revokeObjectURL(url);
+                                  }, 100);
+                                } catch (error) {
+                                  console.error("Error downloading PDF:", error);
+                                }
+                              }}
+                            >
+                              <FileText className="h-4 w-4" />
+                              Download as PDF
+                            </Button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -1124,8 +1297,8 @@ export function ChatSidebar({
         isFullscreen && "pb-6"
       )}>
         {/* Tool indicators */}
-        {(isGeneratingImage || isSearchingWeb || uploadedFiles.length > 0) && (
-          <div className="mb-2 flex items-center gap-2 flex-wrap min-h-[28px]">
+        {(isGeneratingImage || isSearchingWeb || isDatabaseContextActive || isMemoGeneratorActive || uploadedFiles.length > 0) && (
+          <div className="mb-2 flex flex-row items-center gap-2 flex-wrap min-h-[28px]">
             {isGeneratingImage && (
               <div className="text-xs bg-blue-500/10 text-blue-500 py-1 px-2 rounded-full flex items-center gap-1">
                 <ImageIcon className="h-3 w-3" />
@@ -1136,6 +1309,18 @@ export function ChatSidebar({
               <div className="text-xs bg-green-500/10 text-green-500 py-1 px-2 rounded-full flex items-center gap-1">
                 <Globe className="h-3 w-3" />
                 <span>Web Search</span>
+              </div>
+            )}
+            {isDatabaseContextActive && (
+              <div className="text-xs bg-purple-500/10 text-purple-500 py-1 px-2 rounded-full flex items-center gap-1">
+                <Database className="h-3 w-3" />
+                <span>Database Context Included</span>
+              </div>
+            )}
+            {isMemoGeneratorActive && (
+              <div className="text-xs bg-orange-500/10 text-orange-500 py-1 px-2 rounded-full flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                <span>Investor Memo Enabled</span>
               </div>
             )}
             {uploadedFiles.map((uploadedFile, index) => (
@@ -1245,6 +1430,46 @@ export function ChatSidebar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">Web search</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleDatabaseContextClick}
+                        className={cn(
+                          "h-8 w-8 rounded-full bg-transparent hover:bg-muted",
+                          isDatabaseContextActive && "bg-purple-500/10 text-purple-500"
+                        )}
+                      >
+                        <Database className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Include database context</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleMemoGeneratorClick}
+                        className={cn(
+                          "h-8 w-8 rounded-full bg-transparent hover:bg-muted",
+                          isMemoGeneratorActive && "bg-orange-500/10 text-orange-500"
+                        )}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Generate investor memo</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>

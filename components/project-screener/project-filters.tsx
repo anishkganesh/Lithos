@@ -142,7 +142,7 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
     (capexRange.min || capexRange.max ? 1 : 0)
 
   return (
-    <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
+    <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4" />
@@ -177,7 +177,7 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
         {/* Stage Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="bg-background">
               Stage
               {selectedStages.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
@@ -216,7 +216,7 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
         {/* Commodity Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="bg-background">
               Commodity
               {selectedCommodities.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
@@ -257,7 +257,7 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
         {/* Risk Level Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="bg-background">
               Risk Level
               {selectedRisks.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
@@ -296,7 +296,7 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
         {/* NPV Range Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="bg-background">
               NPV Range
               {(npvRange.min || npvRange.max) && (
                 <Badge variant="secondary" className="ml-2">
@@ -330,7 +330,7 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
         {/* IRR Range Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="bg-background">
               IRR Range
               {(irrRange.min || irrRange.max) && (
                 <Badge variant="secondary" className="ml-2">
@@ -364,7 +364,7 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
         {/* CAPEX Range Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="bg-background">
               CAPEX Range
               {(capexRange.min || capexRange.max) && (
                 <Badge variant="secondary" className="ml-2">
@@ -395,7 +395,11 @@ export function ProjectFilters({ table }: ProjectFiltersProps) {
           </PopoverContent>
         </Popover>
 
-        <Button size="sm" onClick={applyFilters}>
+        <Button
+          size="sm"
+          onClick={applyFilters}
+          className="bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
+        >
           Apply Filters
         </Button>
       </div>

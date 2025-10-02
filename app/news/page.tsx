@@ -2,7 +2,7 @@
 
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
-import { NewsAnnouncements } from '@/components/news-announcements/news-announcements'
+import { NewsAnnouncements } from '@/components/news-announcements/news-announcements-final'
 import { ChatLayout } from '@/components/chat-layout'
 import { useRequireAuth } from '@/lib/auth-utils'
 

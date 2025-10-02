@@ -70,7 +70,8 @@ export function useProjects() {
 
       // Transform database data to match MiningProject interface
       const transformedProjects: MiningProject[] = (allData || []).map((project: any) => ({
-        id: project.id,
+        id: project.project_id || project.id,
+        project_id: project.project_id,  // Keep original project_id for database operations
         project: project.project_name || 'Unknown',
         company: project.company_name || 'Unknown',
         stage: project.stage || 'Exploration',

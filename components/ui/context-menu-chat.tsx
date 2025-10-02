@@ -13,12 +13,13 @@ import {
 } from '@/components/ui/context-menu'
 import { useGlobalChat } from '@/lib/global-chat-context'
 import { useChat } from '@/lib/chat-context'
-import { MessageSquare, TrendingUp, Search, Lightbulb, ChartBar, Database } from 'lucide-react'
+import { MessageSquare, TrendingUp, Search, Lightbulb, ChartBar, Database, AlertTriangle, Target, FileText } from 'lucide-react'
+import { formatProjectForChat, formatNewsForChat } from '@/lib/chat/project-context-generator'
 
 interface ContextMenuChatProps {
   children: React.ReactNode
   data: any
-  dataType: 'project' | 'metric' | 'chart' | 'cell'
+  dataType: 'project' | 'metric' | 'chart' | 'cell' | 'news' | 'company'
   context?: string
 }
 
@@ -31,14 +32,45 @@ export function ContextMenuChat({ children, data, dataType, context }: ContextMe
 
     switch (dataType) {
       case 'project':
-        const project = data
+        if (action === 'full-analysis') {
+          // Use the comprehensive project summary with risk analysis
+          query = formatProjectForChat(data)
+        } else {
+          const project = data
+          query = action === 'explain'
+            ? `Explain the ${project.project || project.name} project in ${project.jurisdiction}. Why is the NPV $${project.postTaxNPV}M and IRR ${project.irr}%?`
+            : action === 'compare'
+            ? `Compare ${project.project || project.name} with similar ${project.primaryCommodity} projects in the same region`
+            : action === 'analyze'
+            ? `Analyze the investment potential of ${project.project || project.name} considering its ${project.stage} stage and ${project.irr}% IRR`
+            : `What are the key risks for ${project.project || project.name} given its ${project.riskLevel} risk rating?`
+        }
+        break
+
+      case 'news':
+        if (action === 'full-analysis') {
+          // Use the comprehensive news analysis with predictive insights
+          query = formatNewsForChat(data)
+        } else {
+          query = action === 'explain'
+            ? `Explain the implications of this news: "${data.headline}"`
+            : action === 'predict'
+            ? `What are the predictive insights and investment opportunities from this news: "${data.headline}"?`
+            : action === 'risks'
+            ? `What risks and market impacts does this news present: "${data.headline}"?`
+            : query
+        }
+        break
+
+      case 'company':
+        const company = data
         query = action === 'explain'
-          ? `Explain the ${project.name} project in ${project.location}. Why is the NPV ${project.npv}M and IRR ${project.irr}%?`
+          ? `Provide an overview of ${company.company_name} including their mining projects and financial performance`
           : action === 'compare'
-          ? `Compare ${project.name} with similar ${project.commodity} projects in the same region`
+          ? `Compare ${company.company_name} with peer companies in the ${company.primary_commodity || 'mining'} sector`
           : action === 'analyze'
-          ? `Analyze the investment potential of ${project.name} considering its ${project.stage} stage and ${project.irr}% IRR`
-          : `What are the key risks for ${project.name} given its ${project.riskLevel} risk rating?`
+          ? `Analyze the investment potential of ${company.company_name} based on their project portfolio`
+          : `What are the key risks and opportunities for ${company.company_name}?`
         break
 
       case 'metric':
@@ -85,6 +117,13 @@ export function ContextMenuChat({ children, data, dataType, context }: ContextMe
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-64">
+        {(dataType === 'project' || dataType === 'news') && (
+          <ContextMenuItem onClick={() => handleAction('full-analysis')} className="font-medium">
+            <FileText className="mr-2 h-4 w-4" />
+            <span>Add Full Analysis to Chat</span>
+          </ContextMenuItem>
+        )}
+        
         <ContextMenuItem onClick={() => handleAction('explain')}>
           <MessageSquare className="mr-2 h-4 w-4" />
           <span>Ask AI to explain this</span>
@@ -101,8 +140,34 @@ export function ContextMenuChat({ children, data, dataType, context }: ContextMe
               <span>Analyze investment potential</span>
             </ContextMenuItem>
             <ContextMenuItem onClick={() => handleAction('risks')}>
-              <Lightbulb className="mr-2 h-4 w-4" />
+              <AlertTriangle className="mr-2 h-4 w-4" />
               <span>Identify key risks</span>
+            </ContextMenuItem>
+          </>
+        )}
+        
+        {dataType === 'news' && (
+          <>
+            <ContextMenuItem onClick={() => handleAction('predict')}>
+              <Target className="mr-2 h-4 w-4" />
+              <span>Predictive Analytics</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('risks')}>
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              <span>Risk Assessment</span>
+            </ContextMenuItem>
+          </>
+        )}
+        
+        {dataType === 'company' && (
+          <>
+            <ContextMenuItem onClick={() => handleAction('compare')}>
+              <ChartBar className="mr-2 h-4 w-4" />
+              <span>Compare with peers</span>
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleAction('analyze')}>
+              <TrendingUp className="mr-2 h-4 w-4" />
+              <span>Portfolio analysis</span>
             </ContextMenuItem>
           </>
         )}

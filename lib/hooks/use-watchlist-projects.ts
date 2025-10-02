@@ -50,13 +50,14 @@ export function useWatchlistProjects() {
         .from('projects')
         .select('*')
         .eq('watchlist', true)
-        .order('watchlisted_at', { ascending: false })
+        .order('updated_at', { ascending: false })
 
       if (error) throw error
 
       // Transform database data to match MiningProject interface
       const transformedProjects: MiningProject[] = (data || []).map((project: any) => ({
-        id: project.id,
+        id: project.project_id || project.id,
+        project_id: project.project_id,  // Keep original project_id for database operations
         project: project.project_name || 'Unknown',
         company: project.company_name || 'Unknown',
         stage: project.stage || 'Exploration',
@@ -73,6 +74,7 @@ export function useWatchlistProjects() {
         riskLevel: project.jurisdiction_risk || 'Medium',
         investorsOwnership: project.investors_ownership?.[0] || project.ownership_structure || '',
         resourceGrade: project.resource_grade || 0,
+        gradeUnit: project.grade_unit || '%',
         containedMetal: project.contained_metal || 0,
         esgScore: project.esg_score || 'C',
         redFlags: project.red_flag_count || 0,
