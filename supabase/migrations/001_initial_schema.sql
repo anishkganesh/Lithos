@@ -161,10 +161,10 @@ CREATE INDEX IF NOT EXISTS idx_projects_country ON projects(country);
 CREATE INDEX IF NOT EXISTS idx_projects_watchlist ON projects(watchlist) WHERE watchlist = TRUE;
 
 -- ============================================================================
--- NEWS TABLE
+-- NEWS TABLE (UNIFIED_NEWS)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS news (
+CREATE TABLE IF NOT EXISTS unified_news (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Core fields
@@ -181,16 +181,39 @@ CREATE TABLE IF NOT EXISTS news (
     company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL,
     company_name TEXT,
     symbol TEXT,
+    exchange TEXT,
     
     -- Categorization
     primary_commodity TEXT,
     commodities TEXT[],
     topics TEXT[],
     countries TEXT[],
+    project_names TEXT[],
+    news_category TEXT,
     
-    -- Sentiment
+    -- Mining-specific flags
+    is_mining_related BOOLEAN DEFAULT false,
+    is_project_related BOOLEAN DEFAULT false,
+    is_exploration_news BOOLEAN DEFAULT false,
+    is_production_news BOOLEAN DEFAULT false,
+    
+    -- Content mentions
+    mentions_financials BOOLEAN DEFAULT false,
+    mentions_technical_report BOOLEAN DEFAULT false,
+    mentions_resource_estimate BOOLEAN DEFAULT false,
+    mentions_feasibility_study BOOLEAN DEFAULT false,
+    mentions_environmental BOOLEAN DEFAULT false,
+    mentions_permits BOOLEAN DEFAULT false,
+    mentions_acquisition BOOLEAN DEFAULT false,
+    
+    -- Sentiment and scoring
     sentiment_score NUMERIC(3,2),
     relevance_score INTEGER,
+    importance_level TEXT,
+    
+    -- Status
+    is_featured BOOLEAN DEFAULT false,
+    is_archived BOOLEAN DEFAULT false,
     
     -- Watchlist
     watchlist BOOLEAN DEFAULT FALSE,
@@ -202,10 +225,16 @@ CREATE TABLE IF NOT EXISTS news (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_news_published ON news(published_date DESC);
-CREATE INDEX IF NOT EXISTS idx_news_company_id ON news(company_id);
-CREATE INDEX IF NOT EXISTS idx_news_source ON news(source_name);
-CREATE INDEX IF NOT EXISTS idx_news_watchlist ON news(watchlist) WHERE watchlist = TRUE;
+-- Keep the old news table as an alias/view for backward compatibility
+CREATE VIEW news AS SELECT * FROM unified_news;
+
+CREATE INDEX IF NOT EXISTS idx_unified_news_published ON unified_news(published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_unified_news_company_id ON unified_news(company_id);
+CREATE INDEX IF NOT EXISTS idx_unified_news_source ON unified_news(source_name);
+CREATE INDEX IF NOT EXISTS idx_unified_news_watchlist ON unified_news(watchlist) WHERE watchlist = TRUE;
+CREATE INDEX IF NOT EXISTS idx_unified_news_archived ON unified_news(is_archived);
+CREATE INDEX IF NOT EXISTS idx_unified_news_category ON unified_news(news_category);
+CREATE INDEX IF NOT EXISTS idx_unified_news_commodity ON unified_news(primary_commodity);
 
 -- ============================================================================
 -- USR TABLE (Users)
@@ -249,7 +278,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_history_created ON chat_history(created_at D
 -- News to Projects relationship
 CREATE TABLE IF NOT EXISTS news_projects (
     id SERIAL PRIMARY KEY,
-    news_id UUID NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+    news_id UUID NOT NULL REFERENCES unified_news(id) ON DELETE CASCADE,
     project_id UUID NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
     impact_type VARCHAR(50),
     impact_score INTEGER,
@@ -263,7 +292,7 @@ CREATE INDEX IF NOT EXISTS idx_news_projects_project ON news_projects(project_id
 -- News to Companies relationship
 CREATE TABLE IF NOT EXISTS news_companies (
     id SERIAL PRIMARY KEY,
-    news_id UUID NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+    news_id UUID NOT NULL REFERENCES unified_news(id) ON DELETE CASCADE,
     company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     impact_type VARCHAR(50),
     impact_score INTEGER,
@@ -298,9 +327,9 @@ CREATE TRIGGER update_projects_updated_at
 BEFORE UPDATE ON projects
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_news_updated_at ON news;
-CREATE TRIGGER update_news_updated_at
-BEFORE UPDATE ON news
+DROP TRIGGER IF EXISTS update_unified_news_updated_at ON unified_news;
+CREATE TRIGGER update_unified_news_updated_at
+BEFORE UPDATE ON unified_news
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_usr_updated_at ON usr;
@@ -315,7 +344,7 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 -- Grant permissions for authenticated users
 GRANT SELECT, INSERT, UPDATE ON companies TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON projects TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON news TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON unified_news TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON usr TO authenticated;
 GRANT SELECT, INSERT ON chat_history TO authenticated;
 GRANT SELECT, INSERT, DELETE ON news_projects TO authenticated;
@@ -331,14 +360,14 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+ALTER TABLE unified_news ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usr ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_history ENABLE ROW LEVEL SECURITY;
 
 -- Create basic RLS policies (adjust as needed)
 CREATE POLICY "Enable read access for all users" ON companies FOR SELECT USING (true);
 CREATE POLICY "Enable read access for all users" ON projects FOR SELECT USING (true);
-CREATE POLICY "Enable read access for all users" ON news FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON unified_news FOR SELECT USING (true);
 CREATE POLICY "Users can view own profile" ON usr FOR SELECT USING (auth.uid()::text = email);
 CREATE POLICY "Users can view own chat history" ON chat_history FOR SELECT USING (auth.uid() = user_id);
 
@@ -348,6 +377,7 @@ CREATE POLICY "Users can view own chat history" ON chat_history FOR SELECT USING
 DO $$
 BEGIN
     RAISE NOTICE 'Initial database schema created successfully!';
-    RAISE NOTICE 'Tables created: companies, projects, news, usr, chat_history';
+    RAISE NOTICE 'Tables created: companies, projects, unified_news, usr, chat_history';
     RAISE NOTICE 'Junction tables: news_projects, news_companies';
+    RAISE NOTICE 'Views created: news (alias for unified_news)';
 END $$;
