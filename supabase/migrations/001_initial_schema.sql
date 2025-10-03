@@ -225,7 +225,87 @@ CREATE TABLE IF NOT EXISTS unified_news (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Add missing columns to existing unified_news table if they don't exist
+DO $$ 
+BEGIN
+    -- Add exchange column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='exchange') THEN
+        ALTER TABLE unified_news ADD COLUMN exchange TEXT;
+    END IF;
+    
+    -- Add project_names column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='project_names') THEN
+        ALTER TABLE unified_news ADD COLUMN project_names TEXT[];
+    END IF;
+    
+    -- Add news_category column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='news_category') THEN
+        ALTER TABLE unified_news ADD COLUMN news_category TEXT;
+    END IF;
+    
+    -- Add mining-specific flags
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='is_mining_related') THEN
+        ALTER TABLE unified_news ADD COLUMN is_mining_related BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='is_project_related') THEN
+        ALTER TABLE unified_news ADD COLUMN is_project_related BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='is_exploration_news') THEN
+        ALTER TABLE unified_news ADD COLUMN is_exploration_news BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='is_production_news') THEN
+        ALTER TABLE unified_news ADD COLUMN is_production_news BOOLEAN DEFAULT false;
+    END IF;
+    
+    -- Add content mention flags
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='mentions_financials') THEN
+        ALTER TABLE unified_news ADD COLUMN mentions_financials BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='mentions_technical_report') THEN
+        ALTER TABLE unified_news ADD COLUMN mentions_technical_report BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='mentions_resource_estimate') THEN
+        ALTER TABLE unified_news ADD COLUMN mentions_resource_estimate BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='mentions_feasibility_study') THEN
+        ALTER TABLE unified_news ADD COLUMN mentions_feasibility_study BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='mentions_environmental') THEN
+        ALTER TABLE unified_news ADD COLUMN mentions_environmental BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='mentions_permits') THEN
+        ALTER TABLE unified_news ADD COLUMN mentions_permits BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='mentions_acquisition') THEN
+        ALTER TABLE unified_news ADD COLUMN mentions_acquisition BOOLEAN DEFAULT false;
+    END IF;
+    
+    -- Add importance_level column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='importance_level') THEN
+        ALTER TABLE unified_news ADD COLUMN importance_level TEXT;
+    END IF;
+    
+    -- Add status flags
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='is_featured') THEN
+        ALTER TABLE unified_news ADD COLUMN is_featured BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='unified_news' AND column_name='is_archived') THEN
+        ALTER TABLE unified_news ADD COLUMN is_archived BOOLEAN DEFAULT false;
+    END IF;
+END $$;
+
 -- Keep the old news table as an alias/view for backward compatibility
+DROP VIEW IF EXISTS news;
 CREATE VIEW news AS SELECT * FROM unified_news;
 
 CREATE INDEX IF NOT EXISTS idx_unified_news_published ON unified_news(published_date DESC);
