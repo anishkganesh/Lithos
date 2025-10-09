@@ -3,6 +3,8 @@
 import { AppSidebar } from '@/components/app-sidebar'
 import { ChartAreaInteractive } from '@/components/chart-area-interactive'
 import { ProjectScreener } from '@/components/project-screener'
+import { CompanyScreener } from '@/components/company-screener/company-screener'
+import { NewsScreener } from '@/components/news-screener/news-screener'
 import { SectionCards } from '@/components/section-cards'
 import { SiteHeader } from '@/components/site-header'
 import { ChatLayout } from '@/components/chat-layout'
@@ -49,7 +51,22 @@ export default function Page() {
                   <ChartAreaInteractive />
                 </div>
                 <div className="px-4 lg:px-6">
-                  <ProjectScreener />
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-semibold">Watchlisted Projects</h2>
+                    <ProjectScreener />
+                  </div>
+                </div>
+                <div className="px-4 lg:px-6">
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-semibold">Watchlisted Companies</h2>
+                    <CompanyScreener />
+                  </div>
+                </div>
+                <div className="px-4 lg:px-6">
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-semibold">Watchlisted News</h2>
+                    <NewsScreener />
+                  </div>
                 </div>
               </div>
             </div>

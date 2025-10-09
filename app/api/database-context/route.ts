@@ -20,70 +20,72 @@ export async function GET(request: NextRequest) {
       .from('projects')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (projectsError) {
       console.error('Error fetching projects:', projectsError);
       return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
     }
-    
-    // Fetch news and announcements
-    const { data: news, error: newsError } = await supabase
-      .from('unified_news')
+
+    // Fetch companies
+    const { data: companies, error: companiesError } = await supabase
+      .from('companies')
       .select('*')
-      .order('published_date', { ascending: false })
-      .limit(100);
-    
+      .order('created_at', { ascending: false });
+
+    if (companiesError) {
+      console.error('Error fetching companies:', companiesError);
+    }
+
+    // Fetch news
+    const { data: news, error: newsError } = await supabase
+      .from('news')
+      .select('*')
+      .order('published_at', { ascending: false })
+      .limit(200);
+
     if (newsError) {
       console.error('Error fetching news:', newsError);
     }
     
-    // Fetch technical filings
-    const { data: filings, error: filingsError } = await supabase
-      .from('technical_reports')
-      .select('*')
-      .order('filing_date', { ascending: false })
-      .limit(100);
-    
-    if (filingsError) {
-      console.error('Error fetching filings:', filingsError);
-    }
-    
-    // Fetch reporting issuers
-    const { data: issuers, error: issuersError } = await supabase
-      .from('reporting_issuers')
-      .select('*')
-      .limit(100);
-    
-    if (issuersError) {
-      console.error('Error fetching issuers:', issuersError);
-    }
-    
-    // Get unique companies for reporting issuers count
-    const uniqueCompanies = new Set(projects?.map(p => p.company_name).filter(Boolean));
-    
+    // Extract commodities from array for statistics
+    const allCommodities: string[] = [];
+    projects?.forEach(p => {
+      if (p.commodities && Array.isArray(p.commodities)) {
+        allCommodities.push(...p.commodities);
+      }
+    });
+
+    const commodityCounts: { [key: string]: number } = {};
+    allCommodities.forEach(c => {
+      commodityCounts[c] = (commodityCounts[c] || 0) + 1;
+    });
+
+    const topCommodities = Object.entries(commodityCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
     // Calculate summary statistics (matching dashboard display)
     const summaryStats = {
       totalProjects: projects?.length || 0,
+      totalCompanies: companies?.length || 0,
       totalNews: news?.length || 0,
-      totalFilings: (projects?.length || 0) * 3, // Mock: 3 filings per project to match dashboard
-      totalIssuers: uniqueCompanies.size || 0, // Unique companies as reporting issuers
-      avgNPV: projects ? projects.reduce((sum, p) => sum + (p.post_tax_npv_usd_m || 0), 0) / projects.length : 0,
-      avgIRR: projects ? projects.reduce((sum, p) => sum + (p.irr_percent || 0), 0) / projects.length : 0,
-      topCommodities: getTopItems(projects || [], 'primary_commodity', 5),
-      topCountries: getTopItems(projects || [], 'country', 5)
+      topCommodities: topCommodities,
+      topCountries: getTopItems(projects || [], 'location', 5),
+      topStages: getTopItems(projects || [], 'stage', 5),
+      topExchanges: getTopItems(companies || [], 'exchange', 5)
     };
-    
+
     // Format context for easy consumption
     const formattedContext = {
       projects: projects || [],
+      companies: companies || [],
       news: news || [],
-      filings: filings || [],
-      issuers: issuers || [],
       stats: summaryStats,
-      formattedText: formatForChat(projects || [], news || [], filings || [], issuers || [], summaryStats)
+      formattedText: formatForChat(projects || [], companies || [], news || [], summaryStats)
     };
-    
-    console.log(`Returning ${projects?.length || 0} projects with context`);
+
+    console.log(`Returning database context: ${projects?.length || 0} projects, ${companies?.length || 0} companies, ${news?.length || 0} news`);
     return NextResponse.json(formattedContext);
     
   } catch (error) {
@@ -122,65 +124,92 @@ function groupBy(items: any[], field: string) {
   return groups;
 }
 
-function formatForChat(projects: any[], news: any[], filings: any[], issuers: any[], stats: any): string {
-  // Separate projects with NPV from those without
-  const projectsWithNPV = projects.filter(p => p.post_tax_npv_usd_m !== null);
-  const projectsWithoutNPV = projects.filter(p => p.post_tax_npv_usd_m === null);
-  
-  // Group projects by key attributes for better searchability
-  const projectsByCountry = groupBy(projects, 'country');
-  const projectsByCommodity = groupBy(projects, 'primary_commodity');
-  const projectsByStage = groupBy(projects, 'development_stage');
-  
-  let context = `DATABASE CONTEXT:
+function formatForChat(projects: any[], companies: any[], news: any[], stats: any): string {
+  // Group data by key attributes for better searchability
+  const projectsByLocation = groupBy(projects, 'location');
+  const projectsByStage = groupBy(projects, 'stage');
+  const companiesByCountry = groupBy(companies, 'country');
+  const companiesByExchange = groupBy(companies, 'exchange');
 
-SUMMARY STATISTICS:
-Total Projects: ${stats.totalProjects}
-Total News & Announcements: ${stats.totalNews}
-Total Technical Filings: ${stats.totalFilings}
-Total Reporting Issuers: ${stats.totalIssuers}
+  let context = `═══════════════════════════════════════════════════════════════
+COMPREHENSIVE DATABASE CONTEXT - MINING INDUSTRY INTELLIGENCE
+═══════════════════════════════════════════════════════════════
 
-PROJECT DETAILS:
-Projects with NPV data: ${projectsWithNPV.length}
-Projects without NPV data: ${projectsWithoutNPV.length}
-Average NPV (where available): $${projectsWithNPV.length > 0 ? (projectsWithNPV.reduce((sum, p) => sum + p.post_tax_npv_usd_m, 0) / projectsWithNPV.length).toFixed(1) : 0}M
-Average IRR (where available): ${projectsWithNPV.length > 0 ? (projectsWithNPV.filter(p => p.irr_percent).reduce((sum, p) => sum + p.irr_percent, 0) / projectsWithNPV.filter(p => p.irr_percent).length).toFixed(1) : 0}%
+📊 SUMMARY STATISTICS:
+────────────────────────────────────────────────────────────────
+• Total Mining Projects: ${stats.totalProjects}
+• Total Companies: ${stats.totalCompanies}
+• Total News Articles: ${stats.totalNews}
 
-TOP COMMODITIES:
-${stats.topCommodities.map((c: any) => `- ${c.name}: ${c.count} projects`).join('\n')}
+🔬 PROJECT BREAKDOWN:
+────────────────────────────────────────────────────────────────
+${stats.topStages && stats.topStages.length > 0 ? stats.topStages.map((s: any) => `   • ${s.name}: ${s.count} projects`).join('\n') : '   • No stage data available'}
 
-TOP COUNTRIES:
-${stats.topCountries.map((c: any) => `- ${c.name}: ${c.count} projects`).join('\n')}
+🌍 TOP COMMODITIES:
+${stats.topCommodities && stats.topCommodities.length > 0 ? stats.topCommodities.map((c: any) => `   • ${c.name}: ${c.count} projects`).join('\n') : '   • No commodity data available'}
 
-TOP PROJECTS BY NPV (with available data):
-${projectsWithNPV.slice(0, 15).map((p: any, i: number) => 
-  `${i+1}. ${p.project_name} (${p.company_name}): ${p.primary_commodity || 'N/A'} in ${p.country || 'N/A'}, NPV: $${p.post_tax_npv_usd_m?.toFixed(1)}M, IRR: ${p.irr_percent || 'N/A'}%`
+🗺️  TOP LOCATIONS (Projects):
+${stats.topCountries && stats.topCountries.length > 0 ? stats.topCountries.map((c: any) => `   • ${c.name}: ${c.count} projects`).join('\n') : '   • No location data available'}
+
+📈 TOP EXCHANGES (Companies):
+${stats.topExchanges && stats.topExchanges.length > 0 ? stats.topExchanges.map((e: any) => `   • ${e.name}: ${e.count} companies`).join('\n') : '   • No exchange data available'}
+
+════════════════════════════════════════════════════════════════
+📋 MINING PROJECTS (${projects.length} total)
+════════════════════════════════════════════════════════════════
+${projects.slice(0, 30).map((p: any, i: number) =>
+  `${(i+1).toString().padStart(2, '0')}. ${p.name || 'N/A'}
+    Commodities: ${p.commodities?.join(', ') || 'N/A'} | Location: ${p.location || 'N/A'}
+    Stage: ${p.stage || 'N/A'} | Status: ${p.status || 'N/A'}
+    Ownership: ${p.ownership_percentage ? p.ownership_percentage + '%' : 'N/A'}
+    ${p.description ? p.description.substring(0, 150) + '...' : 'No description'}`
+).join('\n\n')}
+
+════════════════════════════════════════════════════════════════
+🏢 COMPANIES DATABASE (${companies.length} total)
+════════════════════════════════════════════════════════════════
+${companies.slice(0, 30).map((c: any, i: number) =>
+  `${(i+1).toString().padStart(2, '0')}. ${c.name || 'N/A'} (${c.ticker || 'N/A'})
+    Exchange: ${c.exchange || 'N/A'} | Country: ${c.country || 'N/A'}
+    Market Cap: ${c.market_cap ? '$' + (c.market_cap / 1000000).toFixed(1) + 'M' : 'N/A'}
+    ${c.description ? c.description.substring(0, 150) + '...' : 'No description'}`
+).join('\n\n')}
+
+════════════════════════════════════════════════════════════════
+📰 RECENT NEWS & ANNOUNCEMENTS (Latest ${Math.min(news.length, 30)})
+════════════════════════════════════════════════════════════════
+${news.slice(0, 30).map((n: any, i: number) =>
+  `${(i+1).toString().padStart(2, '0')}. ${n.title || 'N/A'}
+    Source: ${n.source || 'Unknown'} | Date: ${n.published_at ? new Date(n.published_at).toLocaleDateString() : 'N/A'}
+    Commodities: ${n.commodities?.join(', ') || 'N/A'} | Sentiment: ${n.sentiment || 'N/A'}
+    Summary: ${n.summary?.substring(0, 150) || 'No summary'}...`
+).join('\n\n') || 'No news available'}
+
+════════════════════════════════════════════════════════════════
+🔍 COMPLETE PROJECT CATALOG (All ${projects.length} Projects)
+════════════════════════════════════════════════════════════════
+${projects.map((p: any) =>
+  `• ${p.name || 'N/A'} | Commodities: ${p.commodities?.join(', ') || 'N/A'} | Location: ${p.location || 'Unknown'} | Stage: ${p.stage || 'N/A'} | Status: ${p.status || 'N/A'} | Ownership: ${p.ownership_percentage ? p.ownership_percentage + '%' : 'N/A'} | Resources: ${p.resource_estimate || 'N/A'} | Reserves: ${p.reserve_estimate || 'N/A'}`
 ).join('\n')}
 
-SAMPLE PROJECTS (without NPV data):
-${projectsWithoutNPV.slice(0, 10).map((p: any, i: number) => 
-  `${i+1}. ${p.project_name} (${p.company_name}): ${p.primary_commodity || 'N/A'} in ${p.country || 'N/A'}`
+════════════════════════════════════════════════════════════════
+🔍 COMPLETE COMPANIES CATALOG (All ${companies.length} Companies)
+════════════════════════════════════════════════════════════════
+${companies.map((c: any) =>
+  `• ${c.name || 'N/A'} (${c.ticker || 'N/A'}) | Exchange: ${c.exchange || 'N/A'} | Country: ${c.country || 'N/A'} | Market Cap: ${c.market_cap ? '$' + (c.market_cap / 1000000).toFixed(1) + 'M' : 'N/A'} | Sector: ${c.sector || 'N/A'} | Website: ${c.website || 'N/A'}`
 ).join('\n')}
 
-RECENT NEWS & ANNOUNCEMENTS (Latest 10):
-${news.slice(0, 10).map((n: any, i: number) => 
-  `${i+1}. ${n.headline || n.title} - ${n.source_name || 'Unknown'} (${n.published_date ? new Date(n.published_date).toLocaleDateString() : 'N/A'})`
-).join('\n') || 'No news available'}
+═══════════════════════════════════════════════════════════════
+END OF DATABASE CONTEXT
+═══════════════════════════════════════════════════════════════
 
-RECENT TECHNICAL FILINGS (Latest 10):
-${filings.slice(0, 10).map((f: any, i: number) => 
-  `${i+1}. ${f.title || f.report_title} - ${f.company_name || 'Unknown'} (${f.filing_date ? new Date(f.filing_date).toLocaleDateString() : 'N/A'})`
-).join('\n') || 'No filings available'}
+INSTRUCTIONS FOR USING THIS DATA:
+• You have complete access to ${stats.totalProjects} mining projects, ${stats.totalCompanies} companies, and ${stats.totalNews} news articles
+• When asked about specific projects, companies, or trends, search through the complete catalogs above
+• Compare projects by their financial metrics (NPV, IRR, CAPEX), commodity types, countries, or development stages
+• Provide data-driven insights using exact figures from the database
+• Reference recent news when discussing market trends or specific companies
+• Always cite specific projects, companies, or news articles when making claims`;
 
-REPORTING ISSUERS (Sample):
-${issuers.slice(0, 10).map((iss: any, i: number) => 
-  `${i+1}. ${iss.company_name || iss.issuer_name} - ${iss.jurisdiction || 'N/A'}`
-).join('\n') || 'No issuers available'}
-
-ALL PROJECT DETAILS (for searching):
-${projects.map((p: any) => 
-  `Project: ${p.project_name || 'N/A'} | Company: ${p.company_name || 'N/A'} | Country: ${p.country || 'Unknown'} | Jurisdiction: ${p.jurisdiction || 'N/A'} | Commodity: ${p.primary_commodity || 'N/A'} | Stage: ${p.development_stage || p.stage || 'N/A'} | NPV: ${p.post_tax_npv_usd_m ? '$' + p.post_tax_npv_usd_m.toFixed(1) + 'M' : 'N/A'} | IRR: ${p.irr_percent ? p.irr_percent + '%' : 'N/A'} | CAPEX: ${p.capex_usd_m ? '$' + p.capex_usd_m + 'M' : 'N/A'} | Mine Life: ${p.mine_life_years ? p.mine_life_years + ' years' : 'N/A'}`
-).join('\n')}`;
-  
   return context;
 }

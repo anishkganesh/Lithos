@@ -381,10 +381,37 @@ Always provide data-driven insights and cite specific details from uploaded docu
     
     // Add database context if provided
     if (databaseContext) {
-      console.log("Including pre-cached database context");
-      finalMessages.unshift({
+      console.log("Including comprehensive database context with projects, companies, and news");
+      finalMessages.push({
         role: 'system',
-        content: `You have access to a comprehensive mining projects database. Use this information to answer questions about projects, comparisons, and investment opportunities.\n\n${databaseContext}`
+        content: `${databaseContext}
+
+IMPORTANT DATABASE QUERYING INSTRUCTIONS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You have been provided with the COMPLETE database contents above, including:
+• ALL mining projects with full details (NPV, IRR, CAPEX, commodity, country, stage, etc.)
+• ALL companies with tickers, exchanges, market caps, and descriptions
+• ALL recent news articles with titles, sources, dates, commodities, and sentiment
+
+When the user asks questions about the database:
+1. Search through the COMPLETE CATALOGS sections for exact matches
+2. Filter, sort, and analyze the data based on user criteria
+3. Provide specific, data-driven answers with exact numbers and names
+4. Compare and rank projects/companies based on metrics like NPV, IRR, market cap
+5. Identify trends across commodities, countries, or development stages
+6. Cross-reference news with projects and companies when relevant
+
+EXAMPLE QUERIES YOU CAN ANSWER:
+• "Show me all lithium projects" → Search project catalog, filter where commodities contains "Lithium"
+• "Which company has the highest market cap?" → Search companies catalog, sort by market_cap
+• "List projects in Australia" → Filter projects where location contains "Australia"
+• "What's the latest news about gold?" → Search news catalog, filter by commodities containing "Gold"
+• "List all companies on the TSX exchange" → Filter companies by exchange="TSX"
+• "Show production stage projects" → Filter projects by stage="Production"
+• "Compare lithium companies by market cap" → Filter companies, search news for lithium-related updates
+
+Always provide concrete data from the catalogs with specific names, numbers, and details.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
       });
     }
     

@@ -21,10 +21,10 @@ interface DashboardStats {
   projectsGrowth: number
   totalCompanies: number
   companiesGrowth: number
-  totalFilings: number
-  filingsGrowth: number
-  totalDeals: number
-  dealsGrowth: number
+  totalNews: number
+  newsGrowth: number
+  watchlistedItems: number
+  watchlistedGrowth: number
 }
 
 export function SectionCards() {
@@ -33,10 +33,10 @@ export function SectionCards() {
     projectsGrowth: 0,
     totalCompanies: 0,
     companiesGrowth: 0,
-    totalFilings: 0,
-    filingsGrowth: 0,
-    totalDeals: 0,
-    dealsGrowth: 0
+    totalNews: 0,
+    newsGrowth: 0,
+    watchlistedItems: 0,
+    watchlistedGrowth: 0
   })
 
   useEffect(() => {
@@ -50,32 +50,53 @@ export function SectionCards() {
         .from('projects')
         .select('*', { count: 'exact', head: true })
 
-      // Fetch unique companies
-      const { data: companies } = await supabase
-        .from('projects')
-        .select('company_name')
+      // Fetch total companies from companies table
+      const { count: companyCount } = await supabase
+        .from('companies')
+        .select('*', { count: 'exact', head: true })
 
-      const uniqueCompanies = new Set(companies?.map(c => c.company_name).filter(Boolean))
+      // Fetch total news
+      const { count: newsCount } = await supabase
+        .from('news')
+        .select('*', { count: 'exact', head: true })
+
+      // Fetch watchlisted items (projects + companies + news)
+      const { count: watchlistedProjects } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('watchlist', true)
+
+      const { count: watchlistedCompanies } = await supabase
+        .from('companies')
+        .select('*', { count: 'exact', head: true })
+        .eq('watchlist', true)
+
+      const { count: watchlistedNews } = await supabase
+        .from('news')
+        .select('*', { count: 'exact', head: true })
+        .eq('watchlist', true)
+
+      const totalWatchlisted = (watchlistedProjects || 0) + (watchlistedCompanies || 0) + (watchlistedNews || 0)
 
       // Calculate growth (mock data for now - in production you'd compare with last month)
       const projectsLastMonth = Math.floor((projectCount || 0) * 0.88)
       const projectsGrowth = projectCount ? ((projectCount - projectsLastMonth) / projectsLastMonth * 100) : 0
 
-      // Mock filing count based on projects (assuming average 3 filings per project)
-      const filingsCount = (projectCount || 0) * 3
+      const companiesLastMonth = Math.floor((companyCount || 0) * 0.95)
+      const companiesGrowth = companyCount ? ((companyCount - companiesLastMonth) / companiesLastMonth * 100) : 0
 
-      // Mock deals count
-      const dealsCount = Math.floor((projectCount || 0) * 0.15)
+      const newsLastWeek = Math.floor((newsCount || 0) * 0.85)
+      const newsGrowth = newsCount ? ((newsCount - newsLastWeek) / newsLastWeek * 100) : 0
 
       setStats({
         totalProjects: projectCount || 0,
         projectsGrowth: projectsGrowth,
-        totalCompanies: uniqueCompanies.size,
-        companiesGrowth: -2.5,
-        totalFilings: filingsCount,
-        filingsGrowth: 8.3,
-        totalDeals: dealsCount,
-        dealsGrowth: 4.5
+        totalCompanies: companyCount || 0,
+        companiesGrowth: companiesGrowth,
+        totalNews: newsCount || 0,
+        newsGrowth: newsGrowth,
+        watchlistedItems: totalWatchlisted,
+        watchlistedGrowth: 0 // Could calculate based on change in watchlist over time
       })
     } catch (error) {
       console.error('Error fetching dashboard stats:', error)
@@ -131,8 +152,8 @@ export function SectionCards() {
         <Card className="@container/card from-primary/5 to-card dark:bg-card bg-gradient-to-t shadow-xs">
         <CardHeader>
           <CardDescription>
-            <InfoTooltip content="Mining companies that are publicly traded and required to file regulatory reports with securities commissions">
-              Reporting Issuers
+            <InfoTooltip content="Total number of mining companies tracked in the database">
+              Companies
             </InfoTooltip>
           </CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
@@ -147,79 +168,79 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            {stats.companiesGrowth >= 0 ? 'Up' : 'Down'} {Math.abs(stats.companiesGrowth).toFixed(1)}% this period {stats.companiesGrowth >= 0 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
+            {stats.companiesGrowth >= 0 ? 'Trending up this period' : 'Trending down this period'} {stats.companiesGrowth >= 0 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
           </div>
           <div className="text-muted-foreground">
-            Companies filing reports
+            Mining companies tracked
           </div>
         </CardFooter>
         </Card>
       </ContextMenuChat>
       <ContextMenuChat
         data={{
-          totalFilings: stats.totalFilings,
-          growth: stats.filingsGrowth,
-          type: 'filings'
+          totalNews: stats.totalNews,
+          growth: stats.newsGrowth,
+          type: 'news'
         }}
         dataType="metric"
-        context="Technical report filings"
+        context="Mining industry news articles"
       >
         <Card className="@container/card from-primary/5 to-card dark:bg-card bg-gradient-to-t shadow-xs">
           <CardHeader>
             <CardDescription>
-              <InfoTooltip content="Technical reports including NI 43-101, JORC, and other regulatory filings submitted to securities commissions">
-                Filings
+              <InfoTooltip content="Total number of mining industry news articles tracked from various sources">
+                News Articles
               </InfoTooltip>
           </CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {stats.totalFilings.toLocaleString()}
+            {stats.totalNews.toLocaleString()}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              {stats.filingsGrowth >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-              {stats.filingsGrowth >= 0 ? '+' : ''}{stats.filingsGrowth.toFixed(1)}%
+              {stats.newsGrowth >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
+              {stats.newsGrowth >= 0 ? '+' : ''}{stats.newsGrowth.toFixed(1)}%
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Strong filing activity <IconTrendingUp className="size-4" />
+            {stats.newsGrowth >= 0 ? 'Strong news activity' : 'News activity down'} {stats.newsGrowth >= 0 ? <IconTrendingUp className="size-4" /> : <IconTrendingDown className="size-4" />}
           </div>
-          <div className="text-muted-foreground">Technical reports submitted</div>
+          <div className="text-muted-foreground">Industry news tracked</div>
         </CardFooter>
         </Card>
       </ContextMenuChat>
       <ContextMenuChat
         data={{
-          totalDeals: stats.totalDeals,
-          growth: stats.dealsGrowth,
-          type: 'deals'
+          totalWatchlisted: stats.watchlistedItems,
+          growth: stats.watchlistedGrowth,
+          type: 'watchlist'
         }}
         dataType="metric"
-        context="Mergers and joint ventures"
+        context="Watchlisted projects, companies, and news"
       >
         <Card className="@container/card from-primary/5 to-card dark:bg-card bg-gradient-to-t shadow-xs">
           <CardHeader>
             <CardDescription>
-              <InfoTooltip content="Mergers, acquisitions, and joint venture agreements between mining companies for project development">
-                M&A/JVs
+              <InfoTooltip content="Total number of projects, companies, and news articles added to your watchlist">
+                Watchlisted Items
             </InfoTooltip>
           </CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {stats.totalDeals.toLocaleString()}
+            {stats.watchlistedItems.toLocaleString()}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
-              {stats.dealsGrowth >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-              {stats.dealsGrowth >= 0 ? '+' : ''}{stats.dealsGrowth.toFixed(1)}%
+              {stats.watchlistedGrowth >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
+              {stats.watchlistedGrowth >= 0 ? '+' : ''}{stats.watchlistedGrowth.toFixed(1)}%
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady deal flow <IconTrendingUp className="size-4" />
+            Your tracked items
           </div>
-          <div className="text-muted-foreground">Mergers & joint ventures</div>
+          <div className="text-muted-foreground">Projects, companies & news</div>
         </CardFooter>
         </Card>
       </ContextMenuChat>

@@ -1,11 +1,54 @@
-"use client"
+'use client'
 
-import { CompaniesTable } from "@/components/companies/companies-table"
+import { AppSidebar } from '@/components/app-sidebar'
+import { SiteHeader } from '@/components/site-header'
+import { ChatLayout } from '@/components/chat-layout'
+import { useRequireAuth } from '@/lib/auth-utils'
+import {
+  SidebarInset,
+  SidebarProvider,
+} from '@/components/ui/sidebar'
+import { CompanyScreenerGlobal } from '@/components/company-screener/company-screener-global'
 
 export default function CompaniesPage() {
+  const { user, isLoading } = useRequireAuth()
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null // Will redirect to login
+  }
+
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <CompaniesTable />
-    </div>
+    <ChatLayout>
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <div className="flex flex-1 flex-col">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <div className="px-4 lg:px-6">
+                  <CompanyScreenerGlobal />
+                </div>
+              </div>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </ChatLayout>
   )
 }

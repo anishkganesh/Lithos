@@ -1,69 +1,47 @@
-export type ProjectStage = 
-  | 'Exploration' 
-  | 'PEA' 
-  | 'PFS' 
-  | 'DFS' 
-  | 'Development' 
-  | 'Production' 
-  | 'Care & Maintenance';
+export type ProjectStage =
+  | 'Exploration'
+  | 'Pre-Feasibility'
+  | 'Feasibility'
+  | 'Development'
+  | 'Construction'
+  | 'Production'
+  | 'On Hold';
 
-export type Commodity = 
-  | 'Lithium' 
-  | 'Copper' 
-  | 'Nickel' 
-  | 'Cobalt' 
-  | 'Graphite' 
-  | 'Rare Earths' 
-  | 'Uranium' 
-  | 'Vanadium'
-  | 'Manganese'
-  | 'Tin'
-  | 'Tungsten'
-  | 'Molybdenum'
-  | 'Neodymium'
-  | 'Cerium';
+export type Commodity = string; // Allow any commodity as string
 
 export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Very High';
 
 export type ESGGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
+// Database schema (actual columns from Supabase)
 export interface MiningProject {
   id: string;
-  project_id?: string;  // Original database project_id for operations
-  project: string;
-  stage: ProjectStage;
-  mineLife: number; // years
-  postTaxNPV: number; // USD millions
-  irr: number; // percentage
-  paybackYears: number;
-  capex: number; // USD millions
-  aisc: number; // USD per tonne
-  primaryCommodity: Commodity;
-  secondaryCommodities?: Commodity[];
-  jurisdiction: string;
-  riskLevel: RiskLevel;
-  investorsOwnership: string;
-  
-  // Hidden columns
-  resourceGrade?: number; // percentage or g/t depending on commodity
-  gradeUnit?: string; // %, g/t, ppm, etc
-  containedMetal?: number; // tonnes
-  esgScore?: ESGGrade;
-  redFlags?: string[];
-  permitStatus?: 'Granted' | 'Pending' | 'In Process' | 'Not Applied';
-  offtakeAgreements?: string[];
-  
-  // Additional metadata
-  lastUpdated: string;
-  dataQuality: 'High' | 'Medium' | 'Low';
+  company_id: string | null;
+  name: string;
+  location: string | null;
+  stage: string | null;
+  commodities: string[] | null;
+  resource_estimate: string | null;
+  reserve_estimate: string | null;
+  ownership_percentage: number | null;
+  status: string | null;
+  description: string | null;
+  urls: string[] | null;
+  watchlist: boolean;
+  created_at: string;
+  updated_at: string;
 
-  // Watchlist
-  watchlist?: boolean;
+  // Computed/display fields (for backward compatibility)
+  project?: string; // Alias for name
+  company?: string; // Company name (joined)
+  primaryCommodity?: string; // First commodity in array
+  jurisdiction?: string; // Alias for location
+  riskLevel?: RiskLevel;
+
+  // Optional legacy fields
+  project_id?: string;
   watchlisted_at?: string;
   generated_image_url?: string;
-  company?: string;
-
-  // Technical documentation
   technicalReportUrl?: string;
 }
 

@@ -13,7 +13,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, Download, Eye, Filter, Plus, Search } from "lucide-react"
+import { ArrowUpDown, ChevronDown, Eye, Plus, Search, Bookmark, BookmarkCheck } from "lucide-react"
+import { LinksPopover } from "@/components/ui/links-popover"
 import { ContextMenuChat } from "@/components/ui/context-menu-chat"
 
 import { Button } from "@/components/ui/button"
@@ -37,52 +38,18 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { MiningProject, ProjectStage, Commodity, RiskLevel } from "@/lib/types/mining-project"
+import { MiningProject, RiskLevel } from "@/lib/types/mining-project"
 import { useWatchlistProjects } from "@/lib/hooks/use-watchlist-projects"
-import Link from 'next/link'
-import { ProjectFilters } from "./project-filters"
-import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { ProjectDetailPanel } from "@/components/project-detail-panel"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MiningAgentEnhanced } from "@/components/mining-agent-enhanced"
 import { MiningAgentV2Button } from "@/components/mining-agent-v2-button"
 import { useState, useEffect } from "react"
 import { Loader2 } from "lucide-react"
-import { InfoTooltip, miningMetrics, stageDefinitions } from "@/components/ui/info-tooltip"
-import { formatNumber, formatCurrency, formatPercent, formatTonnes } from "@/lib/format-utils"
-
-const defaultVisibleColumns = [
-  "select",
-  "project",
-  "stage",
-  "mineLife",
-  "postTaxNPV",
-  "preTaxNPV",
-  "irr",
-  "paybackYears",
-  "capex",
-  "annualRevenue",
-  "aisc",
-  "primaryCommodity",
-  "jurisdiction",
-  "investorsOwnership",
-]
-
-const hiddenColumns = [
-  "resourceGrade",
-  "containedMetal",
-  "esgScore",
-  "redFlags",
-  "permitStatus",
-  "offtakeAgreements",
-  "annualOpex",
-  "cashCost",
-  "stripRatio",
-  "recoveryRate",
-  "reserves",
-  "resources",
-  "discountRate",
-]
+import { ExportDropdown, ExportFormat } from "@/components/ui/export-dropdown"
+import { exportProjects } from "@/lib/export-utils"
+import { toast } from "sonner"
+import { Toaster } from "@/components/ui/toaster"
+import { supabase } from "@/lib/supabase/client"
 
 function getRiskBadgeColor(risk: RiskLevel) {
   switch (risk) {
@@ -97,35 +64,6 @@ function getRiskBadgeColor(risk: RiskLevel) {
   }
 }
 
-function getIRRColor(irr: number) {
-  if (irr >= 30) return "text-green-600 font-semibold"
-  if (irr >= 20) return "text-yellow-600"
-  return "text-red-600"
-}
-
-function getESGBadgeColor(grade?: string) {
-  switch (grade) {
-    case "A":
-      return "bg-green-100 text-green-800"
-    case "B":
-      return "bg-blue-100 text-blue-800"
-    case "C":
-      return "bg-yellow-100 text-yellow-800"
-    case "D":
-      return "bg-orange-100 text-orange-800"
-    case "F":
-      return "bg-red-100 text-red-800"
-    default:
-      return "bg-gray-100 text-gray-800"
-  }
-}
-
-interface DetailPanelState {
-  isOpen: boolean;
-  mode: "single" | "comparison";
-  selectedProjects: MiningProject[];
-}
-
 export function ProjectScreener() {
   const { projects: initialData, loading, error, refetch } = useWatchlistProjects()
   const [data, setData] = useState<MiningProject[]>(initialData)
@@ -134,52 +72,36 @@ export function ProjectScreener() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState("")
-  
+
   // Sync data with initialData when it changes
   useEffect(() => {
     setData(initialData)
   }, [initialData])
-  
+
   // Project detail panel state
   const [detailPanelOpen, setDetailPanelOpen] = useState(false)
   const [selectedProjects, setSelectedProjects] = useState<MiningProject[]>([])
   const [detailPanelMode, setDetailPanelMode] = useState<"single" | "comparison">("single")
   const [miningAgentRunning, setMiningAgentRunning] = useState(false)
   const [miningAgentProgress, setMiningAgentProgress] = useState<string>("")
+  const [updatingWatchlist, setUpdatingWatchlist] = useState<string | null>(null)
 
   // Listen for refresh events
   useEffect(() => {
     const handleRefreshProjects = () => {
-      // Refetch data when mining agent completes
       refetch()
     }
-    
+
     window.addEventListener('refreshProjects', handleRefreshProjects)
-    
+
     return () => {
       window.removeEventListener('refreshProjects', handleRefreshProjects)
     }
   }, [refetch])
 
-  // Set default column visibility
-  useEffect(() => {
-    const hiddenCols = Object.fromEntries(
-      hiddenColumns.map((col: string) => [col, false])
-    )
-    setColumnVisibility(prev => ({
-      ...hiddenCols,
-      ...prev
-    }))
-  }, [])
-
   const handleProjectClick = (projectId: string) => {
-    // Try to find the project by either id or project_id, with string comparison
-    const project = data.find(p => {
-      const idMatch = String(p.id) === String(projectId)
-      const projectIdMatch = p.project_id && String(p.project_id) === String(projectId)
-      return idMatch || projectIdMatch
-    })
-    
+    const project = data.find(p => String(p.id) === String(projectId))
+
     if (project) {
       setSelectedProjects([project])
       setDetailPanelMode("single")
@@ -187,27 +109,54 @@ export function ProjectScreener() {
     }
   }
 
-  const handleProjectAnalysis = () => {
-    const selectedRows = table.getFilteredSelectedRowModel().rows
-    if (selectedRows.length === 1) {
-      setSelectedProjects(selectedRows.map(row => row.original))
-      setDetailPanelMode("single")
-      setDetailPanelOpen(true)
-    }
-  }
-
-  const handleCompareProjects = () => {
-    const selectedRows = table.getFilteredSelectedRowModel().rows
-    if (selectedRows.length >= 2) {
-      setSelectedProjects(selectedRows.map(row => row.original))
-      setDetailPanelMode("comparison")
-      setDetailPanelOpen(true)
-    }
-  }
-
   const handleMiningAgentProgress = (isRunning: boolean, message?: string) => {
     setMiningAgentRunning(isRunning)
     setMiningAgentProgress(message || "")
+  }
+
+  // Watchlist handler
+  const handleToggleWatchlist = async (project: MiningProject) => {
+    try {
+      setUpdatingWatchlist(project.id)
+      const newWatchlistStatus = !project.watchlist
+
+      // Optimistically update local state
+      const updatedData = data.map(p =>
+        p.id === project.id
+          ? { ...p, watchlist: newWatchlistStatus }
+          : p
+      )
+      setData(updatedData)
+
+      const { error } = await supabase
+        .from('projects')
+        .update({ watchlist: newWatchlistStatus })
+        .eq('id', project.id)
+
+      if (error) {
+        // Revert on error
+        const revertedData = data.map(p =>
+          p.id === project.id
+            ? { ...p, watchlist: !newWatchlistStatus }
+            : p
+        )
+        setData(revertedData)
+        throw error
+      }
+
+      toast.success(newWatchlistStatus ? 'Added to watchlist' : 'Removed from watchlist')
+    } catch (error: any) {
+      console.error('Error updating watchlist:', error)
+      toast.error(`Failed to update watchlist: ${error?.message || 'Unknown error'}`)
+    } finally {
+      setUpdatingWatchlist(null)
+    }
+  }
+
+  const handleExport = (format: ExportFormat) => {
+    const dataToExport = table.getFilteredRowModel().rows.map(row => row.original)
+    exportProjects(dataToExport, format, 'global-projects')
+    toast.success(`Exported ${dataToExport.length} projects as ${format.toUpperCase()}`)
   }
 
   const columns: ColumnDef<MiningProject>[] = [
@@ -234,7 +183,37 @@ export function ProjectScreener() {
       enableHiding: false,
     },
     {
-      accessorKey: "project",
+      id: "watchlist",
+      header: "",
+      cell: ({ row }) => {
+        const project = row.original
+        const isUpdating = updatingWatchlist === project.id
+
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleToggleWatchlist(project)
+            }}
+            disabled={isUpdating}
+            className="hover:bg-transparent"
+          >
+            {isUpdating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : project.watchlist ? (
+              <BookmarkCheck className="h-4 w-4 fill-foreground" />
+            ) : (
+              <Bookmark className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            )}
+          </Button>
+        )
+      },
+      size: 50,
+    },
+    {
+      accessorKey: "name",
       header: "Project",
       cell: ({ row }) => (
         <ContextMenuChat
@@ -242,327 +221,132 @@ export function ProjectScreener() {
           dataType="project"
           context={row.original.name}
         >
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
-              handleProjectClick(row.original.id)
-            }}
-            className="text-sm font-medium text-blue-600 hover:underline"
-          >
-            {row.getValue("project")}
-          </a>
+          <div className="space-y-1">
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault()
+                handleProjectClick(row.original.id)
+              }}
+              className="text-sm font-semibold text-blue-600 hover:underline block"
+            >
+              {row.original.name}
+            </a>
+            <div className="text-xs text-gray-500">
+              {row.original.company || 'N/A'}
+            </div>
+          </div>
         </ContextMenuChat>
       ),
     },
     {
       accessorKey: "stage",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Stage / Study Type
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => <div className="text-sm text-center">{row.getValue("stage")}</div>,
-    },
-    {
-      accessorKey: "mineLife",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Mine Life (yrs)
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => <div className="text-sm text-center">{formatNumber(row.getValue("mineLife"), { decimals: 0, suffix: ' yrs' })}</div>,
-    },
-    {
-      accessorKey: "postTaxNPV",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            <InfoTooltip content={miningMetrics.npv.description}>
-              Post-tax NPV (USD M)
-            </InfoTooltip>
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const amount = row.getValue("postTaxNPV") as number | null
-        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return (
-          <ContextMenuChat
-            data={amount}
-            dataType="metric"
-            context={`NPV of ${row.original.project} project`}
-          >
-            <div className="text-sm text-right font-medium">{formatted}</div>
-          </ContextMenuChat>
-        )
-      },
-    },
-    {
-      accessorKey: "preTaxNPV",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Pre-tax NPV (USD M)
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const amount = row.getValue("preTaxNPV") as number | null
-        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return <div className="text-sm text-right font-medium">{formatted}</div>
-      },
-    },
-    {
-      accessorKey: "irr",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            IRR %
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const irr = row.getValue("irr") as number | null
-        const formatted = formatPercent(irr, { decimals: 1 })
-        return (
-          <ContextMenuChat
-            data={irr}
-            dataType="metric"
-            context={`IRR of ${row.original.project} project`}
-          >
-            <div className={cn("text-center", irr ? getIRRColor(irr) : "")}>
-              {formatted}
-            </div>
-          </ContextMenuChat>
-        )
-      },
-    },
-    {
-      accessorKey: "paybackYears",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Payback yrs
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => (
-        <div className="text-sm text-center">{formatNumber(row.getValue("paybackYears"), { decimals: 1 })}</div>
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Stage
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
       ),
+      cell: ({ row }) => <div className="text-sm text-center">{row.original.stage || 'Unknown'}</div>,
     },
     {
-      accessorKey: "capex",
-      header: ({ column }) => {
+      accessorKey: "commodities",
+      header: "Commodities",
+      cell: ({ row }) => {
+        const commodities = row.original.commodities || []
         return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Capex (US $ M)
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const amount = row.getValue("capex") as number | null
-        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return <div className="text-sm text-right">{formatted}</div>
-      },
-    },
-    {
-      accessorKey: "annualRevenue",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Annual Revenue (USD M)
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const amount = row.getValue("annualRevenue") as number | null
-        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return <div className="text-sm text-right">{formatted}</div>
-      },
-    },
-    {
-      accessorKey: "aisc",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            AISC (US $/t)
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const amount = row.getValue("aisc") as number | null
-        const formatted = formatNumber(amount, { decimals: 2, prefix: '$', suffix: '/t' })
-        return <div className="text-sm text-right">{formatted}</div>
-      },
-    },
-    {
-      accessorKey: "primaryCommodity",
-      header: "Primary Commodity",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="font-normal">
-          {row.getValue("primaryCommodity")}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "jurisdiction",
-      header: "Jurisdiction & Risk",
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-sm">{row.original.jurisdiction}</span>
-          <Badge className={cn("w-fit", getRiskBadgeColor(row.original.riskLevel))}>
-            {row.original.riskLevel}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "investorsOwnership",
-      header: "Investors/Ownership",
-      cell: ({ row }) => (
-        <div className="max-w-[200px] truncate" title={row.getValue("investorsOwnership")}>
-          {row.getValue("investorsOwnership")}
-        </div>
-      ),
-    },
-    // Hidden columns
-    {
-      accessorKey: "resourceGrade",
-      header: "Resource Grade",
-      cell: ({ row }) => (
-        <div className="text-center">
-          {row.getValue("resourceGrade")} {row.original.gradeUnit}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "containedMetal",
-      header: "Contained Metal",
-      cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("containedMetal") || "0")
-        const formatted = new Intl.NumberFormat("en-US").format(amount)
-        return <div className="text-sm text-right">{formatted} t</div>
-      },
-    },
-    {
-      accessorKey: "esgScore",
-      header: "ESG Score",
-      cell: ({ row }) => (
-        <Badge className={cn("w-fit", getESGBadgeColor(row.getValue("esgScore")))}>
-          {row.getValue("esgScore") || "N/A"}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "technicalReportUrl",
-      header: "Technical Report",
-      cell: ({ row }) => {
-        const url = row.original.technicalReportUrl
-        if (!url) return <span className="text-sm text-gray-400">N/A</span>
-
-        return (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline text-sm flex items-center gap-1"
-            onClick={(e) => e.stopPropagation()}
-          >
-            View Report
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-        )
-      },
-    },
-    {
-      accessorKey: "redFlags",
-      header: "Red Flags",
-      cell: ({ row }) => {
-        const flags = row.getValue("redFlags") as string[] | undefined
-        if (!flags || flags.length === 0) return <span className="text-sm text-gray-400">None</span>
-        return (
-          <div className="flex flex-col gap-1">
-            {flags.map((flag, i) => (
-              <Badge key={i} variant="destructive" className="text-xs">
-                {flag}
+          <div className="flex flex-wrap gap-1">
+            {commodities.slice(0, 2).map((commodity, i) => (
+              <Badge key={i} variant="outline" className="font-normal text-xs">
+                {commodity}
               </Badge>
             ))}
+            {commodities.length > 2 && (
+              <Badge variant="outline" className="font-normal text-xs">
+                +{commodities.length - 2}
+              </Badge>
+            )}
           </div>
         )
       },
     },
     {
-      accessorKey: "permitStatus",
-      header: "Permit Status",
+      accessorKey: "location",
+      header: "Location",
+      cell: ({ row }) => (
+        <div className="space-y-1">
+          <div className="text-sm font-semibold">{row.original.location || 'Unknown'}</div>
+          <div className="flex items-center gap-2">
+            <Badge className={cn("text-xs", getRiskBadgeColor(row.original.riskLevel || 'Medium'))}>
+              {row.original.riskLevel || 'Medium'} Risk
+            </Badge>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "resource_estimate",
+      header: "Resource Estimate",
+      cell: ({ row }) => (
+        <div className="text-sm max-w-[200px] truncate" title={row.original.resource_estimate || 'N/A'}>
+          {row.original.resource_estimate || 'N/A'}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "reserve_estimate",
+      header: "Reserve Estimate",
+      cell: ({ row }) => (
+        <div className="text-sm max-w-[200px] truncate" title={row.original.reserve_estimate || 'N/A'}>
+          {row.original.reserve_estimate || 'N/A'}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "ownership_percentage",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Ownership %
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
-        const status = row.getValue("permitStatus") as string
-        if (!status) return <span className="text-sm text-gray-400">N/A</span>
-        
-        const statusColors = {
-          "Granted": "bg-green-100 text-green-800",
-          "Pending": "bg-yellow-100 text-yellow-800",
-          "In Process": "bg-blue-100 text-blue-800",
-          "Not Applied": "bg-gray-100 text-gray-800",
-        }
-        
+        const pct = row.original.ownership_percentage
         return (
-          <Badge className={cn("w-fit", statusColors[status as keyof typeof statusColors])}>
-            {status}
+          <div className="text-sm text-center">
+            {pct !== null && pct !== undefined ? `${pct}%` : 'N/A'}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.original.status
+        const statusColors = {
+          "Active": "bg-green-100 text-green-800",
+          "On Hold": "bg-yellow-100 text-yellow-800",
+          "Closed": "bg-gray-100 text-gray-800",
+        }
+
+        return (
+          <Badge className={cn("w-fit", statusColors[status as keyof typeof statusColors] || "bg-gray-100 text-gray-800")}>
+            {status || 'Unknown'}
           </Badge>
         )
       },
     },
     {
-      accessorKey: "offtakeAgreements",
-      header: "Off-take Agreements",
-      cell: ({ row }) => {
-        const agreements = row.getValue("offtakeAgreements") as string[] | undefined
-        if (!agreements || agreements.length === 0) return <span className="text-sm text-gray-400">None</span>
-        return <div className="text-sm">{agreements.join(", ")}</div>
-      },
+      accessorKey: "urls",
+      header: "Links",
+      cell: ({ row }) => <LinksPopover urls={row.original.urls || []} />,
     },
   ]
 
@@ -603,7 +387,7 @@ export function ProjectScreener() {
   if (error) {
     return (
       <div className="w-full p-8 text-center">
-        <p className="text-muted-foreground">Failed to load projects. Using sample data.</p>
+        <p className="text-muted-foreground">Failed to load projects: {error}</p>
       </div>
     )
   }
@@ -612,34 +396,11 @@ export function ProjectScreener() {
     <>
       <div className="w-full space-y-4 relative">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">Watchlisted Projects — {data.length} deposits</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Showing your watchlisted projects. <Link href="/global-projects" className="text-primary hover:underline">Browse all projects →</Link>
-            </p>
-          </div>
+          <div className="text-sm text-muted-foreground">{data.length} projects</div>
           <div className="flex items-center gap-2">
-            <MiningAgentV2Button 
-              onComplete={refetch} 
-              onProgressChange={handleMiningAgentProgress}
-            />
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Eye className="mr-2 h-4 w-4" />
-                View Data in Public Company Search
-              </Button>
-              <Button variant="outline" size="sm">
-                Set Alerts
-              </Button>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Project
-              </Button>
-            </div>
+            <ExportDropdown onExport={handleExport} />
           </div>
         </div>
-
-        <ProjectFilters table={table} />
 
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-2">
@@ -684,18 +445,7 @@ export function ProjectScreener() {
           </div>
         </div>
 
-        {selectedRowsCount > 0 && (
-          <BulkActionsToolbar
-            selectedCount={selectedRowsCount}
-            selectedProjects={table.getFilteredSelectedRowModel().rows.map(row => row.original)}
-            onClearSelection={() => setRowSelection({})}
-            onProjectAnalysis={handleProjectAnalysis}
-            onCompare={handleCompareProjects}
-          />
-        )}
-
         <div className="rounded-lg border relative overflow-hidden">
-          {/* Mining agent progress overlay */}
           {miningAgentRunning && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
@@ -706,7 +456,7 @@ export function ProjectScreener() {
               </div>
             </div>
           )}
-          
+
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -778,24 +528,20 @@ export function ProjectScreener() {
         </div>
       </div>
 
-      {/* Project Detail Panel */}
       <ProjectDetailPanel
         isOpen={detailPanelOpen}
         onClose={() => setDetailPanelOpen(false)}
         projects={selectedProjects}
         mode={detailPanelMode}
         onProjectSelect={(projectId) => {
-          const project = data.find(p => {
-            const idMatch = String(p.id) === String(projectId)
-            const projectIdMatch = p.project_id && String(p.project_id) === String(projectId)
-            return idMatch || projectIdMatch
-          })
+          const project = data.find(p => String(p.id) === String(projectId))
           if (project) {
             setSelectedProjects([project])
             setDetailPanelMode("single")
           }
         }}
       />
+      <Toaster />
     </>
   )
-} 
+}

@@ -18,14 +18,18 @@ export function useUserData() {
 
     const fetchUserData = async () => {
       try {
+        // Try to fetch user data, without brands join since it may not exist
         const { data, error } = await supabase
           .from('usr')
-          .select('*, brands(*)')
+          .select('*')
           .eq('email', user.email)
           .single();
 
         if (error) {
-          console.error('Error fetching user data:', error);
+          // Only log if it's not a "no rows" error (user might not be in usr table yet)
+          if (error.code !== 'PGRST116') {
+            console.error('Error fetching user data:', error);
+          }
         } else {
           setUserData(data);
         }

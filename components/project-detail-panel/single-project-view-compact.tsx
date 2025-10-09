@@ -143,16 +143,15 @@ export function SingleProjectView({ project, onProjectSelect, onClose }: SingleP
   const handleAddToChat = () => {
     const projectContext = `Analyze this mining project:
 
-Project: ${project.project}
+Project: ${project.name}
 Company: ${project.company || 'N/A'}
-Stage: ${project.stage}
-Location: ${project.jurisdiction}
-Commodities: ${project.primaryCommodity}
-NPV: $${project.postTaxNPV?.toLocaleString() || 'N/A'}M
-IRR: ${project.irr || 'N/A'}%
-CAPEX: $${project.capex?.toLocaleString() || 'N/A'}M
-Mine Life: ${project.mineLife} years
-AISC: $${project.aisc}/t
+Stage: ${project.stage || 'Unknown'}
+Location: ${project.location || 'N/A'}
+Commodities: ${(project.commodities || []).join(', ')}
+Status: ${project.status || 'Unknown'}
+Ownership: ${project.ownership_percentage !== null ? `${project.ownership_percentage}%` : 'N/A'}
+Resource Estimate: ${project.resource_estimate || 'N/A'}
+Reserve Estimate: ${project.reserve_estimate || 'N/A'}
 
 What is your assessment of this project?`
 
@@ -176,13 +175,13 @@ What is your assessment of this project?`
       <div className="space-y-3">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-medium">{project.project || 'N/A'}</h2>
+            <h2 className="text-xl font-medium">{project.name}</h2>
             <p className="text-sm text-muted-foreground">
-              {String(project.investorsOwnership || project.company || 'Unknown').split("(")[0].trim()} • {project.jurisdiction || 'N/A'}
+              {project.company || 'Unknown'} • {project.location || 'N/A'}
             </p>
           </div>
-          <Badge className={cn("text-xs", getRiskBadgeColor(project.riskLevel))}>
-            {project.riskLevel} Risk
+          <Badge className={cn("text-xs", getRiskBadgeColor(project.riskLevel || 'Medium'))}>
+            {project.riskLevel || 'Medium'} Risk
           </Badge>
         </div>
 
@@ -268,61 +267,104 @@ What is your assessment of this project?`
 
       {/* Key Metrics Table */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium">Financial Metrics</h3>
+        <h3 className="text-sm font-medium">Project Information</h3>
         <div className="border rounded-lg divide-y">
-          <div className="grid grid-cols-2 divide-x">
-            <div className="p-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Post-tax NPV</span>
-                <span className="text-sm">{formatCurrency(project.postTaxNPV, { decimals: 1, unit: 'M' })}</span>
-              </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Location</span>
+              <span className="text-sm font-medium">{project.location || 'N/A'}</span>
             </div>
-            <div className="p-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">IRR</span>
-                <span className="text-sm">{formatPercent(project.irr)}</span>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Stage</span>
+              <Badge variant="outline" className="text-xs">{project.stage || 'Unknown'}</Badge>
+            </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Status</span>
+              <Badge variant="outline" className="text-xs">{project.status || 'Unknown'}</Badge>
+            </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Commodities</span>
+              <div className="flex flex-wrap gap-1 justify-end">
+                {(project.commodities || []).map((commodity, i) => (
+                  <Badge key={i} variant="outline" className="text-xs">{commodity}</Badge>
+                ))}
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 divide-x">
-            <div className="p-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">CAPEX</span>
-                <span className="text-sm">{formatCurrency(project.capex, { decimals: 0, unit: 'M' })}</span>
-              </div>
-            </div>
-            <div className="p-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Payback</span>
-                <span className="text-sm">{formatNumber(project.paybackYears, { decimals: 1, suffix: ' years' })}</span>
-              </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Ownership</span>
+              <span className="text-sm font-medium">
+                {project.ownership_percentage !== null && project.ownership_percentage !== undefined
+                  ? `${project.ownership_percentage}%`
+                  : 'N/A'}
+              </span>
             </div>
           </div>
-          <div className="grid grid-cols-2 divide-x">
-            <div className="p-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">AISC</span>
-                <span className="text-sm">{formatCurrency(project.aisc, { decimals: 0, unit: '', suffix: '/t' })}</span>
-              </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Resource Estimate</span>
+              <span className="text-sm font-medium">{project.resource_estimate || 'N/A'}</span>
             </div>
-            <div className="p-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Mine Life</span>
-                <span className="text-sm">{formatNumber(project.mineLife, { decimals: 0, suffix: ' years' })}</span>
-              </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Reserve Estimate</span>
+              <span className="text-sm font-medium">{project.reserve_estimate || 'N/A'}</span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Description */}
+      {project.description && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Description</h3>
+          <p className="text-sm text-muted-foreground">{project.description}</p>
+        </div>
+      )}
+
+      {/* Project URLs */}
+      {project.urls && project.urls.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Resources</h3>
+          <div className="flex flex-wrap gap-2">
+            {project.urls.map((url, i) => (
+              <Button
+                key={i}
+                variant="outline"
+                size="sm"
+                asChild
+              >
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Source {i + 1}
+                </a>
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Project Details Table */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium">Project Details</h3>
+        <h3 className="text-sm font-medium">Additional Details</h3>
         <div className="border rounded-lg divide-y">
           <div className="p-2.5">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Stage</span>
-              <Badge variant="outline" className="text-xs">{project.stage}</Badge>
+              <span className="text-sm text-muted-foreground">Last Updated</span>
+              <span className="text-xs">{new Date(project.updated_at).toLocaleDateString()}</span>
             </div>
           </div>
           <div className="p-2.5">

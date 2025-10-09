@@ -68,37 +68,43 @@ export function useProjects() {
         }
       }
 
+      // Fetch companies to join company names
+      const { data: companies } = await client
+        .from('companies')
+        .select('id, name')
+
+      const companiesMap = new Map(companies?.map(c => [c.id, c.name]) || [])
+
       // Transform database data to match MiningProject interface
       const transformedProjects: MiningProject[] = (allData || []).map((project: any) => ({
-        id: project.project_id || project.id,
-        project_id: project.project_id,  // Keep original project_id for database operations
-        project: project.project_name || 'Unknown',
-        company: project.company_name || 'Unknown',
-        stage: project.stage || 'Exploration',
-        mineLife: project.mine_life_years || 0,
-        postTaxNPV: project.post_tax_npv_usd_m || 0,
-        irr: project.irr_percent || 0,
-        payback: project.payback_years || 0,
-        paybackYears: project.payback_years || 0,
-        capex: project.capex_usd_m || 0,
-        aisc: project.aisc_usd_per_tonne || 0,
-        primaryCommodity: project.primary_commodity || 'Unknown',
-        jurisdiction: `${project.jurisdiction || ''}, ${project.country || ''}`.trim() || 'Unknown',
-        jurisdictionRisk: project.jurisdiction_risk || 'Medium',
-        riskLevel: project.jurisdiction_risk || 'Medium',
-        investorsOwnership: project.investors_ownership?.[0] || project.ownership_structure || '',
-        resourceGrade: project.resource_grade || 0,
-        containedMetal: project.contained_metal || 0,
-        esgScore: project.esg_score || 'C',
-        redFlags: project.red_flag_count || 0,
-        permitStatus: project.permit_status || 'Pending',
-        offtakeAgreements: project.offtake_count || 0,
-        lastUpdated: project.updated_at || new Date().toISOString(),
-        dataQuality: 'High' as const,
+        // Database fields
+        id: project.id,
+        company_id: project.company_id,
+        name: project.name,
+        location: project.location,
+        stage: project.stage,
+        commodities: project.commodities,
+        resource_estimate: project.resource_estimate,
+        reserve_estimate: project.reserve_estimate,
+        ownership_percentage: project.ownership_percentage,
+        status: project.status,
+        description: project.description,
+        urls: project.urls,
         watchlist: project.watchlist || false,
+        created_at: project.created_at,
+        updated_at: project.updated_at,
+
+        // Computed/display fields for backward compatibility
+        project: project.name,
+        company: project.company_id ? (companiesMap.get(project.company_id) || 'Unknown') : 'Unknown',
+        primaryCommodity: project.commodities?.[0] || 'Unknown',
+        jurisdiction: project.location || 'Unknown',
+        riskLevel: 'Medium' as const, // Default risk level
+
+        // Optional fields
+        project_id: project.id,
         watchlisted_at: project.watchlisted_at,
-        generated_image_url: project.generated_image_url,
-        technicalReportUrl: project.technical_report_url
+        technicalReportUrl: project.urls?.[0]
       }))
 
       setProjects(transformedProjects)
