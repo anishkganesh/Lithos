@@ -43,6 +43,7 @@ import { CompanyDetailPanel } from "@/components/company-detail-panel"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 
 export function CompanyScreener() {
   const { companies: initialData, loading, error, refetch } = useWatchlistCompanies()
@@ -52,8 +53,9 @@ export function CompanyScreener() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [globalFilter, setGlobalFilter] = useState("")
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
+  const [selectedCompanies, setSelectedCompanies] = useState<Company[]>([])
   const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [detailPanelMode, setDetailPanelMode] = useState<"single" | "comparison">("single")
   const [updatingWatchlist, setUpdatingWatchlist] = useState<string | null>(null)
 
   // Sync data with initialData when it changes
@@ -77,9 +79,32 @@ export function CompanyScreener() {
   const handleCompanyClick = (companyId: string) => {
     const company = data.find((p) => p.id === companyId)
     if (company) {
-      setSelectedCompany(company)
+      setSelectedCompanies([company])
+      setDetailPanelMode("single")
       setIsPanelOpen(true)
     }
+  }
+
+  const handleCompanyAnalysis = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    if (selectedRows.length === 1) {
+      setSelectedCompanies(selectedRows.map(row => row.original))
+      setDetailPanelMode("single")
+      setIsPanelOpen(true)
+    }
+  }
+
+  const handleCompareCompanies = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    if (selectedRows.length >= 2) {
+      setSelectedCompanies(selectedRows.map(row => row.original))
+      setDetailPanelMode("comparison")
+      setIsPanelOpen(true)
+    }
+  }
+
+  const handleClearSelection = () => {
+    setRowSelection({})
   }
 
   const handleToggleWatchlist = async (company: Company) => {
@@ -368,6 +393,17 @@ export function CompanyScreener() {
           </div>
         </div>
 
+        {/* Bulk Actions Toolbar */}
+        {selectedRowsCount > 0 && (
+          <BulkActionsToolbar
+            selectedCount={selectedRowsCount}
+            selectedCompanies={table.getFilteredSelectedRowModel().rows.map(row => row.original)}
+            onClearSelection={handleClearSelection}
+            onCompanyAnalysis={selectedRowsCount === 1 ? handleCompanyAnalysis : undefined}
+            onCompare={selectedRowsCount >= 2 ? handleCompareCompanies : undefined}
+          />
+        )}
+
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -486,11 +522,12 @@ export function CompanyScreener() {
       </div>
       </div>
 
-      {selectedCompany && (
+      {selectedCompanies.length > 0 && (
         <CompanyDetailPanel
           isOpen={isPanelOpen}
           onClose={() => setIsPanelOpen(false)}
-          company={selectedCompany}
+          companies={selectedCompanies}
+          mode={detailPanelMode}
         />
       )}
     </>

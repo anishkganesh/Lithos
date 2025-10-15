@@ -38,26 +38,32 @@ export function ProjectComparisonView({ projects }: ProjectComparisonViewProps) 
   const metrics: ComparisonMetric[] = [
     {
       label: "NPV (USD M)",
-      key: "postTaxNPV",
-      format: (value) => `$${value.toLocaleString()}M`,
+      key: "npv",
+      format: (value) => value !== null && value !== undefined ? `$${value.toFixed(0)}M` : "N/A",
       showDiff: true,
     },
     {
       label: "IRR (%)",
       key: "irr",
-      format: (value) => `${value.toFixed(1)}%`,
+      format: (value) => value !== null && value !== undefined ? `${value.toFixed(1)}%` : "N/A",
+      showDiff: true,
+    },
+    {
+      label: "CAPEX (USD M)",
+      key: "capex",
+      format: (value) => value !== null && value !== undefined ? `$${value.toFixed(0)}M` : "N/A",
       showDiff: true,
     },
     {
       label: "Resource Grade",
       key: "resourceGrade",
-      format: (value, project) => 
-        value ? `${value}${project?.gradeUnit || ""}` : "—",
+      format: (value, project) =>
+        value ? `${value}${project?.gradeUnit || ""}` : "N/A",
     },
     {
       label: "Stage",
       key: "stage",
-      format: (value) => value,
+      format: (value) => value || "Unknown",
     },
     {
       label: "ESG Score",
@@ -67,7 +73,7 @@ export function ProjectComparisonView({ projects }: ProjectComparisonViewProps) 
     {
       label: "Jurisdiction Risk",
       key: "riskLevel",
-      format: (value) => value,
+      format: (value) => value || "Medium",
     },
   ]
 
@@ -141,14 +147,14 @@ export function ProjectComparisonView({ projects }: ProjectComparisonViewProps) 
         {projects.map((project, index) => (
           <Card key={project.id} className="relative">
             <CardHeader>
-              <CardTitle className="text-lg">{project.project}</CardTitle>
+              <CardTitle className="text-lg">{project.name}</CardTitle>
               <div className="text-sm text-muted-foreground">
-                {project.investorsOwnership.split("(")[0].trim()}
+                {project.company || 'Unknown'}
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline">{project.jurisdiction}</Badge>
-                <Badge className={cn("text-xs", getRiskColor(project.riskLevel))}>
-                  {project.riskLevel} Risk
+                <Badge variant="outline">{project.location || 'N/A'}</Badge>
+                <Badge className={cn("text-xs", getRiskColor(project.riskLevel || 'Medium'))}>
+                  {project.riskLevel || 'Medium'} Risk
                 </Badge>
               </div>
             </CardHeader>
@@ -158,32 +164,38 @@ export function ProjectComparisonView({ projects }: ProjectComparisonViewProps) 
                 <div>
                   <div className="text-sm text-muted-foreground">NPV</div>
                   <div className="text-xl font-bold">
-                    ${(project.postTaxNPV / 1000).toFixed(1)}B
+                    {project.npv !== null && project.npv !== undefined
+                      ? `$${project.npv.toFixed(0)}M`
+                      : 'N/A'}
                   </div>
-                  {index === 1 && projects.length === 2 && (
+                  {index === 1 && projects.length === 2 && project.npv !== null && projects[0].npv !== null && (
                     <div className={cn(
                       "text-xs flex items-center gap-1",
-                      project.postTaxNPV > projects[0].postTaxNPV 
-                        ? "text-green-600" 
+                      project.npv > projects[0].npv
+                        ? "text-green-600"
                         : "text-red-600"
                     )}>
-                      {project.postTaxNPV > projects[0].postTaxNPV ? (
+                      {project.npv > projects[0].npv ? (
                         <TrendingUp className="h-3 w-3" />
                       ) : (
                         <TrendingDown className="h-3 w-3" />
                       )}
-                      {Math.abs(getValueDiff(project.postTaxNPV, projects[0].postTaxNPV)).toFixed(1)}%
+                      {Math.abs(getValueDiff(project.npv, projects[0].npv)).toFixed(1)}%
                     </div>
                   )}
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">IRR</div>
-                  <div className="text-xl font-bold">{project.irr.toFixed(1)}%</div>
-                  {index === 1 && projects.length === 2 && (
+                  <div className="text-xl font-bold">
+                    {project.irr !== null && project.irr !== undefined
+                      ? `${project.irr.toFixed(1)}%`
+                      : 'N/A'}
+                  </div>
+                  {index === 1 && projects.length === 2 && project.irr !== null && projects[0].irr !== null && (
                     <div className={cn(
                       "text-xs flex items-center gap-1",
-                      project.irr > projects[0].irr 
-                        ? "text-green-600" 
+                      project.irr > projects[0].irr
+                        ? "text-green-600"
                         : "text-red-600"
                     )}>
                       {project.irr > projects[0].irr ? (
@@ -200,39 +212,30 @@ export function ProjectComparisonView({ projects }: ProjectComparisonViewProps) 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground">CAPEX</div>
-                  <div className="font-semibold">${(project.capex / 1000).toFixed(1)}B</div>
+                  <div className="font-semibold">
+                    {project.capex !== null && project.capex !== undefined
+                      ? `$${project.capex.toFixed(0)}M`
+                      : 'N/A'}
+                  </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">MINE LIFE</div>
-                  <div className="font-semibold">{project.mineLife} yrs</div>
+                  <div className="text-sm text-muted-foreground">STAGE</div>
+                  <div className="font-semibold">{project.stage || 'Unknown'}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm text-muted-foreground">GRADE</div>
+                  <div className="text-sm text-muted-foreground">COMMODITIES</div>
                   <div className="font-semibold">
-                    {project.resourceGrade}{project.gradeUnit}
+                    {project.commodities && project.commodities.length > 0
+                      ? project.commodities[0]
+                      : 'N/A'}
                   </div>
-                  {index === 1 && projects.length === 2 && project.resourceGrade && projects[0].resourceGrade && (
-                    <div className={cn(
-                      "text-xs flex items-center gap-1",
-                      project.resourceGrade > projects[0].resourceGrade 
-                        ? "text-green-600" 
-                        : "text-red-600"
-                    )}>
-                      {project.resourceGrade > projects[0].resourceGrade ? (
-                        <TrendingUp className="h-3 w-3" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3" />
-                      )}
-                      {Math.abs(getValueDiff(project.resourceGrade, projects[0].resourceGrade)).toFixed(1)}%
-                    </div>
-                  )}
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">AISC</div>
-                  <div className="font-semibold">${project.aisc.toFixed(2)}/t</div>
+                  <div className="text-sm text-muted-foreground">STATUS</div>
+                  <div className="font-semibold">{project.status || 'Unknown'}</div>
                 </div>
               </div>
 

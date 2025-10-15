@@ -46,6 +46,7 @@ import { ExportDropdown, ExportFormat } from "@/components/ui/export-dropdown"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/toaster"
 import { supabase } from "@/lib/supabase/client"
+import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 
 export function CompanyScreenerGlobal() {
   const { companies: initialData, loading, error, refetch } = useCompanies()
@@ -63,7 +64,8 @@ export function CompanyScreenerGlobal() {
 
   // Company detail panel state
   const [detailPanelOpen, setDetailPanelOpen] = useState(false)
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
+  const [selectedCompanies, setSelectedCompanies] = useState<Company[]>([])
+  const [detailPanelMode, setDetailPanelMode] = useState<"single" | "comparison">("single")
   const [updatingWatchlist, setUpdatingWatchlist] = useState<string | null>(null)
 
   // Listen for refresh events
@@ -83,9 +85,32 @@ export function CompanyScreenerGlobal() {
     const company = data.find(c => String(c.id) === String(companyId))
 
     if (company) {
-      setSelectedCompany(company)
+      setSelectedCompanies([company])
+      setDetailPanelMode("single")
       setDetailPanelOpen(true)
     }
+  }
+
+  const handleCompanyAnalysis = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    if (selectedRows.length === 1) {
+      setSelectedCompanies(selectedRows.map(row => row.original))
+      setDetailPanelMode("single")
+      setDetailPanelOpen(true)
+    }
+  }
+
+  const handleCompareCompanies = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    if (selectedRows.length >= 2) {
+      setSelectedCompanies(selectedRows.map(row => row.original))
+      setDetailPanelMode("comparison")
+      setDetailPanelOpen(true)
+    }
+  }
+
+  const handleClearSelection = () => {
+    setRowSelection({})
   }
 
   // Watchlist handler
@@ -362,6 +387,17 @@ export function CompanyScreenerGlobal() {
           </div>
         </div>
 
+        {/* Bulk Actions Toolbar */}
+        {selectedRowsCount > 0 && (
+          <BulkActionsToolbar
+            selectedCount={selectedRowsCount}
+            selectedCompanies={table.getFilteredSelectedRowModel().rows.map(row => row.original)}
+            onClearSelection={handleClearSelection}
+            onCompanyAnalysis={selectedRowsCount === 1 ? handleCompanyAnalysis : undefined}
+            onCompare={selectedRowsCount >= 2 ? handleCompareCompanies : undefined}
+          />
+        )}
+
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -477,11 +513,12 @@ export function CompanyScreenerGlobal() {
         </div>
       </div>
 
-      {selectedCompany && (
+      {selectedCompanies.length > 0 && (
         <CompanyDetailPanel
           isOpen={detailPanelOpen}
           onClose={() => setDetailPanelOpen(false)}
-          company={selectedCompany}
+          companies={selectedCompanies}
+          mode={detailPanelMode}
         />
       )}
       <Toaster />

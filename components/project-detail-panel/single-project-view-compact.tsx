@@ -267,6 +267,45 @@ What is your assessment of this project?`
 
       {/* Key Metrics Table */}
       <div className="space-y-3">
+        <h3 className="text-sm font-medium">Financial Metrics</h3>
+        <div className="border rounded-lg divide-y">
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">NPV (Net Present Value)</span>
+              <span className="text-sm font-medium">
+                {project.npv !== null && project.npv !== undefined
+                  ? `$${project.npv.toFixed(0)}M`
+                  : 'N/A'}
+              </span>
+            </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">IRR (Internal Rate of Return)</span>
+              <span className="text-sm font-medium">
+                {project.irr !== null && project.irr !== undefined
+                  ? `${project.irr.toFixed(1)}%`
+                  : 'N/A'}
+              </span>
+            </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">CAPEX (Capital Expenditure)</span>
+              <span className="text-sm font-medium">
+                {project.capex !== null && project.capex !== undefined
+                  ? `$${project.capex.toFixed(0)}M`
+                  : 'N/A'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Project Information */}
+      <div className="space-y-3">
         <h3 className="text-sm font-medium">Project Information</h3>
         <div className="border rounded-lg divide-y">
           <div className="p-2.5">

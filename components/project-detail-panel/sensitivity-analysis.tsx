@@ -74,6 +74,11 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
   )
 
   const calculateNPV = () => {
+    // Use database NPV field if available, otherwise return 0
+    if (project.npv === null || project.npv === undefined) {
+      return 0
+    }
+
     // Simple sensitivity calculation
     const priceImpact = (values.price - 100) * 0.02
     const throughputImpact = (values.throughput - 100) * 0.015
@@ -82,18 +87,30 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
     const capexImpact = -(values.capex - 100) * 0.008
 
     const totalImpact = 1 + priceImpact + throughputImpact + gradeImpact + opexImpact + capexImpact
-    return project.postTaxNPV * totalImpact
+    return project.npv * totalImpact
   }
 
-  const calculateAISC = () => {
-    const opexImpact = (values.opex - 100) * 0.01
-    const capexImpact = (values.capex - 100) * 0.005
-    const totalImpact = 1 + opexImpact + capexImpact
-    return project.aisc * totalImpact
+  const calculateIRR = () => {
+    // Use database IRR field if available, otherwise return 0
+    if (project.irr === null || project.irr === undefined) {
+      return 0
+    }
+
+    // Simple sensitivity calculation for IRR
+    const priceImpact = (values.price - 100) * 0.015
+    const throughputImpact = (values.throughput - 100) * 0.01
+    const gradeImpact = (values.grade - 100) * 0.012
+    const opexImpact = -(values.opex - 100) * 0.008
+    const capexImpact = -(values.capex - 100) * 0.006
+
+    const totalImpact = priceImpact + throughputImpact + gradeImpact + opexImpact + capexImpact
+    return project.irr + totalImpact
   }
 
   const npv = calculateNPV()
-  const aisc = calculateAISC()
+  const irr = calculateIRR()
+  const baselineNPV = project.npv || 0
+  const baselineIRR = project.irr || 0
 
   return (
     <div className="space-y-6">
@@ -138,33 +155,37 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
       <div className="grid grid-cols-2 gap-4 pt-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">NPV</CardTitle>
+            <CardTitle className="text-sm font-medium">NPV (Net Present Value)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold text-blue-600">
-              ${(npv / 1000).toFixed(2)}B
+              {baselineNPV > 0 ? `$${npv.toFixed(0)}M` : 'N/A'}
             </div>
-            <div className="text-xs text-muted-foreground">
-              {npv > project.postTaxNPV ? "+" : ""}
-              {((npv - project.postTaxNPV) / project.postTaxNPV * 100).toFixed(1)}% 
-              from baseline
-            </div>
+            {baselineNPV > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {npv > baselineNPV ? "+" : ""}
+                {((npv - baselineNPV) / baselineNPV * 100).toFixed(1)}%
+                from baseline
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">AISC</CardTitle>
+            <CardTitle className="text-sm font-medium">IRR (Internal Rate of Return)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold text-green-600">
-              ${aisc.toFixed(2)}/t
+              {baselineIRR > 0 ? `${irr.toFixed(1)}%` : 'N/A'}
             </div>
-            <div className="text-xs text-muted-foreground">
-              {aisc > project.aisc ? "+" : ""}
-              {((aisc - project.aisc) / project.aisc * 100).toFixed(1)}% 
-              from baseline
-            </div>
+            {baselineIRR > 0 && (
+              <div className="text-xs text-muted-foreground">
+                {irr > baselineIRR ? "+" : ""}
+                {(irr - baselineIRR).toFixed(1)}% pts
+                from baseline
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -9,25 +9,31 @@ import { Separator } from "@/components/ui/separator"
 import { Company } from "@/lib/hooks/use-companies"
 import { supabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { CompanyComparisonView } from "./company-comparison-view"
 
 interface CompanyDetailPanelProps {
   isOpen: boolean
   onClose: () => void
-  company: Company
+  companies: Company[]
+  mode?: "single" | "comparison"
 }
 
 export function CompanyDetailPanel({
   isOpen,
   onClose,
-  company,
+  companies,
+  mode = "single",
 }: CompanyDetailPanelProps) {
+  const company = companies[0] // For single mode
   const [updatingWatchlist, setUpdatingWatchlist] = useState(false)
-  const [isWatchlisted, setIsWatchlisted] = useState(company.watchlist || false)
+  const [isWatchlisted, setIsWatchlisted] = useState(company?.watchlist || false)
 
   // Update local state when company prop changes
   React.useEffect(() => {
-    setIsWatchlisted(company.watchlist || false)
-  }, [company.watchlist])
+    if (company) {
+      setIsWatchlisted(company.watchlist || false)
+    }
+  }, [company])
 
   // Close on ESC key
   React.useEffect(() => {
@@ -55,6 +61,8 @@ export function CompanyDetailPanel({
   }, [isOpen])
 
   const handleToggleWatchlist = async () => {
+    if (!company) return
+
     try {
       setUpdatingWatchlist(true)
       const newWatchlistStatus = !isWatchlisted
@@ -112,7 +120,9 @@ export function CompanyDetailPanel({
                 Back to Companies
               </Button>
               <h2 className="text-lg font-semibold">
-                {company.name}
+                {mode === "comparison"
+                  ? `Comparing ${companies.length} Companies`
+                  : company?.name || "Company Details"}
               </h2>
             </div>
             <Button
@@ -128,6 +138,9 @@ export function CompanyDetailPanel({
 
         {/* Content */}
         <div className="h-[calc(100%-73px)] overflow-y-auto">
+          {mode === "comparison" ? (
+            <CompanyComparisonView companies={companies} />
+          ) : company ? (
           <div className="space-y-4 p-6">
             {/* Company Info */}
             <div className="space-y-3">
@@ -305,6 +318,7 @@ export function CompanyDetailPanel({
               </div>
             </div>
           </div>
+          ) : null}
         </div>
       </div>
     </>

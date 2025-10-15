@@ -50,6 +50,7 @@ import { exportProjects } from "@/lib/export-utils"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/toaster"
 import { supabase } from "@/lib/supabase/client"
+import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 
 function getRiskBadgeColor(risk: RiskLevel) {
   switch (risk) {
@@ -112,6 +113,28 @@ export function ProjectScreenerGlobal() {
   const handleMiningAgentProgress = (isRunning: boolean, message?: string) => {
     setMiningAgentRunning(isRunning)
     setMiningAgentProgress(message || "")
+  }
+
+  const handleProjectAnalysis = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    if (selectedRows.length === 1) {
+      setSelectedProjects(selectedRows.map(row => row.original))
+      setDetailPanelMode("single")
+      setDetailPanelOpen(true)
+    }
+  }
+
+  const handleCompareProjects = () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    if (selectedRows.length >= 2) {
+      setSelectedProjects(selectedRows.map(row => row.original))
+      setDetailPanelMode("comparison")
+      setDetailPanelOpen(true)
+    }
+  }
+
+  const handleClearSelection = () => {
+    setRowSelection({})
   }
 
   // Watchlist handler
@@ -435,6 +458,17 @@ export function ProjectScreenerGlobal() {
             </Button>
           </div>
         </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectedRowsCount > 0 && (
+          <BulkActionsToolbar
+            selectedCount={selectedRowsCount}
+            selectedProjects={table.getFilteredSelectedRowModel().rows.map(row => row.original)}
+            onClearSelection={handleClearSelection}
+            onProjectAnalysis={selectedRowsCount === 1 ? handleProjectAnalysis : undefined}
+            onCompare={selectedRowsCount >= 2 ? handleCompareProjects : undefined}
+          />
+        )}
 
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-2">
