@@ -94,6 +94,11 @@ export function useProjects() {
         created_at: project.created_at,
         updated_at: project.updated_at,
 
+        // Financial metrics
+        npv: project.npv,
+        irr: project.irr,
+        capex: project.capex,
+
         // Computed/display fields for backward compatibility
         project: project.name,
         company: project.company_id ? (companiesMap.get(project.company_id) || 'Unknown') : 'Unknown',
