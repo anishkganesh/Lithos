@@ -21,15 +21,17 @@ export interface MiningProject {
   location: string | null;
   stage: string | null;
   commodities: string[] | null;
-  resource_estimate: string | null;
-  reserve_estimate: string | null;
-  ownership_percentage: number | null;
   status: string | null;
   description: string | null;
   urls: string[] | null;
   watchlist: boolean;
   created_at: string;
   updated_at: string;
+
+  // Financial metrics (added in migration 010)
+  npv: number | null; // Net Present Value in millions USD
+  irr: number | null; // Internal Rate of Return as percentage
+  capex: number | null; // Capital Expenditure in millions USD
 
   // Computed/display fields (for backward compatibility)
   project?: string; // Alias for name

@@ -288,39 +288,61 @@ export function ProjectScreener() {
       ),
     },
     {
-      accessorKey: "resource_estimate",
-      header: "Resource Estimate",
-      cell: ({ row }) => (
-        <div className="text-sm max-w-[200px] truncate" title={row.original.resource_estimate || 'N/A'}>
-          {row.original.resource_estimate || 'N/A'}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "reserve_estimate",
-      header: "Reserve Estimate",
-      cell: ({ row }) => (
-        <div className="text-sm max-w-[200px] truncate" title={row.original.reserve_estimate || 'N/A'}>
-          {row.original.reserve_estimate || 'N/A'}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "ownership_percentage",
+      accessorKey: "npv",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Ownership %
+          NPV ($M)
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
-        const pct = row.original.ownership_percentage
+        const npv = row.original.npv
         return (
-          <div className="text-sm text-center">
-            {pct !== null && pct !== undefined ? `${pct}%` : 'N/A'}
+          <div className="text-sm text-center font-medium">
+            {npv !== null && npv !== undefined ? `$${npv.toFixed(0)}M` : 'N/A'}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "irr",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          IRR %
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const irr = row.original.irr
+        return (
+          <div className="text-sm text-center font-medium">
+            {irr !== null && irr !== undefined ? `${irr.toFixed(1)}%` : 'N/A'}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "capex",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          CAPEX ($M)
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const capex = row.original.capex
+        return (
+          <div className="text-sm text-center font-medium">
+            {capex !== null && capex !== undefined ? `$${capex.toFixed(0)}M` : 'N/A'}
           </div>
         )
       },

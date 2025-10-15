@@ -49,6 +49,7 @@
     "@tabler/icons-react": "latest",
     "@tanstack/react-table": "latest",
     "@types/pdf-parse": "^1.1.5",
+    "@types/pg": "^8.15.5",
     "autoprefixer": "^10.4.20",
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",
