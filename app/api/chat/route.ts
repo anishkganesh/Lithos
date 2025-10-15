@@ -27,26 +27,69 @@ async function extractPDFText(buffer: Buffer): Promise<{ text: string; numpages:
 }
 
 
-// Helper function to fetch project context
+// Helper function to fetch project context - use direct Supabase query instead of fetch
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseServer = createClient(supabaseUrl, supabaseServiceKey);
+
 async function getProjectContext(): Promise<string> {
   try {
-    // Use the correct port based on the environment
-    const baseUrl = process.env.NEXT_PUBLIC_URL || 
-                   (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
-    
-    const response = await fetch(`${baseUrl}/api/chat/projects`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      console.error('Failed to fetch projects:', response.status);
+    console.log('[getProjectContext] Fetching projects directly from Supabase...');
+
+    // Query Supabase directly instead of making HTTP request
+    const { data: projects, error, count } = await supabaseServer
+      .from('projects')
+      .select('*', { count: 'exact' })
+      .order('npv', { ascending: false, nullsFirst: false })
+      .limit(200); // Get up to 200 projects
+
+    if (error) {
+      console.error('[getProjectContext] Supabase error:', error);
       return '';
     }
-    
-    const data = await response.json();
+
+    console.log('[getProjectContext] Fetched', projects?.length, 'projects');
+
+    if (!projects || projects.length === 0) {
+      console.log('[getProjectContext] No projects found');
+      return '';
+    }
+
+    // Prepare data object similar to API response
+    const data = {
+      projects: projects.map(p => ({
+        id: p.id,
+        name: p.name,
+        company_id: p.company_id,
+        stage: p.stage || 'N/A',
+        location: p.location || 'N/A',
+        commodities: Array.isArray(p.commodities) ? p.commodities.join(', ') : 'N/A',
+        status: p.status || 'N/A',
+        npv: p.npv !== null && p.npv !== undefined ? `$${p.npv}M` : 'N/A',
+        irr: p.irr !== null && p.irr !== undefined ? `${p.irr}%` : 'N/A',
+        capex: p.capex !== null && p.capex !== undefined ? `$${p.capex}M` : 'N/A',
+        description: p.description
+      })),
+      stats: {
+        totalProjects: count || projects.length,
+        avgIRR: projects.filter(p => p.irr !== null).reduce((sum, p) => sum + (p.irr || 0), 0) / projects.filter(p => p.irr !== null).length || 0,
+        totalNPV: projects.reduce((sum, p) => sum + (p.npv || 0), 0),
+        byStage: projects.reduce((acc: any, p) => {
+          const stage = p.stage || 'Unknown';
+          acc[stage] = (acc[stage] || 0) + 1;
+          return acc;
+        }, {}),
+        byCommodity: projects.reduce((acc: any, p) => {
+          const commodities = p.commodities || [];
+          commodities.forEach((commodity: string) => {
+            acc[commodity] = (acc[commodity] || 0) + 1;
+          });
+          return acc;
+        }, {})
+      }
+    };
     
     if (!data.projects || data.projects.length === 0) {
       return '';
@@ -83,15 +126,33 @@ async function getProjectContext(): Promise<string> {
         const npvB = parseFloat(b.npv.replace('$', '').replace('M', ''));
         return npvB - npvA;
       })
-      .slice(0, 5);
-    
+      .slice(0, 10);
+
     if (topProjects.length > 0) {
-      context += `**Top Projects by NPV:**\n`;
-      topProjects.forEach((p: any) => {
-        context += `- ${p.name} (${p.company}): ${p.npv}, ${p.irr} IRR, ${p.location}\n`;
+      context += `**Top 10 Projects by NPV:**\n`;
+      topProjects.forEach((p: any, i: number) => {
+        context += `${i + 1}. ${p.name}: NPV ${p.npv}, IRR ${p.irr}, CAPEX ${p.capex}, Location: ${p.location}\n`;
       });
+      context += '\n';
     }
-    
+
+    // Add comprehensive project catalog with all financial metrics
+    context += `**Complete Project Catalog (${data.projects.length} projects):**\n`;
+    context += 'When asked about specific projects, search this catalog for exact project names and their financial metrics.\n\n';
+
+    data.projects.forEach((p: any) => {
+      const metrics = [];
+      if (p.npv !== 'N/A') metrics.push(`NPV: ${p.npv}`);
+      if (p.irr !== 'N/A') metrics.push(`IRR: ${p.irr}`);
+      if (p.capex !== 'N/A') metrics.push(`CAPEX: ${p.capex}`);
+
+      context += `• ${p.name} | ${p.location} | ${p.stage} | ${p.commodities}`;
+      if (metrics.length > 0) {
+        context += ` | ${metrics.join(', ')}`;
+      }
+      context += '\n';
+    });
+
     return context;
   } catch (error) {
     console.error('Error getting project context:', error);
@@ -370,12 +431,21 @@ Always provide data-driven insights and cite specific details from uploaded docu
       });
     }
     
-    // Add project database context
+    // Add project database context with detailed instructions
     const projectContext = await getProjectContext();
     if (projectContext) {
       finalMessages.push({
         role: 'system',
-        content: `You have access to the following mining project database information:${projectContext}\n\nUse this data to provide context and comparisons when discussing mining projects, feasibility, or investment opportunities.`
+        content: `MINING PROJECTS DATABASE CONTEXT:
+${projectContext}
+
+IMPORTANT: You have access to complete project data above including NPV, IRR, and CAPEX values for all projects listed.
+When users ask about specific projects or financial metrics:
+1. Search the project catalog above for the exact project name
+2. Extract the financial data (NPV, IRR, CAPEX) directly from the catalog
+3. Provide specific numeric values from the data
+
+Example: If asked "what is the NPV of Mountain Pass REE?", search for "Mountain Pass" in the catalog above and report the NPV value shown.`
       });
     }
     

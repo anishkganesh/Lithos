@@ -1,75 +1,69 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+
+// Create Supabase client with service role for server-side
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET() {
   try {
-    // Fetch all projects with key metrics
-    const { data: projects, error } = await supabase
+    console.log('[Projects API] Starting fetch...');
+    console.log('[Projects API] Supabase URL:', supabaseUrl);
+    console.log('[Projects API] Service key available:', !!supabaseServiceKey);
+
+    // Fetch all projects - use * to get all available columns
+    const { data: projects, error, count } = await supabase
       .from('projects')
-      .select(`
-        id,
-        project_name,
-        company_name,
-        stage,
-        primary_commodity,
-        secondary_commodities,
-        jurisdiction,
-        country,
-        post_tax_npv_usd_m,
-        irr_percent,
-        capex_usd_m,
-        mine_life_years,
-        annual_production_tonnes,
-        resource_grade,
-        resource_grade_unit,
-        contained_metal,
-        contained_metal_unit,
-        esg_score,
-        jurisdiction_risk,
-        updated_at
-      `)
-      .eq('processing_status', 'completed')
+      .select('*', { count: 'exact' })
       .order('updated_at', { ascending: false });
 
+    console.log('[Projects API] Query complete. Error:', error);
+    console.log('[Projects API] Projects found:', projects?.length || 0);
+    console.log('[Projects API] Total count:', count);
+
     if (error) {
-      console.error('Error fetching projects:', error);
-      return NextResponse.json({ projects: [] });
+      console.error('[Projects API] Error fetching projects:', error);
+      return NextResponse.json({ projects: [], stats: {}, error: error.message });
     }
 
     // Format projects data for AI consumption
     const formattedProjects = projects?.map(project => ({
-      name: project.project_name,
-      company: project.company_name,
-      stage: project.stage,
-      location: `${project.jurisdiction}, ${project.country}`,
-      commodity: project.primary_commodity,
-      otherCommodities: project.secondary_commodities?.join(', ') || 'None',
-      npv: project.post_tax_npv_usd_m ? `$${project.post_tax_npv_usd_m}M` : 'N/A',
-      irr: project.irr_percent ? `${project.irr_percent}%` : 'N/A',
-      capex: project.capex_usd_m ? `$${project.capex_usd_m}M` : 'N/A',
-      mineLife: project.mine_life_years ? `${project.mine_life_years} years` : 'N/A',
-      production: project.annual_production_tonnes ? `${project.annual_production_tonnes.toLocaleString()} tonnes/year` : 'N/A',
-      grade: project.resource_grade && project.resource_grade_unit ? 
-        `${project.resource_grade} ${project.resource_grade_unit}` : 'N/A',
-      esgScore: project.esg_score || 'N/A',
-      riskLevel: project.jurisdiction_risk || 'N/A'
+      id: project.id,
+      name: project.name,
+      company_id: project.company_id,
+      stage: project.stage || 'N/A',
+      location: project.location || 'N/A',
+      commodities: Array.isArray(project.commodities) ? project.commodities.join(', ') : 'N/A',
+      status: project.status || 'N/A',
+      npv: project.npv !== null && project.npv !== undefined ? `$${project.npv}M` : 'N/A',
+      irr: project.irr !== null && project.irr !== undefined ? `${project.irr}%` : 'N/A',
+      capex: project.capex !== null && project.capex !== undefined ? `$${project.capex}M` : 'N/A',
+      description: project.description ? project.description.substring(0, 200) + '...' : 'N/A'
     })) || [];
 
     // Calculate summary statistics
     const stats = {
       totalProjects: projects?.length || 0,
       byStage: projects?.reduce((acc: any, p) => {
-        acc[p.stage] = (acc[p.stage] || 0) + 1;
+        const stage = p.stage || 'Unknown';
+        acc[stage] = (acc[stage] || 0) + 1;
         return acc;
       }, {}),
       byCommodity: projects?.reduce((acc: any, p) => {
-        acc[p.primary_commodity] = (acc[p.primary_commodity] || 0) + 1;
+        const commodities = p.commodities || [];
+        commodities.forEach((commodity: string) => {
+          acc[commodity] = (acc[commodity] || 0) + 1;
+        });
         return acc;
       }, {}),
-      avgIRR: projects?.filter(p => p.irr_percent)
-        .reduce((sum, p) => sum + (p.irr_percent || 0), 0) / 
-        projects?.filter(p => p.irr_percent).length || 0,
-      totalNPV: projects?.reduce((sum, p) => sum + (p.post_tax_npv_usd_m || 0), 0) || 0
+      avgIRR: projects?.filter(p => p.irr !== null && p.irr !== undefined)
+        .reduce((sum, p) => sum + (p.irr || 0), 0) /
+        projects?.filter(p => p.irr !== null && p.irr !== undefined).length || 0,
+      totalNPV: projects?.reduce((sum, p) => sum + (p.npv || 0), 0) || 0,
+      avgCapex: projects?.filter(p => p.capex !== null && p.capex !== undefined)
+        .reduce((sum, p) => sum + (p.capex || 0), 0) /
+        projects?.filter(p => p.capex !== null && p.capex !== undefined).length || 0
     };
 
     return NextResponse.json({ 

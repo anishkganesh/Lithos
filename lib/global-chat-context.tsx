@@ -99,7 +99,19 @@ Always provide data-driven insights and cite sources when available. Focus on ac
 - M&A/JV Deals: ${appContext.totalDeals}
 - Last Updated: ${new Date(appContext.lastUpdated).toLocaleString()}
 
-Top projects in database include: ${appContext.projects.slice(0, 5).map(p => `${p.project_name} (${p.company_name})`).join(', ')}, and many more.
+Sample projects in database: ${appContext.projects.slice(0, 5).map(p => {
+  const details = [];
+  if (p.name) details.push(`Name: ${p.name}`);
+  if (p.location) details.push(`Location: ${p.location}`);
+  if (p.stage) details.push(`Stage: ${p.stage}`);
+  if (p.commodities && p.commodities.length > 0) details.push(`Commodities: ${p.commodities.join(', ')}`);
+  if (p.npv !== null && p.npv !== undefined) details.push(`NPV: $${p.npv}M`);
+  if (p.irr !== null && p.irr !== undefined) details.push(`IRR: ${p.irr}%`);
+  if (p.capex !== null && p.capex !== undefined) details.push(`CAPEX: $${p.capex}M`);
+  return `[${details.join(' | ')}]`;
+}).join('\n')}.
+
+When users ask about specific projects or financial metrics (NPV, IRR, CAPEX), you have access to this data in the context above.
 
 Note: This context is available for reference but should only be mentioned when directly relevant to the user's query.`;
     }
@@ -282,18 +294,18 @@ Note: This context is available for reference but should only be mentioned when 
   useEffect(() => {
     const fetchAppContext = async () => {
       try {
-        // Fetch projects with key fields
+        // Fetch projects with key fields (using correct column names from database)
         const { data: projects, count: projectCount } = await supabase
           .from('projects')
-          .select('id, project_name, company_name, jurisdiction, country, stage, primary_commodity, post_tax_npv_usd_m, irr_percent, capex_usd_m, mine_life_years')
+          .select('id, name, company_id, location, stage, commodities, status, npv, irr, capex, resource_estimate, reserve_estimate, ownership_percentage, description, created_at, updated_at', { count: 'exact' })
           .limit(100) // Get top 100 projects for context
 
-        // Fetch unique companies
-        const { data: companies } = await supabase
-          .from('projects')
-          .select('company_name')
+        // Fetch unique companies from companies table
+        const { data: companies, count: companiesCount } = await supabase
+          .from('companies')
+          .select('id, name', { count: 'exact' })
 
-        const uniqueCompanies = new Set(companies?.map((c: any) => c.company_name).filter(Boolean))
+        const uniqueCompanies = companies?.length || companiesCount || 0
 
         // Mock filing and deal counts based on projects
         const filingsCount = (projectCount || 0) * 3
@@ -302,7 +314,7 @@ Note: This context is available for reference but should only be mentioned when 
         const newContext = {
           projects: projects || [],
           totalProjects: projectCount || 0,
-          totalCompanies: uniqueCompanies.size,
+          totalCompanies: uniqueCompanies,
           totalFilings: filingsCount,
           totalDeals: dealsCount,
           lastUpdated: new Date().toISOString()
@@ -334,7 +346,19 @@ Always provide data-driven insights and cite sources when available. Focus on ac
 - M&A/JV Deals: ${newContext.totalDeals}
 - Last Updated: ${new Date(newContext.lastUpdated).toLocaleString()}
 
-Top projects in database include: ${newContext.projects.slice(0, 5).map((p: any) => `${p.project_name} (${p.company_name})`).join(', ')}, and many more.
+Sample projects in database: ${newContext.projects.slice(0, 5).map((p: any) => {
+  const details = [];
+  if (p.name) details.push(`Name: ${p.name}`);
+  if (p.location) details.push(`Location: ${p.location}`);
+  if (p.stage) details.push(`Stage: ${p.stage}`);
+  if (p.commodities && p.commodities.length > 0) details.push(`Commodities: ${p.commodities.join(', ')}`);
+  if (p.npv !== null && p.npv !== undefined) details.push(`NPV: $${p.npv}M`);
+  if (p.irr !== null && p.irr !== undefined) details.push(`IRR: ${p.irr}%`);
+  if (p.capex !== null && p.capex !== undefined) details.push(`CAPEX: $${p.capex}M`);
+  return `[${details.join(' | ')}]`;
+}).join('\n')}.
+
+When users ask about specific projects or financial metrics (NPV, IRR, CAPEX), you have access to this data in the context above.
 
 Note: This context is available for reference but should only be mentioned when directly relevant to the user's query.`;
 
