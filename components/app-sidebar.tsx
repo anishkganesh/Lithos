@@ -19,6 +19,7 @@ import {
   IconUsers,
   IconWorld,
   IconBuilding,
+  IconSphere,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from '@/components/nav-documents'
@@ -48,6 +49,11 @@ const data = {
       title: "Global Projects",
       url: "/global-projects",
       icon: IconWorld,
+    },
+    {
+      title: "Project Globe",
+      url: "/globe",
+      icon: IconSphere,
     },
     {
       title: "Global Companies",
