@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { ExternalLink, AlertTriangle, FileText, Users, Bookmark, BookmarkCheck, ImageIcon, MessageSquare, Loader2 } from "lucide-react"
 import { SensitivityAnalysis } from "./sensitivity-analysis"
+import { AIInsightsPanel } from "@/components/ai-insights-panel"
 import { cn } from "@/lib/utils"
 import { ExportDropdown, ExportFormat } from "@/components/ui/export-dropdown"
 import { exportProjects } from "@/lib/export-utils"
@@ -471,7 +472,7 @@ What is your assessment of this project?`
       ) : null}
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue="insights" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="technical">Technical Report</TabsTrigger>
@@ -537,15 +538,11 @@ What is your assessment of this project?`
         </TabsContent>
 
         <TabsContent value="insights" className="mt-4">
-          <Card className="p-4">
-            <h4 className="text-sm font-medium mb-3">AI Analysis Summary</h4>
-            <p className="text-sm text-muted-foreground">
-              Advanced AI analysis of technical reports, market conditions, and risk factors.
-            </p>
-            <Button className="w-full mt-4" variant="outline">
-              Open Full AI Analysis
-            </Button>
-          </Card>
+          <AIInsightsPanel
+            projectId={project.id}
+            projectName={project.name}
+            autoGenerate={true}
+          />
         </TabsContent>
 
         <TabsContent value="experts" className="mt-4">

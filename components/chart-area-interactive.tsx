@@ -135,11 +135,15 @@ const chartConfig = {
   },
   projects: {
     label: "Total Projects",
-    color: "var(--primary)",
+    color: "hsl(var(--chart-1))",
   },
   companies: {
     label: "Mining Companies",
-    color: "var(--muted-foreground)",
+    color: "hsl(var(--chart-2))",
+  },
+  news: {
+    label: "News Articles",
+    color: "hsl(var(--chart-3))",
   },
   production: {
     label: "Production (oz/day)",
@@ -156,6 +160,8 @@ export function ChartAreaInteractive() {
   const [timeRange, setTimeRange] = React.useState("90d")
   const [projectData, setProjectData] = React.useState<any[]>([])
   const [totalProjects, setTotalProjects] = React.useState(0)
+  const [totalCompanies, setTotalCompanies] = React.useState(0)
+  const [totalNews, setTotalNews] = React.useState(0)
 
   React.useEffect(() => {
     if (isMobile) {
@@ -164,59 +170,212 @@ export function ChartAreaInteractive() {
   }, [isMobile])
 
   React.useEffect(() => {
-    fetchProjectCount()
+    fetchCounts()
   }, [])
 
-  const fetchProjectCount = async () => {
+  const fetchCounts = async () => {
     try {
-      const { count } = await supabase
+      // Fetch projects, companies, and news counts
+      const { count: projectCount } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true })
 
-      setTotalProjects(count || 0)
+      const { count: companyCount } = await supabase
+        .from('companies')
+        .select('*', { count: 'exact', head: true })
 
-      // Generate historical data based on actual project count
-      const data = generateHistoricalData(count || 0)
+      const { count: newsCount } = await supabase
+        .from('news')
+        .select('*', { count: 'exact', head: true })
+
+      setTotalProjects(projectCount || 0)
+      setTotalCompanies(companyCount || 0)
+      setTotalNews(newsCount || 0)
+
+      // Generate historical data based on actual counts
+      const data = await generateHistoricalData(projectCount || 0, companyCount || 0, newsCount || 0)
       setProjectData(data)
     } catch (error) {
-      console.error('Error fetching project count:', error)
+      console.error('Error fetching counts:', error)
       // Use fallback data if fetch fails
-      setProjectData(generateHistoricalData(148))
+      const data = await generateHistoricalData(148, 25, 450)
+      setProjectData(data)
     }
   }
 
-  const generateHistoricalData = (currentTotal: number) => {
+  const generateHistoricalData = async (currentProjectTotal: number, currentCompanyTotal: number, currentNewsTotal: number) => {
     const data = []
     const today = new Date()
     const daysToGenerate = 90
 
-    // Start with fewer projects and grow to current total
-    const startingProjects = Math.floor(currentTotal * 0.4)
-    const dailyGrowth = (currentTotal - startingProjects) / daysToGenerate
+    // Fetch actual historical data from database using created_at timestamps
+    try {
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('created_at')
+        .order('created_at', { ascending: true })
+
+      const { data: companies } = await supabase
+        .from('companies')
+        .select('created_at')
+        .order('created_at', { ascending: true })
+
+      const { data: news } = await supabase
+        .from('news')
+        .select('created_at')
+        .order('created_at', { ascending: true })
+
+      // If we have actual data, use it to generate realistic historical counts
+      if (projects && projects.length > 0 && companies && companies.length > 0) {
+        for (let i = daysToGenerate; i >= 0; i--) {
+          const date = new Date(today)
+          date.setDate(date.getDate() - i)
+          const dateStr = date.toISOString().split('T')[0]
+
+          // Count items created up to this date
+          const projectsUpToDate = projects.filter(p => {
+            const createdDate = new Date(p.created_at).toISOString().split('T')[0]
+            return createdDate <= dateStr
+          }).length
+
+          const companiesUpToDate = companies.filter(c => {
+            const createdDate = new Date(c.created_at).toISOString().split('T')[0]
+            return createdDate <= dateStr
+          }).length
+
+          const newsUpToDate = news ? news.filter(n => {
+            const createdDate = new Date(n.created_at).toISOString().split('T')[0]
+            return createdDate <= dateStr
+          }).length : 0
+
+          data.push({
+            date: dateStr,
+            projects: projectsUpToDate,
+            companies: companiesUpToDate,
+            news: newsUpToDate
+          })
+        }
+
+        return data
+      }
+    } catch (error) {
+      console.error('Error fetching historical data:', error)
+    }
+
+    // Fallback: generate synthetic data with natural random growth starting from zero
+    const startingProjects = 0
+    const startingCompanies = 0
+    const startingNews = 0
+
+    // Target daily growth rates (we'll add variation around these)
+    const avgDailyProjectGrowth = currentProjectTotal / daysToGenerate
+    const avgDailyCompanyGrowth = currentCompanyTotal / daysToGenerate
+    const avgDailyNewsGrowth = currentNewsTotal / daysToGenerate
+
+    let cumulativeProjects = startingProjects
+    let cumulativeCompanies = startingCompanies
+    let cumulativeNews = startingNews
 
     for (let i = daysToGenerate; i >= 0; i--) {
       const date = new Date(today)
       date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
 
-      // Add realistic variation with trend
+      // Calculate progress (0 to 1)
+      const progress = (daysToGenerate - i) / daysToGenerate
+
+      // Add natural variation and randomness
       const dayOfWeek = date.getDay()
-      const weekendFactor = (dayOfWeek === 0 || dayOfWeek === 6) ? 0.7 : 1.2
-      const randomVariation = (Math.random() - 0.5) * 10
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
-      const projectsAdded = Math.floor(
-        startingProjects +
-        (daysToGenerate - i) * dailyGrowth +
-        randomVariation * weekendFactor
-      )
+      // Weekend means less activity
+      const weekendSlowdown = isWeekend ? 0.2 : 1.0
 
-      // Companies typically less than projects
-      const companiesCount = Math.floor(projectsAdded * 0.12 + Math.random() * 5)
+      // Some days have bursts of activity
+      const hasBigDay = Math.random() > 0.88
+      const hasSmallBurst = Math.random() > 0.75
+
+      // Projects: Steady growth with occasional spikes
+      let projectsToAdd = 0
+      if (progress < 1.0) { // Don't add if we've hit the target
+        projectsToAdd = avgDailyProjectGrowth * weekendSlowdown
+
+        if (hasBigDay) {
+          projectsToAdd += Math.random() * 6 + 3 // Big burst: 3-9 projects
+        } else if (hasSmallBurst) {
+          projectsToAdd += Math.random() * 3 + 1 // Small burst: 1-4 projects
+        }
+
+        // Natural variation
+        projectsToAdd *= (0.5 + Math.random() * 1.5)
+
+        // Some days might have zero additions
+        if (Math.random() > 0.85) {
+          projectsToAdd = 0
+        }
+      }
+
+      cumulativeProjects = Math.min(cumulativeProjects + projectsToAdd, currentProjectTotal)
+
+      // Companies: Slower, more irregular growth
+      let companiesToAdd = 0
+      if (progress < 1.0) {
+        companiesToAdd = avgDailyCompanyGrowth * weekendSlowdown
+
+        if (hasBigDay && Math.random() > 0.7) {
+          companiesToAdd += Math.random() * 2 + 1 // Burst: 1-3 companies
+        }
+
+        // More variation for companies
+        companiesToAdd *= (0.3 + Math.random() * 1.8)
+
+        // Companies added less frequently
+        if (Math.random() > 0.7) {
+          companiesToAdd = 0
+        }
+      }
+
+      cumulativeCompanies = Math.min(cumulativeCompanies + companiesToAdd, currentCompanyTotal)
+
+      // News: Fast growth with high variability (batches of articles)
+      let newsToAdd = 0
+      if (progress < 1.0) {
+        newsToAdd = avgDailyNewsGrowth * (isWeekend ? 0.3 : 1.0)
+
+        // News often comes in large batches
+        if (hasBigDay) {
+          newsToAdd += Math.random() * 40 + 10 // Big batch: 10-50 articles
+        } else if (hasSmallBurst) {
+          newsToAdd += Math.random() * 15 + 5 // Small batch: 5-20 articles
+        }
+
+        // High natural variation
+        newsToAdd *= (0.2 + Math.random() * 2.0)
+
+        // More weekdays with no news
+        if (Math.random() > 0.75) {
+          newsToAdd = 0
+        }
+      }
+
+      cumulativeNews = Math.min(cumulativeNews + newsToAdd, currentNewsTotal)
 
       data.push({
-        date: date.toISOString().split('T')[0],
-        projects: Math.max(startingProjects, projectsAdded),
-        companies: Math.max(10, companiesCount)
+        date: dateStr,
+        projects: Math.round(cumulativeProjects),
+        companies: Math.round(cumulativeCompanies),
+        news: Math.round(cumulativeNews)
       })
+    }
+
+    // Ensure the last data point matches current totals exactly
+    if (data.length > 0) {
+      data[data.length - 1] = {
+        ...data[data.length - 1],
+        projects: currentProjectTotal,
+        companies: currentCompanyTotal,
+        news: currentNewsTotal
+      }
     }
 
     return data
@@ -296,7 +455,7 @@ export function ChartAreaInteractive() {
                 <stop
                   offset="5%"
                   stopColor="var(--color-projects)"
-                  stopOpacity={1.0}
+                  stopOpacity={0.9}
                 />
                 <stop
                   offset="95%"
@@ -308,12 +467,24 @@ export function ChartAreaInteractive() {
                 <stop
                   offset="5%"
                   stopColor="var(--color-companies)"
-                  stopOpacity={0.8}
+                  stopOpacity={0.7}
                 />
                 <stop
                   offset="95%"
                   stopColor="var(--color-companies)"
                   stopOpacity={0.1}
+                />
+              </linearGradient>
+              <linearGradient id="fillNews" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-news)"
+                  stopOpacity={0.6}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-news)"
+                  stopOpacity={0.05}
                 />
               </linearGradient>
             </defs>
@@ -345,6 +516,13 @@ export function ChartAreaInteractive() {
                   indicator="dot"
                 />
               }
+            />
+            <Area
+              dataKey="news"
+              type="natural"
+              fill="url(#fillNews)"
+              stroke="var(--color-news)"
+              stackId="a"
             />
             <Area
               dataKey="companies"
