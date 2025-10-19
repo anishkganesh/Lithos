@@ -1,8 +1,8 @@
 "use client"
 
-import { useRef, useState, useMemo, Suspense } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
-import { OrbitControls, Stars, Sphere } from '@react-three/drei'
+import { OrbitControls, Sphere } from '@react-three/drei'
 import * as THREE from 'three'
 import { MiningProject } from '@/lib/types/mining-project'
 import { Card } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { GlobeFilters } from './globe-filters'
 
 interface ProjectGlobeProps {
   projects: MiningProject[]
@@ -253,13 +254,14 @@ function GlobeScene({
 export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlobeProps) {
   const [selectedProject, setSelectedProject] = useState<MiningProject | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<GlobePoint | null>(null)
+  const [filteredProjects, setFilteredProjects] = useState<MiningProject[]>(projects)
   const canvasRef = useRef<HTMLDivElement>(null)
 
-  // Convert projects to globe points
+  // Convert filtered projects to globe points
   const globePoints = useMemo(() => {
     const points: GlobePoint[] = []
 
-    projects.forEach(project => {
+    filteredProjects.forEach(project => {
       if (!project.location) return
 
       const coords = getCoordinatesFromLocation(project.location)
@@ -279,7 +281,7 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
     })
 
     return points
-  }, [projects])
+  }, [filteredProjects])
 
   const handlePointClick = (point: GlobePoint, event: any) => {
     setSelectedProject(point.project)
@@ -287,38 +289,41 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
 
   return (
     <div className={cn("relative w-full h-full bg-background", className)} ref={canvasRef}>
-      {/* Combined Legend & Stats */}
-      <Card className="absolute bottom-4 left-4 z-10 p-4 shadow-sm">
-        <div className="mb-3 pb-3 border-b">
-          <div className="text-2xl font-semibold">{globePoints.length}</div>
-          <div className="text-xs text-muted-foreground">Projects</div>
-        </div>
-        <h3 className="text-xs font-semibold mb-3">Commodities</h3>
-        <div className="space-y-2 text-xs">
-          {[
-            { color: '#818cf8', label: 'Lithium' },
-            { color: '#f59e0b', label: 'Copper' },
-            { color: '#fbbf24', label: 'Gold' },
-            { color: '#10b981', label: 'Nickel' },
-            { color: '#8b5cf6', label: 'Rare Earth' },
-            { color: '#3b82f6', label: 'Cobalt' },
-          ].map((item, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <div
-                className="w-2.5 h-2.5 rounded-full ring-1 ring-border"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-muted-foreground">{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
+      {/* Filters & Stats - Bottom Left (combined) */}
+      <div className="absolute bottom-4 left-4 z-10 space-y-2">
+        <GlobeFilters
+          projects={projects}
+          onFilterChange={setFilteredProjects}
+        />
+
+        <Card className="p-3 shadow-sm">
+          <h3 className="text-xs font-semibold mb-2">Commodities</h3>
+          <div className="space-y-1.5 text-xs">
+            {[
+              { color: '#818cf8', label: 'Lithium' },
+              { color: '#f59e0b', label: 'Copper' },
+              { color: '#fbbf24', label: 'Gold' },
+              { color: '#10b981', label: 'Nickel' },
+              { color: '#8b5cf6', label: 'Rare Earth' },
+              { color: '#3b82f6', label: 'Cobalt' },
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <div
+                  className="w-2.5 h-2.5 rounded-full ring-1 ring-border"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-muted-foreground">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
 
       {/* Project Detail Panel */}
       {selectedProject && (
         <Card className="absolute top-4 right-4 z-10 w-80 shadow-lg">
-          <div className="p-4">
-            <div className="flex items-start justify-between mb-3">
+          <div className="p-3">
+            <div className="flex items-start justify-between mb-2">
               <h3 className="font-semibold text-sm leading-tight pr-2">
                 {selectedProject.name}
               </h3>
@@ -326,31 +331,31 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
                 variant="ghost"
                 size="icon"
                 onClick={() => setSelectedProject(null)}
-                className="h-6 w-6 -mr-2 -mt-1 flex-shrink-0"
+                className="h-6 w-6 -mr-1.5 -mt-0.5 flex-shrink-0"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-2 text-xs">
               <div>
-                <div className="text-muted-foreground mb-1">Location</div>
+                <div className="text-muted-foreground mb-0.5">Location</div>
                 <div className="font-medium">{selectedProject.location || 'N/A'}</div>
               </div>
 
               {selectedProject.description && (
                 <div>
-                  <div className="text-muted-foreground mb-1">Description</div>
+                  <div className="text-muted-foreground mb-0.5">Description</div>
                   <div className="text-muted-foreground leading-relaxed line-clamp-3">
                     {selectedProject.description}
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {selectedProject.commodities && selectedProject.commodities.length > 0 && (
                   <div>
-                    <div className="text-muted-foreground mb-1">Commodities</div>
+                    <div className="text-muted-foreground mb-0.5">Commodities</div>
                     <div className="font-medium">
                       {selectedProject.commodities.slice(0, 2).join(', ')}
                       {selectedProject.commodities.length > 2 && ` +${selectedProject.commodities.length - 2}`}
@@ -359,23 +364,23 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
                 )}
                 {selectedProject.stage && (
                   <div>
-                    <div className="text-muted-foreground mb-1">Stage</div>
+                    <div className="text-muted-foreground mb-0.5">Stage</div>
                     <div className="font-medium">{selectedProject.stage}</div>
                   </div>
                 )}
               </div>
 
               {(selectedProject.npv || selectedProject.irr) && (
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                   {selectedProject.npv && (
                     <div>
-                      <div className="text-muted-foreground mb-1">NPV</div>
+                      <div className="text-muted-foreground mb-0.5">NPV</div>
                       <div className="font-semibold">${selectedProject.npv}M</div>
                     </div>
                   )}
                   {selectedProject.irr && (
                     <div>
-                      <div className="text-muted-foreground mb-1">IRR</div>
+                      <div className="text-muted-foreground mb-0.5">IRR</div>
                       <div className="font-semibold">{selectedProject.irr}%</div>
                     </div>
                   )}
@@ -389,7 +394,7 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
                   onProjectClick(selectedProject)
                 }
               }}
-              className="w-full mt-4"
+              className="w-full mt-3"
               size="sm"
             >
               View Full Details
