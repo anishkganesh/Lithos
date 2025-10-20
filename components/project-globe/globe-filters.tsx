@@ -93,23 +93,21 @@ export function GlobeFilters({ projects, onFilterChange }: GlobeFiltersProps) {
   const activeFiltersCount = selectedStages.length + selectedCommodities.length
 
   return (
-    <Card className="p-3">
+    <Card className="p-2">
       <div className="mb-2">
+        <div className="text-xs text-muted-foreground mb-1">Total Projects</div>
         <div className="text-2xl font-semibold">{projects.length}</div>
-        <div className="text-xs text-muted-foreground">
-          {activeFiltersCount > 0 ? 'Filtered Projects' : 'Total Projects'}
-        </div>
       </div>
-      <div className="mb-2">
+      <div>
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="relative w-full">
-              <Filter className="h-3.5 w-3.5 mr-1.5" />
+              <Filter className="h-3 w-3 mr-1.5" />
               Filter
               {activeFiltersCount > 0 && (
                 <Badge
                   variant="secondary"
-                  className="ml-1.5 h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]"
+                  className="ml-1.5 h-4 w-4 p-0 flex items-center justify-center rounded-full text-[9px]"
                 >
                   {activeFiltersCount}
                 </Badge>

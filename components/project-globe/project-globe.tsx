@@ -142,14 +142,26 @@ function Earth({ points, onPointClick, onPointHover }: {
 
   return (
     <group ref={earthRef}>
+      {/* Main Earth */}
       <Sphere args={[2, 64, 64]}>
         <meshStandardMaterial
           map={texture}
-          metalness={0.05}
-          roughness={0.8}
+          metalness={0.1}
+          roughness={0.7}
           toneMapped={false}
         />
       </Sphere>
+
+      {/* Atmospheric glow layer */}
+      <Sphere args={[2.05, 64, 64]}>
+        <meshBasicMaterial
+          color="#4a9eff"
+          transparent
+          opacity={0.15}
+          side={THREE.BackSide}
+        />
+      </Sphere>
+
       {/* Points as children so they rotate with the globe */}
       {points.map((point, idx) => (
         <ProjectPoint
@@ -163,25 +175,31 @@ function Earth({ points, onPointClick, onPointHover }: {
   )
 }
 
-// Project Point component
+// Project Point component - using cylinder pins instead of spheres
 function ProjectPoint({ point, onClick, onHover }: {
   point: GlobePoint
   onClick: (point: GlobePoint, event: any) => void
   onHover: (point: GlobePoint | null) => void
 }) {
-  const meshRef = useRef<THREE.Mesh>(null)
+  const groupRef = useRef<THREE.Group>(null)
   const [hovered, setHovered] = useState(false)
 
   useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.scale.setScalar(hovered ? 1.5 : 1)
+    if (groupRef.current) {
+      groupRef.current.scale.setScalar(hovered ? 1.3 : 1)
     }
   })
 
+  // Calculate normal direction for pin orientation
+  const normal = point.position.clone().normalize()
+  const quaternion = new THREE.Quaternion()
+  quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal)
+
   return (
-    <mesh
-      ref={meshRef}
+    <group
+      ref={groupRef}
       position={point.position}
+      quaternion={quaternion}
       onClick={(e) => {
         e.stopPropagation()
         onClick(point, e)
@@ -198,13 +216,42 @@ function ProjectPoint({ point, onClick, onHover }: {
         document.body.style.cursor = 'auto'
       }}
     >
-      <sphereGeometry args={[0.03, 16, 16]} />
-      <meshStandardMaterial
-        color={point.color}
-        emissive={point.color}
-        emissiveIntensity={hovered ? 1.5 : 0.5}
-      />
-    </mesh>
+      {/* Pin cylinder */}
+      <mesh position={[0, 0.025, 0]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.05, 8]} />
+        <meshStandardMaterial
+          color={point.color}
+          emissive={point.color}
+          emissiveIntensity={hovered ? 0.8 : 0.3}
+          metalness={0.3}
+          roughness={0.4}
+        />
+      </mesh>
+
+      {/* Pin head (small sphere on top) */}
+      <mesh position={[0, 0.055, 0]}>
+        <sphereGeometry args={[0.015, 12, 12]} />
+        <meshStandardMaterial
+          color={point.color}
+          emissive={point.color}
+          emissiveIntensity={hovered ? 1.2 : 0.5}
+          metalness={0.4}
+          roughness={0.3}
+        />
+      </mesh>
+
+      {/* Glowing base ring */}
+      {hovered && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.02, 0.035, 16]} />
+          <meshBasicMaterial
+            color={point.color}
+            transparent
+            opacity={0.6}
+          />
+        </mesh>
+      )}
+    </group>
   )
 }
 
@@ -255,7 +302,13 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
   const [selectedProject, setSelectedProject] = useState<MiningProject | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<GlobePoint | null>(null)
   const [filteredProjects, setFilteredProjects] = useState<MiningProject[]>(projects)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const canvasRef = useRef<HTMLDivElement>(null)
+
+  // Track mouse position for tooltip
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setMousePosition({ x: e.clientX, y: e.clientY })
+  }
 
   // Convert filtered projects to globe points
   const globePoints = useMemo(() => {
@@ -288,17 +341,16 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
   }
 
   return (
-    <div className={cn("relative w-full h-full bg-background", className)} ref={canvasRef}>
-      {/* Filters & Stats - Bottom Left (combined) */}
-      <div className="absolute bottom-4 left-4 z-10 space-y-2">
-        <GlobeFilters
-          projects={projects}
-          onFilterChange={setFilteredProjects}
-        />
-
-        <Card className="p-3 shadow-sm">
-          <h3 className="text-xs font-semibold mb-2">Commodities</h3>
-          <div className="space-y-1.5 text-xs">
+    <div
+      className={cn("relative w-full h-full bg-background", className)}
+      ref={canvasRef}
+      onMouseMove={handleMouseMove}
+    >
+      {/* Filters & Stats - Bottom Left (side by side) */}
+      <div className="absolute bottom-4 left-4 z-10 flex gap-2 items-end">
+        <Card className="p-2 shadow-sm">
+          <h3 className="text-xs font-semibold mb-1.5">Commodities</h3>
+          <div className="space-y-1 text-xs">
             {[
               { color: '#818cf8', label: 'Lithium' },
               { color: '#f59e0b', label: 'Copper' },
@@ -317,6 +369,11 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
             ))}
           </div>
         </Card>
+
+        <GlobeFilters
+          projects={projects}
+          onFilterChange={setFilteredProjects}
+        />
       </div>
 
       {/* Project Detail Panel */}
@@ -403,18 +460,25 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
         </Card>
       )}
 
-      {/* Hover Tooltip */}
-      {hoveredPoint && !selectedProject && (
+      {/* Hover Tooltip - follows cursor */}
+      {hoveredPoint && (
         <div
           className="fixed z-50 pointer-events-none"
           style={{
-            left: '50%',
-            top: '20%',
-            transform: 'translateX(-50%)'
+            left: `${mousePosition.x + 15}px`,
+            top: `${mousePosition.y - 10}px`,
           }}
         >
-          <Card className="p-2 px-3 shadow-lg">
-            <div className="text-xs font-medium">{hoveredPoint.label}</div>
+          <Card className="px-3 py-1.5 shadow-lg border-l-4 bg-background/95 backdrop-blur-sm" style={{ borderLeftColor: hoveredPoint.color }}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">{hoveredPoint.label}</span>
+              {hoveredPoint.project.location && (
+                <>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <span className="text-xs text-muted-foreground">{hoveredPoint.project.location}</span>
+                </>
+              )}
+            </div>
           </Card>
         </div>
       )}
