@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { ExternalLink, AlertTriangle, FileText, Users, Bookmark, BookmarkCheck, ImageIcon, MessageSquare, Loader2 } from "lucide-react"
 import { SensitivityAnalysis } from "./sensitivity-analysis"
 import { AIInsightsPanel } from "@/components/ai-insights-panel"
+import { InlinePDFViewerWrapper } from "./inline-pdf-viewer-wrapper"
 import { cn } from "@/lib/utils"
 import { ExportDropdown, ExportFormat } from "@/components/ui/export-dropdown"
 import { exportProjects } from "@/lib/export-utils"
@@ -24,6 +25,8 @@ interface SingleProjectViewProps {
   project: MiningProject
   onProjectSelect?: (projectId: string) => void
   onClose?: () => void
+  initialPdfUrl?: string | null
+  initialPdfTitle?: string | null
 }
 
 const getRiskBadgeColor = (risk: string) => {
@@ -39,19 +42,41 @@ const getRiskBadgeColor = (risk: string) => {
   }
 }
 
-export function SingleProjectView({ project, onProjectSelect, onClose }: SingleProjectViewProps) {
+export function SingleProjectView({ project, onProjectSelect, onClose, initialPdfUrl, initialPdfTitle }: SingleProjectViewProps) {
   const [updatingWatchlist, setUpdatingWatchlist] = useState(false)
   const [generatingImage, setGeneratingImage] = useState(false)
   const [isWatchlisted, setIsWatchlisted] = useState(project.watchlist || false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(project.generated_image_url || null)
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false)
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null)
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState<string | null>(null)
   const { setInput } = useGlobalChat()
   const { toggleChat } = useChat()
+
+  const handleViewPdf = (url: string, title: string) => {
+    setSelectedPdfUrl(url)
+    setSelectedPdfTitle(title)
+    setPdfViewerOpen(true)
+  }
+
+  const handleClosePdf = () => {
+    setPdfViewerOpen(false)
+    setSelectedPdfUrl(null)
+    setSelectedPdfTitle(null)
+  }
 
   // Update local state when project prop changes
   React.useEffect(() => {
     setIsWatchlisted(project.watchlist || false)
     setGeneratedImageUrl(project.generated_image_url || null)
   }, [project.watchlist, project.generated_image_url])
+
+  // Auto-open PDF viewer if initial PDF URL is provided
+  React.useEffect(() => {
+    if (initialPdfUrl && initialPdfTitle) {
+      handleViewPdf(initialPdfUrl, initialPdfTitle)
+    }
+  }, [initialPdfUrl, initialPdfTitle])
 
   const similarProjects = [
     { id: '1', name: 'Similar Project 1', npv: 3200, irr: 28 },
@@ -168,6 +193,19 @@ What is your assessment of this project?`
     toggleChat()
 
     toast.success('Project added to chat')
+  }
+
+  // If PDF viewer is open, show it instead of the main content
+  if (pdfViewerOpen && selectedPdfUrl) {
+    return (
+      <div className="h-full flex flex-col">
+        <InlinePDFViewerWrapper
+          url={selectedPdfUrl}
+          title={selectedPdfTitle || undefined}
+          onClose={handleClosePdf}
+        />
+      </div>
+    )
   }
 
   return (
@@ -373,26 +411,28 @@ What is your assessment of this project?`
       {/* Project URLs */}
       {project.urls && project.urls.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium">Resources</h3>
+          <h3 className="text-sm font-medium">Technical Documents</h3>
           <div className="flex flex-wrap gap-2">
-            {project.urls.map((url, i) => (
-              <Button
-                key={i}
-                variant="outline"
-                size="sm"
-                asChild
-              >
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs"
+            {project.urls.map((url, i) => {
+              const isPdf = url.toLowerCase().includes('.pdf')
+              return (
+                <Button
+                  key={i}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (isPdf) {
+                      handleViewPdf(url, `${project.name} - Document ${i + 1}`)
+                    } else {
+                      window.open(url, '_blank')
+                    }
+                  }}
                 >
-                  <ExternalLink className="h-3 w-3 mr-1" />
-                  Source {i + 1}
-                </a>
-              </Button>
-            ))}
+                  <FileText className="h-3 w-3 mr-1" />
+                  {isPdf ? `PDF ${i + 1}` : `Source ${i + 1}`}
+                </Button>
+              )
+            })}
           </div>
         </div>
       )}

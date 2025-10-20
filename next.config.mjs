@@ -9,10 +9,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...(config.externals || []), 'canvas', 'pdf-parse']
+    }
+    return config
   },
 }
 

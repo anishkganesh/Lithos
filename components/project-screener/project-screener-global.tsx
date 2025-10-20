@@ -86,6 +86,8 @@ export function ProjectScreenerGlobal() {
   const [miningAgentRunning, setMiningAgentRunning] = useState(false)
   const [miningAgentProgress, setMiningAgentProgress] = useState<string>("")
   const [updatingWatchlist, setUpdatingWatchlist] = useState<string | null>(null)
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [pdfTitle, setPdfTitle] = useState<string | null>(null)
 
   // Listen for refresh events
   useEffect(() => {
@@ -135,6 +137,15 @@ export function ProjectScreenerGlobal() {
 
   const handleClearSelection = () => {
     setRowSelection({})
+  }
+
+  // PDF click handler - opens project detail panel with PDF
+  const handlePdfClick = (url: string, title: string, project: MiningProject) => {
+    setPdfUrl(url)
+    setPdfTitle(title)
+    setSelectedProjects([project])
+    setDetailPanelMode("single")
+    setDetailPanelOpen(true)
   }
 
   // Watchlist handler
@@ -391,7 +402,12 @@ export function ProjectScreenerGlobal() {
     {
       accessorKey: "urls",
       header: "Links",
-      cell: ({ row }) => <LinksPopover urls={row.original.urls || []} />,
+      cell: ({ row }) => (
+        <LinksPopover
+          urls={row.original.urls || []}
+          onPdfClick={(url, title) => handlePdfClick(url, title, row.original)}
+        />
+      ),
     },
   ]
 
@@ -608,6 +624,8 @@ export function ProjectScreenerGlobal() {
             setDetailPanelMode("single")
           }
         }}
+        initialPdfUrl={pdfUrl}
+        initialPdfTitle={pdfTitle}
       />
       <Toaster />
     </>

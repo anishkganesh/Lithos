@@ -15,6 +15,8 @@ interface ProjectDetailPanelProps {
   mode: "single" | "comparison"
   onProjectSelect?: (projectId: string) => void
   onUpdate?: () => void
+  initialPdfUrl?: string | null
+  initialPdfTitle?: string | null
 }
 
 export function ProjectDetailPanel({
@@ -23,6 +25,8 @@ export function ProjectDetailPanel({
   projects,
   mode,
   onProjectSelect,
+  initialPdfUrl,
+  initialPdfTitle,
 }: ProjectDetailPanelProps) {
   // Close on ESC key
   React.useEffect(() => {
@@ -107,6 +111,8 @@ export function ProjectDetailPanel({
               project={projects[0]}
               onProjectSelect={onProjectSelect}
               onClose={onClose}
+              initialPdfUrl={initialPdfUrl}
+              initialPdfTitle={initialPdfTitle}
             />
           ) : (
             <ProjectComparisonView projects={projects} />
