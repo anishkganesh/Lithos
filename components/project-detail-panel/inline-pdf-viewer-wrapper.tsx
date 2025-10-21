@@ -21,8 +21,10 @@ interface InlinePDFViewerWrapperProps {
   url: string
   title?: string
   onClose: () => void
+  projectId?: string | null
+  onProjectUpdated?: () => void
 }
 
-export function InlinePDFViewerWrapper({ url, title, onClose }: InlinePDFViewerWrapperProps) {
-  return <InlinePDFViewer url={url} title={title} onClose={onClose} />
+export function InlinePDFViewerWrapper({ url, title, onClose, projectId, onProjectUpdated }: InlinePDFViewerWrapperProps) {
+  return <InlinePDFViewer url={url} title={title} onClose={onClose} projectId={projectId} onProjectUpdated={onProjectUpdated} />
 }

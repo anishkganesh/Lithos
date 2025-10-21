@@ -421,6 +421,77 @@ Return null for values not found. Be precise with page numbers.`,
 
     console.log('✅ Extraction complete!')
 
+    // Step 6: Update projects table with extracted financial data if projectId is provided
+    let projectUpdated = false
+    if (projectId && extractedData) {
+      console.log('💾 Updating project with extracted financial data...')
+      console.log('📊 Project ID:', projectId)
+      console.log('📊 Extracted data summary:', {
+        hasNPV: !!extractedData.npv?.value,
+        npvValue: extractedData.npv?.value,
+        hasIRR: !!extractedData.irr?.value,
+        irrValue: extractedData.irr?.value,
+        hasCAPEX: !!extractedData.capex?.value,
+        capexValue: extractedData.capex?.value,
+        hasLocation: !!extractedData.location?.value,
+        hasCommodities: !!extractedData.commodities?.value,
+      })
+
+      const projectUpdateData: any = {
+        updated_at: new Date().toISOString(),
+        financial_metrics_updated_at: new Date().toISOString(),
+      }
+
+      // Add NPV if extracted (use simple column name that frontend expects)
+      if (extractedData.npv?.value) {
+        projectUpdateData.npv = extractedData.npv.value
+        console.log('  ✓ Adding NPV:', extractedData.npv.value)
+      }
+
+      // Add IRR if extracted
+      if (extractedData.irr?.value) {
+        projectUpdateData.irr = extractedData.irr.value
+        console.log('  ✓ Adding IRR:', extractedData.irr.value)
+      }
+
+      // Add CAPEX if extracted
+      if (extractedData.capex?.value) {
+        projectUpdateData.capex = extractedData.capex.value
+        console.log('  ✓ Adding CAPEX:', extractedData.capex.value)
+      }
+
+      // Add location if extracted
+      if (extractedData.location?.value) {
+        projectUpdateData.location = extractedData.location.value
+        console.log('  ✓ Adding location:', extractedData.location.value)
+      }
+
+      // Add commodities if extracted
+      if (extractedData.commodities?.value && Array.isArray(extractedData.commodities.value)) {
+        projectUpdateData.commodities = extractedData.commodities.value
+        console.log('  ✓ Adding commodities:', extractedData.commodities.value)
+      }
+
+      console.log('📝 Updating with data:', projectUpdateData)
+
+      // Update project in database
+      const { data: updatedProject, error: projectError } = await supabase
+        .from('projects')
+        .update(projectUpdateData)
+        .eq('id', projectId)
+        .select()
+
+      if (projectError) {
+        console.error('❌ Error updating project:', projectError)
+      } else {
+        console.log('✅ Project updated successfully!')
+        console.log('✅ Updated project data:', updatedProject)
+        projectUpdated = true
+      }
+    } else {
+      console.log('⚠️ Skipping project update - projectId:', projectId, 'extractedData:', !!extractedData)
+    }
+
     return NextResponse.json({
       success: true,
       highlights,
@@ -428,6 +499,7 @@ Return null for values not found. Be precise with page numbers.`,
       numPages,
       relevantPages: topPages.map(p => p.pageNumber),
       saved: !!savedHighlights,
+      projectUpdated,
     })
   } catch (error: any) {
     console.error('❌ Error extracting highlights:', error)

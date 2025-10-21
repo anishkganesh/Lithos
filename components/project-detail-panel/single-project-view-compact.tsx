@@ -50,6 +50,7 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false)
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null)
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string | null>(null)
+  const [currentProject, setCurrentProject] = useState(project)
   const { setInput } = useGlobalChat()
   const { toggleChat } = useChat()
 
@@ -65,11 +66,33 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
     setSelectedPdfTitle(null)
   }
 
+  const handleProjectUpdated = async () => {
+    // Refresh project data from database after extraction
+    console.log('🔄 Refreshing project data after extraction...')
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', project.id)
+        .single()
+
+      if (error) {
+        console.error('Error refreshing project:', error)
+      } else if (data) {
+        console.log('✅ Project data refreshed:', data)
+        setCurrentProject(data as MiningProject)
+      }
+    } catch (error) {
+      console.error('Error refreshing project:', error)
+    }
+  }
+
   // Update local state when project prop changes
   React.useEffect(() => {
+    setCurrentProject(project)
     setIsWatchlisted(project.watchlist || false)
     setGeneratedImageUrl(project.generated_image_url || null)
-  }, [project.watchlist, project.generated_image_url])
+  }, [project])
 
   // Auto-open PDF viewer if initial PDF URL is provided
   React.useEffect(() => {
@@ -203,6 +226,8 @@ What is your assessment of this project?`
           url={selectedPdfUrl}
           title={selectedPdfTitle || undefined}
           onClose={handleClosePdf}
+          projectId={project.id}
+          onProjectUpdated={handleProjectUpdated}
         />
       </div>
     )
@@ -214,13 +239,13 @@ What is your assessment of this project?`
       <div className="space-y-3">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-medium">{project.name}</h2>
+            <h2 className="text-xl font-medium">{currentProject.name}</h2>
             <p className="text-sm text-muted-foreground">
-              {project.company || 'Unknown'} • {project.location || 'N/A'}
+              {currentProject.company || 'Unknown'} • {currentProject.location || 'N/A'}
             </p>
           </div>
-          <Badge className={cn("text-xs", getRiskBadgeColor(project.riskLevel || 'Medium'))}>
-            {project.riskLevel || 'Medium'} Risk
+          <Badge className={cn("text-xs", getRiskBadgeColor(currentProject.riskLevel || 'Medium'))}>
+            {currentProject.riskLevel || 'Medium'} Risk
           </Badge>
         </div>
 
@@ -312,8 +337,8 @@ What is your assessment of this project?`
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">NPV (Net Present Value)</span>
               <span className="text-sm font-medium">
-                {project.npv !== null && project.npv !== undefined
-                  ? `$${project.npv.toFixed(0)}M`
+                {currentProject.npv !== null && currentProject.npv !== undefined
+                  ? `$${currentProject.npv.toFixed(0)}M`
                   : 'N/A'}
               </span>
             </div>
@@ -322,8 +347,8 @@ What is your assessment of this project?`
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">IRR (Internal Rate of Return)</span>
               <span className="text-sm font-medium">
-                {project.irr !== null && project.irr !== undefined
-                  ? `${project.irr.toFixed(1)}%`
+                {currentProject.irr !== null && currentProject.irr !== undefined
+                  ? `${currentProject.irr.toFixed(1)}%`
                   : 'N/A'}
               </span>
             </div>
@@ -332,8 +357,8 @@ What is your assessment of this project?`
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">CAPEX (Capital Expenditure)</span>
               <span className="text-sm font-medium">
-                {project.capex !== null && project.capex !== undefined
-                  ? `$${project.capex.toFixed(0)}M`
+                {currentProject.capex !== null && currentProject.capex !== undefined
+                  ? `$${currentProject.capex.toFixed(0)}M`
                   : 'N/A'}
               </span>
             </div>

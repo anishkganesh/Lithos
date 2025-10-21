@@ -18,6 +18,8 @@ interface InlinePDFViewerProps {
   url: string
   title?: string
   onClose: () => void
+  projectId?: string | null
+  onProjectUpdated?: () => void
 }
 
 interface Highlight {
@@ -33,7 +35,7 @@ interface Highlight {
   quote: string
 }
 
-export function InlinePDFViewer({ url, title, onClose }: InlinePDFViewerProps) {
+export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdated }: InlinePDFViewerProps) {
   const [highlights, setHighlights] = React.useState<Highlight[]>([])
   const [loading, setLoading] = React.useState(true)
   const [autoExtracting, setAutoExtracting] = React.useState(false)
@@ -169,7 +171,7 @@ export function InlinePDFViewer({ url, title, onClose }: InlinePDFViewerProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pdfUrl: url,
-          projectId: null, // Can be passed as prop if needed
+          projectId: projectId,
         }),
       })
 
@@ -177,7 +179,15 @@ export function InlinePDFViewer({ url, title, onClose }: InlinePDFViewerProps) {
         const data = await response.json()
         if (data.highlights) {
           setHighlights(data.highlights)
-          console.log('Auto-extracted highlights:', data.highlights.length)
+          console.log('✅ Auto-extracted highlights:', data.highlights.length)
+
+          if (data.projectUpdated) {
+            console.log('✅ Project database updated with extracted data')
+            // Trigger refresh of project data in parent component
+            if (onProjectUpdated) {
+              onProjectUpdated()
+            }
+          }
         }
       }
     } catch (error) {
