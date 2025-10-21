@@ -13,6 +13,11 @@ const nextConfig = {
     if (isServer) {
       config.externals = [...(config.externals || []), 'canvas', 'pdf-parse']
     }
+    // Prevent canvas errors for react-pdf-viewer
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    }
     return config
   },
 }

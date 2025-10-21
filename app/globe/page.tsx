@@ -34,11 +34,15 @@ export default function GlobePage() {
         .select('*')
         .order('npv', { ascending: false, nullsFirst: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching projects:', error.message || error)
+        toast.error(`Failed to load projects: ${error.message || 'Unknown error'}`)
+        return
+      }
 
       setProjects(data || [])
     } catch (error: any) {
-      console.error('Error fetching projects:', error)
+      console.error('Error fetching projects:', error?.message || error)
       toast.error('Failed to load projects')
     } finally {
       setLoadingProjects(false)

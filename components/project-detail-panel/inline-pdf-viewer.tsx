@@ -314,7 +314,7 @@ export function InlinePDFViewer({ url, title, onClose }: InlinePDFViewerProps) {
         <PanelGroup direction="vertical">
           <Panel defaultSize={70} minSize={30}>
             <div className="h-full overflow-auto bg-background">
-              <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+              <Worker workerUrl="/pdf.worker.min.js">
                 <div className="h-full">
                   <Viewer
                     fileUrl={url}
