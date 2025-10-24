@@ -460,71 +460,16 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
 
                   <div className="space-y-3">
                     {highlights.map((highlight: any) => {
-                      // Determine color scheme based on dataType
-                      let bgColor = "bg-yellow-50"
-                      let borderColor = "border-yellow-200"
-                      let textColor = "text-yellow-900"
-                      let labelColor = "text-yellow-700"
-                      let hoverColor = "hover:bg-yellow-100"
-
-                      if (highlight.dataType === 'npv') {
-                        bgColor = "bg-green-50"
-                        borderColor = "border-green-200"
-                        textColor = "text-green-900"
-                        labelColor = "text-green-700"
-                        hoverColor = "hover:bg-green-100"
-                      } else if (highlight.dataType === 'irr') {
-                        bgColor = "bg-blue-50"
-                        borderColor = "border-blue-200"
-                        textColor = "text-blue-900"
-                        labelColor = "text-blue-700"
-                        hoverColor = "hover:bg-blue-100"
-                      } else if (highlight.dataType === 'capex') {
-                        bgColor = "bg-purple-50"
-                        borderColor = "border-purple-200"
-                        textColor = "text-purple-900"
-                        labelColor = "text-purple-700"
-                        hoverColor = "hover:bg-purple-100"
-                      } else if (highlight.dataType === 'resources') {
-                        bgColor = "bg-cyan-50"
-                        borderColor = "border-cyan-200"
-                        textColor = "text-cyan-900"
-                        labelColor = "text-cyan-700"
-                        hoverColor = "hover:bg-cyan-100"
-                      } else if (highlight.dataType === 'reserves') {
-                        bgColor = "bg-indigo-50"
-                        borderColor = "border-indigo-200"
-                        textColor = "text-indigo-900"
-                        labelColor = "text-indigo-700"
-                        hoverColor = "hover:bg-indigo-100"
-                      }
-
                       return (
                         <div
                           key={highlight.id}
-                          className={`p-3 ${bgColor} border ${borderColor} rounded-lg ${hoverColor} transition-colors cursor-pointer`}
+                          className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
                           onClick={() => {
                             console.log('🖱️ Clicked highlight:', highlight)
-                            console.log('  - Has highlightAreas:', !!highlight.highlightAreas)
-                            console.log('  - highlightAreas length:', highlight.highlightAreas?.length)
                             console.log('  - Page:', highlight.page)
 
-                            // If highlight has areas with coordinates, jump to the exact position
-                            if (highlight.highlightAreas && highlight.highlightAreas.length > 0) {
-                              const area = highlight.highlightAreas[0]
-                              console.log('  - Jumping to highlight area:', area)
-                              try {
-                                jumpToHighlightArea(area)
-                              } catch (error) {
-                                console.error('Error jumping to highlight area:', error)
-                                // Fallback to page if highlight jump fails
-                                if (area.pageIndex !== undefined) {
-                                  console.log('  - Fallback: Jumping to page', area.pageIndex)
-                                  jumpToPage(area.pageIndex)
-                                }
-                              }
-                            } else if (highlight.page !== null && highlight.page !== undefined) {
-                              // Fallback to page navigation if no highlight areas
+                            // Jump to the page
+                            if (highlight.page !== null && highlight.page !== undefined) {
                               console.log('  - Jumping to page', highlight.page - 1)
                               jumpToPage(highlight.page - 1)
                             } else {
@@ -532,32 +477,14 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
                             }
                           }}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className={`text-xs font-bold uppercase ${labelColor}`}>
-                              {highlight.dataType || 'Data'}
-                            </div>
-                            {highlight.page && (
-                              <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
-                                <span>Page {highlight.page}</span>
-                                <span className="text-blue-400">→</span>
-                              </div>
-                            )}
+                          {/* Header: DATATYPE → PAGE X */}
+                          <div className="text-xs font-bold uppercase text-yellow-800 mb-2">
+                            {highlight.dataType || 'Data'} → PAGE {highlight.page}
                           </div>
 
-                          {/* Extracted Value (if available) */}
-                          {highlight.value !== undefined && (
-                            <div className={`text-base font-bold ${textColor} mb-2`}>
-                              {typeof highlight.value === 'number' ? (
-                                highlight.dataType === 'irr' ? `${highlight.value}%` : `$${highlight.value}M`
-                              ) : (
-                                highlight.value
-                              )}
-                            </div>
-                          )}
-
                           {/* Source Quote */}
-                          <div className={`text-xs ${textColor} italic leading-relaxed border-l-2 ${borderColor} pl-2`}>
-                            "{highlight.quote}"
+                          <div className="text-sm text-yellow-900 leading-relaxed">
+                            {highlight.quote}
                           </div>
                         </div>
                       )
