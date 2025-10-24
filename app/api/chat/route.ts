@@ -14,12 +14,17 @@ const openai = new OpenAI({
   apiKey: apiKey || 'sk-dummy-key' // Use dummy key to prevent initialization errors
 })
 
-// Dynamic import for pdf-parse to avoid build issues
+// Use unpdf for PDF parsing
 async function extractPDFText(buffer: Buffer): Promise<{ text: string; numpages: number; info: any }> {
   try {
-    const pdfParse = require('../../../lib/pdf-parse-wrapper.js');
-    const data = await pdfParse(buffer);
-    return data;
+    const { extractText } = await import('unpdf');
+    const uint8Array = new Uint8Array(buffer);
+    const { text, totalPages } = await extractText(uint8Array, { mergePages: true });
+    return {
+      text,
+      numpages: totalPages,
+      info: {}
+    };
   } catch (error) {
     console.error('PDF parse error:', error);
     throw error;
