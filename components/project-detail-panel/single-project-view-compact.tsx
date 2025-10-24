@@ -20,6 +20,7 @@ import { supabase } from "@/lib/supabase/client"
 import { useGlobalChat } from "@/lib/global-chat-context"
 import { useChat } from "@/lib/chat-context"
 import { formatNumber, formatCurrency, formatPercent, formatTonnes } from "@/lib/format-utils"
+import { InteractiveMapbox } from "@/components/ui/interactive-mapbox"
 
 interface SingleProjectViewProps {
   project: MiningProject
@@ -366,6 +367,16 @@ What is your assessment of this project?`
             </Button>
           )}
         </div>
+
+        {/* Location Map */}
+        {currentProject.location && (
+          <InteractiveMapbox
+            location={currentProject.location}
+            width={600}
+            height={300}
+            initialZoom={8}
+          />
+        )}
 
         {/* Generated Image Display */}
         {generatedImageUrl && (

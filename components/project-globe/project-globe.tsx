@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GlobeFilters } from './globe-filters'
+import { InteractiveMapbox } from '@/components/ui/interactive-mapbox'
 
 interface ProjectGlobeProps {
   projects: MiningProject[]
@@ -402,6 +403,17 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
+
+            {/* Location Map */}
+            {selectedProject.location && (
+              <InteractiveMapbox
+                location={selectedProject.location}
+                width={280}
+                height={150}
+                initialZoom={7}
+                className="mb-2"
+              />
+            )}
 
             <div className="space-y-2 text-xs">
               <div>
