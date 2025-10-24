@@ -51,6 +51,8 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null)
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string | null>(null)
   const [currentProject, setCurrentProject] = useState(project)
+  const [similarProjects, setSimilarProjects] = useState<any[]>([])
+  const [loadingSimilar, setLoadingSimilar] = useState(false)
   const { setInput } = useGlobalChat()
   const { toggleChat } = useChat()
 
@@ -80,6 +82,8 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
         console.error('Error refreshing project:', error)
       } else if (data) {
         console.log('✅ Project data refreshed:', data)
+        console.log('📊 Resource value:', data.resource)
+        console.log('📊 Reserve value:', data.reserve)
         setCurrentProject(data as MiningProject)
       }
     } catch (error) {
@@ -87,12 +91,52 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
     }
   }
 
-  // Update local state when project prop changes
+  // Load similar projects
   React.useEffect(() => {
-    setCurrentProject(project)
+    async function loadSimilarProjects() {
+      if (!project.id) return
+
+      setLoadingSimilar(true)
+      try {
+        const response = await fetch(`/api/projects/${project.id}/similar`)
+        if (response.ok) {
+          const data = await response.json()
+          setSimilarProjects(data.similar || [])
+        }
+      } catch (error) {
+        console.error('Error loading similar projects:', error)
+      } finally {
+        setLoadingSimilar(false)
+      }
+    }
+
+    loadSimilarProjects()
+  }, [project.id])
+
+  // Load full project data on mount including resource/reserve
+  React.useEffect(() => {
+    async function loadFullProjectData() {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', project.id)
+        .single()
+
+      if (error) {
+        console.error('Error loading full project data:', error)
+        setCurrentProject(project)
+      } else if (data) {
+        console.log('✅ Full project data loaded:', data)
+        console.log('📊 Resource:', data.resource)
+        console.log('📊 Reserve:', data.reserve)
+        setCurrentProject(data as MiningProject)
+      }
+    }
+
+    loadFullProjectData()
     setIsWatchlisted(project.watchlist || false)
     setGeneratedImageUrl(project.generated_image_url || null)
-  }, [project])
+  }, [project.id])
 
   // Auto-open PDF viewer if initial PDF URL is provided
   React.useEffect(() => {
@@ -100,13 +144,6 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
       handleViewPdf(initialPdfUrl, initialPdfTitle)
     }
   }, [initialPdfUrl, initialPdfTitle])
-
-  const similarProjects = [
-    { id: '1', name: 'Similar Project 1', npv: 3200, irr: 28 },
-    { id: '2', name: 'Similar Project 2', npv: 2800, irr: 24 },
-    { id: '3', name: 'Similar Project 3', npv: 4100, irr: 31 },
-    { id: '4', name: 'Similar Project 4', npv: 2500, irr: 22 }
-  ]
 
   const handleToggleWatchlist = async () => {
     try {
@@ -199,8 +236,8 @@ Location: ${project.location || 'N/A'}
 Commodities: ${(project.commodities || []).join(', ')}
 Status: ${project.status || 'Unknown'}
 Ownership: ${project.ownership_percentage !== null ? `${project.ownership_percentage}%` : 'N/A'}
-Resource Estimate: ${project.resource_estimate || 'N/A'}
-Reserve Estimate: ${project.reserve_estimate || 'N/A'}
+Resource Estimate: ${currentProject.resource || 'N/A'}
+Reserve Estimate: ${currentProject.reserve || 'N/A'}
 
 What is your assessment of this project?`
 
@@ -238,11 +275,24 @@ What is your assessment of this project?`
       {/* Company Info */}
       <div className="space-y-3">
         <div className="flex items-start justify-between">
-          <div>
+          <div className="space-y-1">
             <h2 className="text-xl font-medium">{currentProject.name}</h2>
             <p className="text-sm text-muted-foreground">
               {currentProject.company || 'Unknown'} • {currentProject.location || 'N/A'}
             </p>
+            {currentProject.commodities && currentProject.commodities.length > 0 && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-muted-foreground">Primary:</span>
+                <Badge variant="default" className="text-xs font-medium">
+                  {currentProject.commodities[0]}
+                </Badge>
+                {currentProject.commodities.length > 1 && (
+                  <span className="text-xs text-muted-foreground">
+                    +{currentProject.commodities.length - 1} more
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <Badge className={cn("text-xs", getRiskBadgeColor(currentProject.riskLevel || 'Medium'))}>
             {currentProject.riskLevel || 'Medium'} Risk
@@ -413,13 +463,23 @@ What is your assessment of this project?`
           <div className="p-2.5">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Resource Estimate</span>
-              <span className="text-sm font-medium">{project.resource_estimate || 'N/A'}</span>
+              <span className="text-sm font-medium">
+                {(() => {
+                  console.log('🔍 Displaying resource:', currentProject.resource, 'Type:', typeof currentProject.resource)
+                  return currentProject.resource || 'N/A'
+                })()}
+              </span>
             </div>
           </div>
           <div className="p-2.5">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Reserve Estimate</span>
-              <span className="text-sm font-medium">{project.reserve_estimate || 'N/A'}</span>
+              <span className="text-sm font-medium">
+                {(() => {
+                  console.log('🔍 Displaying reserve:', currentProject.reserve, 'Type:', typeof currentProject.reserve)
+                  return currentProject.reserve || 'N/A'
+                })()}
+              </span>
             </div>
           </div>
         </div>
@@ -636,23 +696,40 @@ What is your assessment of this project?`
       {/* Similar Projects */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium">Similar Projects</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {similarProjects.map((similar) => (
-            <Card 
-              key={similar.id} 
-              className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => onProjectSelect?.(similar.id)}
-            >
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">{similar.name}</h4>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>NPV: ${similar.npv}M</span>
-                  <span>IRR: {similar.irr}%</span>
+        {loadingSimilar ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : similarProjects.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {similarProjects.map((similar) => (
+              <Card
+                key={similar.id}
+                className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => onProjectSelect?.(similar.id)}
+              >
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium line-clamp-1">{similar.name}</h4>
+                  {similar.commodities && similar.commodities.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {similar.commodities.slice(0, 2).map((commodity: string, idx: number) => (
+                        <Badge key={idx} variant="outline" className="text-xs px-1.5 py-0">
+                          {commodity}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{similar.npv ? `NPV: $${similar.npv}M` : 'NPV: N/A'}</span>
+                    <span>{similar.irr ? `IRR: ${similar.irr}%` : 'IRR: N/A'}</span>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">No similar projects found</p>
+        )}
       </div>
 
       {/* Quick Actions */}

@@ -79,9 +79,15 @@ export function AIInsightsTab({ projects, loading: projectsLoading, className }:
       const projectIds = projects.map(p => p.id).join(',')
 
       const response = await fetch(`/api/ai-insights?projectIds=${projectIds}`)
+
+      if (!response.ok) {
+        console.error('Failed to fetch AI insights:', response.status)
+        return
+      }
+
       const data = await response.json()
 
-      if (response.ok && data.insights) {
+      if (data.insights) {
         const insightsMap: Record<string, AIInsight> = {}
         data.insights.forEach((insight: AIInsight) => {
           insightsMap[insight.project_id] = insight
@@ -110,9 +116,15 @@ export function AIInsightsTab({ projects, loading: projectsLoading, className }:
         })
       })
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('AI insights batch generation error:', response.status, errorText)
+        throw new Error(`Failed to generate insights: ${response.status}`)
+      }
+
       const data = await response.json()
 
-      if (response.ok) {
+      if (data.insights) {
         const insightsMap: Record<string, AIInsight> = {}
         data.insights.forEach((insight: AIInsight) => {
           insightsMap[insight.project_id] = insight

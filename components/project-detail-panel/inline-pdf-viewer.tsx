@@ -39,27 +39,162 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
   const [highlights, setHighlights] = React.useState<Highlight[]>([])
   const [loading, setLoading] = React.useState(true)
   const [autoExtracting, setAutoExtracting] = React.useState(false)
+  const hasAttemptedAutoExtract = React.useRef(false)
 
-  // Load existing highlights from database
+  // Auto-extract function
+  const autoExtractKeyData = React.useCallback(async () => {
+    if (!projectId || hasAttemptedAutoExtract.current) return
+
+    hasAttemptedAutoExtract.current = true
+    setAutoExtracting(true)
+    try {
+      const response = await fetch('/api/pdf/extract-highlights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pdfUrl: url,
+          projectId: projectId,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.highlights) {
+          setHighlights(data.highlights)
+          console.log('✅ Auto-extracted highlights:', data.highlights.length)
+
+          if (data.projectUpdated) {
+            console.log('✅ Project database updated with extracted data')
+            // Trigger refresh of project data in parent component
+            if (onProjectUpdated) {
+              onProjectUpdated()
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error auto-extracting:', error)
+    } finally {
+      setAutoExtracting(false)
+    }
+  }, [url, projectId, onProjectUpdated])
+
+  // Load existing highlights from database and create fallback from project data
   React.useEffect(() => {
     async function loadHighlights() {
       try {
         const response = await fetch(`/api/pdf/extract-highlights?pdfUrl=${encodeURIComponent(url)}`)
         if (response.ok) {
           const data = await response.json()
-          if (data.highlights?.highlights) {
+          console.log('📥 Highlight API response:', data)
+          if (data.highlights?.highlights && data.highlights.highlights.length > 0) {
+            console.log('✅ Loaded existing highlights:', data.highlights.highlights)
             setHighlights(data.highlights.highlights)
-            console.log('Loaded existing highlights:', data.highlights.highlights.length)
+          } else {
+            console.log('⚠️ No highlights found')
+            // If we have projectId, create synthetic highlights from project data
+            if (projectId) {
+              await createSyntheticHighlights()
+            } else {
+              // Try auto-extraction
+              autoExtractKeyData()
+            }
+          }
+        } else {
+          console.log('⚠️ Highlight API request failed:', response.status)
+          // Fallback to synthetic highlights if we have projectId
+          if (projectId) {
+            await createSyntheticHighlights()
           }
         }
       } catch (error) {
-        console.error('Error loading highlights:', error)
+        console.error('❌ Error loading highlights:', error)
+        // Fallback to synthetic highlights if we have projectId
+        if (projectId) {
+          await createSyntheticHighlights()
+        }
       } finally {
         setLoading(false)
       }
     }
+
+    async function createSyntheticHighlights() {
+      try {
+        const projectResponse = await fetch(`/api/projects/${projectId}`)
+        if (projectResponse.ok) {
+          const project = await projectResponse.json()
+          const syntheticHighlights: any[] = []
+
+          if (project.npv) {
+            syntheticHighlights.push({
+              id: `synthetic-npv-${Date.now()}`,
+              content: `NPV: $${project.npv}M`,
+              quote: `Net Present Value: $${project.npv} million`,
+              highlightAreas: [],
+              dataType: 'npv',
+              value: project.npv,
+              page: null,
+            })
+          }
+
+          if (project.irr) {
+            syntheticHighlights.push({
+              id: `synthetic-irr-${Date.now()}`,
+              content: `IRR: ${project.irr}%`,
+              quote: `Internal Rate of Return: ${project.irr}%`,
+              highlightAreas: [],
+              dataType: 'irr',
+              value: project.irr,
+              page: null,
+            })
+          }
+
+          if (project.capex) {
+            syntheticHighlights.push({
+              id: `synthetic-capex-${Date.now()}`,
+              content: `CAPEX: $${project.capex}M`,
+              quote: `Capital Expenditure: $${project.capex} million`,
+              highlightAreas: [],
+              dataType: 'capex',
+              value: project.capex,
+              page: null,
+            })
+          }
+
+          if (project.resource) {
+            syntheticHighlights.push({
+              id: `synthetic-resources-${Date.now()}`,
+              content: project.resource,
+              quote: project.resource,
+              highlightAreas: [],
+              dataType: 'resources',
+              page: null,
+            })
+          }
+
+          if (project.reserve) {
+            syntheticHighlights.push({
+              id: `synthetic-reserves-${Date.now()}`,
+              content: project.reserve,
+              quote: project.reserve,
+              highlightAreas: [],
+              dataType: 'reserves',
+              page: null,
+            })
+          }
+
+          if (syntheticHighlights.length > 0) {
+            console.log('✅ Created synthetic highlights from project data:', syntheticHighlights)
+            setHighlights(syntheticHighlights)
+          }
+        }
+      } catch (error) {
+        console.error('Error creating synthetic highlights:', error)
+      }
+    }
+
     loadHighlights()
-  }, [url])
+  }, [url, projectId, autoExtractKeyData])
 
   // Save highlights to database
   const saveHighlights = React.useCallback(async (newHighlights: Highlight[]) => {
@@ -161,40 +296,6 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
 
   function openFullScreen() {
     window.open(url, "_blank")
-  }
-
-  async function autoExtractKeyData() {
-    setAutoExtracting(true)
-    try {
-      const response = await fetch('/api/pdf/extract-highlights', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pdfUrl: url,
-          projectId: projectId,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.highlights) {
-          setHighlights(data.highlights)
-          console.log('✅ Auto-extracted highlights:', data.highlights.length)
-
-          if (data.projectUpdated) {
-            console.log('✅ Project database updated with extracted data')
-            // Trigger refresh of project data in parent component
-            if (onProjectUpdated) {
-              onProjectUpdated()
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error auto-extracting:', error)
-    } finally {
-      setAutoExtracting(false)
-    }
   }
 
   return (
@@ -339,7 +440,7 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
             </div>
           </Panel>
 
-          {/* Highlights Section */}
+          {/* Extracted Data Highlights Section */}
           {highlights.length > 0 && (
             <>
               <PanelResizeHandle className="h-1 bg-border hover:bg-accent transition-colors flex items-center justify-center group">
@@ -347,59 +448,120 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
                   <GripHorizontal className="h-3 w-3 text-muted-foreground" />
                 </div>
               </PanelResizeHandle>
-              <Panel defaultSize={30} minSize={15} maxSize={60}>
+              <Panel defaultSize={35} minSize={20} maxSize={60}>
                 <div className="h-full overflow-auto border-t p-4 bg-background">
-                  <h4 className="text-sm font-semibold mb-2">
-                    Extracted Data ({highlights.length} items)
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-yellow-600" />
+                    Extracted Key Data ({highlights.length})
                   </h4>
-                  <div className="space-y-2">
-                    {highlights.map((highlight: any) => (
-                      <div
-                        key={highlight.id}
-                        className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs hover:bg-yellow-100 transition-colors cursor-pointer"
-                        onClick={() => {
-                          // If highlight has areas, jump to the exact position
-                          if (highlight.highlightAreas && highlight.highlightAreas.length > 0) {
-                            jumpToHighlightArea(highlight.highlightAreas[0])
-                          } else if (highlight.page) {
-                            // Fallback to page navigation if no highlight areas
-                            jumpToPage(highlight.page - 1)
-                          }
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            {highlight.dataType && (
-                              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">
-                                {highlight.dataType}
-                                {highlight.page && (
-                                  <span className="ml-2 text-blue-600 hover:underline">
-                                    → Page {highlight.page}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            <p className="line-clamp-2">{highlight.quote}</p>
-                            {highlight.value !== undefined && (
-                              <div className="mt-1 text-xs font-medium text-gray-700">
-                                Value: {highlight.value}
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Click any item to jump to the source in the document
+                  </p>
+
+                  <div className="space-y-3">
+                    {highlights.map((highlight: any) => {
+                      // Determine color scheme based on dataType
+                      let bgColor = "bg-yellow-50"
+                      let borderColor = "border-yellow-200"
+                      let textColor = "text-yellow-900"
+                      let labelColor = "text-yellow-700"
+                      let hoverColor = "hover:bg-yellow-100"
+
+                      if (highlight.dataType === 'npv') {
+                        bgColor = "bg-green-50"
+                        borderColor = "border-green-200"
+                        textColor = "text-green-900"
+                        labelColor = "text-green-700"
+                        hoverColor = "hover:bg-green-100"
+                      } else if (highlight.dataType === 'irr') {
+                        bgColor = "bg-blue-50"
+                        borderColor = "border-blue-200"
+                        textColor = "text-blue-900"
+                        labelColor = "text-blue-700"
+                        hoverColor = "hover:bg-blue-100"
+                      } else if (highlight.dataType === 'capex') {
+                        bgColor = "bg-purple-50"
+                        borderColor = "border-purple-200"
+                        textColor = "text-purple-900"
+                        labelColor = "text-purple-700"
+                        hoverColor = "hover:bg-purple-100"
+                      } else if (highlight.dataType === 'resources') {
+                        bgColor = "bg-cyan-50"
+                        borderColor = "border-cyan-200"
+                        textColor = "text-cyan-900"
+                        labelColor = "text-cyan-700"
+                        hoverColor = "hover:bg-cyan-100"
+                      } else if (highlight.dataType === 'reserves') {
+                        bgColor = "bg-indigo-50"
+                        borderColor = "border-indigo-200"
+                        textColor = "text-indigo-900"
+                        labelColor = "text-indigo-700"
+                        hoverColor = "hover:bg-indigo-100"
+                      }
+
+                      return (
+                        <div
+                          key={highlight.id}
+                          className={`p-3 ${bgColor} border ${borderColor} rounded-lg ${hoverColor} transition-colors cursor-pointer`}
+                          onClick={() => {
+                            console.log('🖱️ Clicked highlight:', highlight)
+                            console.log('  - Has highlightAreas:', !!highlight.highlightAreas)
+                            console.log('  - highlightAreas length:', highlight.highlightAreas?.length)
+                            console.log('  - Page:', highlight.page)
+
+                            // If highlight has areas with coordinates, jump to the exact position
+                            if (highlight.highlightAreas && highlight.highlightAreas.length > 0) {
+                              const area = highlight.highlightAreas[0]
+                              console.log('  - Jumping to highlight area:', area)
+                              try {
+                                jumpToHighlightArea(area)
+                              } catch (error) {
+                                console.error('Error jumping to highlight area:', error)
+                                // Fallback to page if highlight jump fails
+                                if (area.pageIndex !== undefined) {
+                                  console.log('  - Fallback: Jumping to page', area.pageIndex)
+                                  jumpToPage(area.pageIndex)
+                                }
+                              }
+                            } else if (highlight.page !== null && highlight.page !== undefined) {
+                              // Fallback to page navigation if no highlight areas
+                              console.log('  - Jumping to page', highlight.page - 1)
+                              jumpToPage(highlight.page - 1)
+                            } else {
+                              console.log('  - No navigation info available')
+                            }
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className={`text-xs font-bold uppercase ${labelColor}`}>
+                              {highlight.dataType || 'Data'}
+                            </div>
+                            {highlight.page && (
+                              <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                                <span>Page {highlight.page}</span>
+                                <span className="text-blue-400">→</span>
                               </div>
                             )}
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation() // Prevent triggering the parent onClick
-                              const updated = highlights.filter((h) => h.id !== highlight.id)
-                              setHighlights(updated)
-                              saveHighlights(updated)
-                            }}
-                            className="text-red-600 hover:text-red-800 text-xs flex-shrink-0"
-                          >
-                            ✕
-                          </button>
+
+                          {/* Extracted Value (if available) */}
+                          {highlight.value !== undefined && (
+                            <div className={`text-base font-bold ${textColor} mb-2`}>
+                              {typeof highlight.value === 'number' ? (
+                                highlight.dataType === 'irr' ? `${highlight.value}%` : `$${highlight.value}M`
+                              ) : (
+                                highlight.value
+                              )}
+                            </div>
+                          )}
+
+                          {/* Source Quote */}
+                          <div className={`text-xs ${textColor} italic leading-relaxed border-l-2 ${borderColor} pl-2`}>
+                            "{highlight.quote}"
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </Panel>

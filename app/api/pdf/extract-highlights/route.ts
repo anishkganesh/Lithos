@@ -29,49 +29,93 @@ interface ExtractedData {
   production?: { text: string; page: number }
 }
 
-// Helper function to find text coordinates and convert to viewer coordinates
-// PDF.js coordinates: origin at bottom-left, y-axis goes up
-// react-pdf-viewer coordinates: origin at top-left, y-axis goes down, uses percentages
+// Simple Cmd+F style text search to find coordinates
+// Just searches for the text in the page and returns coordinates
 function findTextCoordinatesInPage(
   searchText: string,
   page: any,
   pageHeight: number,
   pageWidth: number
 ): { left: number; top: number; width: number; height: number } | null {
-  if (!page || !page.textItems) {
-    console.log('⚠️ No page or textItems provided')
+  if (!page || !page.textItems || !searchText) {
     return null
   }
 
   const textItems = page.textItems
 
-  // Build full page text to find the search text
+  // Normalize search text - remove extra spaces and lowercase
+  const searchNormalized = searchText
+    .toLowerCase()
+    .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+    .trim()
+
+  // Build text with original spacing preserved
   const fullText = textItems.map((item: any) => item.str || '').join(' ')
-  const searchLower = searchText.toLowerCase().trim()
-  const fullTextLower = fullText.toLowerCase()
+  const fullTextNormalized = fullText
+    .toLowerCase()
+    .replace(/\s+/g, ' ')  // Normalize spaces in page text too
 
-  // Try to find the exact search text in the page
-  const index = fullTextLower.indexOf(searchLower)
-  if (index === -1) {
-    // Fallback: try to find key words
-    const searchWords = searchLower.split(/\s+/).filter((w: string) => w.length > 3)
-    const foundWords = searchWords.filter((word: string) => fullTextLower.includes(word))
+  // Try exact match first
+  let searchIndex = fullTextNormalized.indexOf(searchNormalized)
 
-    if (foundWords.length === 0) {
-      console.log(`⚠️ Could not find any text matching "${searchText.substring(0, 50)}..."`)
-      return null
+  // If exact match fails, try finding a substring (first 30 chars)
+  if (searchIndex === -1 && searchNormalized.length > 30) {
+    const shortSearch = searchNormalized.substring(0, 30)
+    searchIndex = fullTextNormalized.indexOf(shortSearch)
+
+    if (searchIndex !== -1) {
+      console.log(`📝 Partial match found for: "${shortSearch}..."`)
+      // Use the partial match
+      return findCoordinatesForTextRange(
+        textItems,
+        pageHeight,
+        pageWidth,
+        searchIndex,
+        searchIndex + shortSearch.length,
+        fullText
+      )
     }
-
-    // Use first significant word found
-    const wordIndex = fullTextLower.indexOf(foundWords[0])
-    if (wordIndex === -1) return null
-
-    console.log(`📝 Found word "${foundWords[0]}" in page text`)
-    return findCoordinatesForTextRange(textItems, pageHeight, pageWidth, wordIndex, wordIndex + foundWords[0].length, fullText)
   }
 
-  console.log(`📝 Found exact text at index ${index}`)
-  return findCoordinatesForTextRange(textItems, pageHeight, pageWidth, index, index + searchLower.length, fullText)
+  // If still not found, try key phrases (first significant part)
+  if (searchIndex === -1) {
+    // Extract key numbers or phrases from the search text
+    const keyPhrases = searchNormalized.match(/\d+[\d,.]* ?mt|[\d.]+%|[\d,]+\.[\d]+|\b\w+\s+\w+\s+\w+/g)
+
+    if (keyPhrases && keyPhrases.length > 0) {
+      for (const phrase of keyPhrases) {
+        searchIndex = fullTextNormalized.indexOf(phrase)
+        if (searchIndex !== -1) {
+          console.log(`🔍 Found key phrase: "${phrase}"`)
+          return findCoordinatesForTextRange(
+            textItems,
+            pageHeight,
+            pageWidth,
+            searchIndex,
+            searchIndex + phrase.length,
+            fullText
+          )
+        }
+      }
+    }
+  }
+
+  if (searchIndex === -1) {
+    console.log(`⚠️ Text not found: "${searchText.substring(0, 30)}..."`)
+    return null
+  }
+
+  console.log(`✅ Found text: "${searchText.substring(0, 30)}..."`)
+
+  // Find the text items that contain this text range
+  return findCoordinatesForTextRange(
+    textItems,
+    pageHeight,
+    pageWidth,
+    searchIndex,
+    searchIndex + searchNormalized.length,
+    fullText
+  )
 }
 
 function findCoordinatesForTextRange(
@@ -82,80 +126,65 @@ function findCoordinatesForTextRange(
   endIndex: number,
   fullText: string
 ): { left: number; top: number; width: number; height: number } | null {
-  // Find which text items contain the target range
-  let currentIndex = 0
+  // Simple approach: find which text items contain our search range
+  let currentPos = 0
   const matchedItems: any[] = []
 
   for (const item of textItems) {
     const itemText = item.str || ''
-    const itemEnd = currentIndex + itemText.length + 1 // +1 for space
+    const itemLength = itemText.length
+    const itemEndPos = currentPos + itemLength + 1 // +1 for the space we add between items
 
-    // Check if this item overlaps with our search range
-    if (itemEnd > startIndex && currentIndex < endIndex) {
+    // Check if this item is within our search range
+    if (currentPos < endIndex && itemEndPos > startIndex) {
       matchedItems.push(item)
     }
 
-    currentIndex = itemEnd
-    if (currentIndex > endIndex) break
+    currentPos = itemEndPos
   }
 
   if (matchedItems.length === 0) {
-    console.log('⚠️ No matching text items found in range')
     return null
   }
 
-  console.log(`📍 Found ${matchedItems.length} text items in range`)
-
-  // Calculate bounding box from text items
-  // transform array: [scaleX, skewX, skewY, scaleY, translateX, translateY]
+  // Get bounding box from matched items
   const bounds = matchedItems.map((item: any) => {
     const transform = item.transform || [1, 0, 0, 1, 0, 0]
-    const x = transform[4]  // translateX (left position)
-    const y = transform[5]  // translateY (bottom position)
+    const x = transform[4]  // x position
+    const y = transform[5]  // y position (from bottom in PDF coordinates)
+    const fontSize = Math.abs(transform[3])
 
-    // Calculate width and height from transform matrix and text
-    const scaleX = transform[0]
-    const scaleY = transform[3]
-    const fontSize = Math.abs(scaleY)
+    // Simple width estimation if not provided
+    const width = item.width || (item.str?.length || 0) * fontSize * 0.6
 
-    // Estimate width from text length if not provided
-    const w = item.width || (item.str?.length || 0) * fontSize * 0.5
-    const h = fontSize
-
-    return { x, y, w, h }
+    return {
+      left: x,
+      bottom: y,
+      right: x + width,
+      top: y + fontSize
+    }
   })
 
-  // Get bounding box
-  const minX = Math.min(...bounds.map(b => b.x))
-  const maxX = Math.max(...bounds.map(b => b.x + b.w))
-  const minY = Math.min(...bounds.map(b => b.y - b.h)) // Bottom minus height
-  const maxY = Math.max(...bounds.map(b => b.y))       // Top
+  // Calculate overall bounding box
+  const left = Math.min(...bounds.map(b => b.left))
+  const right = Math.max(...bounds.map(b => b.right))
+  const bottom = Math.min(...bounds.map(b => b.bottom))
+  const top = Math.max(...bounds.map(b => b.top))
 
-  const pdfWidth = maxX - minX
-  const pdfHeight = maxY - minY
+  // Convert to viewer percentages (top-left origin)
+  // Add small padding for visibility
+  const padding = 2 // pixels
+  const viewerLeft = Math.max(0, ((left - padding) / pageWidth) * 100)
+  const viewerTop = Math.max(0, ((pageHeight - top - padding) / pageHeight) * 100)
+  const viewerWidth = Math.min(100 - viewerLeft, ((right - left + 2 * padding) / pageWidth) * 100)
+  const viewerHeight = Math.min(100 - viewerTop, ((top - bottom + 2 * padding) / pageHeight) * 100)
 
-  // Add padding for better visibility (5% on each side)
-  const padding = 0.05
-  const paddedMinX = Math.max(0, minX - pdfWidth * padding)
-  const paddedMaxX = Math.min(pageWidth, maxX + pdfWidth * padding)
-  const paddedMinY = Math.max(0, minY - pdfHeight * padding)
-  const paddedMaxY = Math.min(pageHeight, maxY + pdfHeight * padding)
-
-  // Convert PDF coordinates (bottom-left origin) to viewer coordinates (top-left origin, percentages)
-  const viewerTop = ((pageHeight - paddedMaxY) / pageHeight) * 100
-  const viewerLeft = (paddedMinX / pageWidth) * 100
-  const viewerWidth = ((paddedMaxX - paddedMinX) / pageWidth) * 100
-  const viewerHeight = ((paddedMaxY - paddedMinY) / pageHeight) * 100
-
-  const result = {
-    left: Math.max(0, Math.min(100, viewerLeft)),
-    top: Math.max(0, Math.min(100, viewerTop)),
-    width: Math.max(1, Math.min(100 - viewerLeft, viewerWidth)),
-    height: Math.max(1, Math.min(100 - viewerTop, viewerHeight)),
+  return {
+    left: viewerLeft,
+    top: viewerTop,
+    width: viewerWidth,
+    height: viewerHeight
   }
-
-  console.log(`📐 Calculated coordinates:`, result)
-  return result
 }
 
 export async function POST(req: NextRequest) {
@@ -178,8 +207,6 @@ export async function POST(req: NextRequest) {
 
     // Extract text page-by-page from PDF
     console.log('📖 Extracting text from PDF...')
-    const pdf = (await import('pdf-parse')).default
-
     // Custom page rendering to preserve page numbers and coordinates
     let currentPage = 0
     const pages: {
@@ -189,26 +216,43 @@ export async function POST(req: NextRequest) {
       viewport?: { height: number; width: number }
     }[] = []
 
-    const pdfData = await pdf(Buffer.from(pdfBuffer), {
-      pagerender: (pageData: any) => {
-        currentPage++
-        return pageData.getTextContent().then((textContent: any) => {
-          const pageText = textContent.items.map((item: any) => item.str).join(' ')
-          const viewport = pageData.getViewport({ scale: 1.0 })
+    // Use unpdf for ESM-compatible PDF parsing
+    const { extractText, getDocumentProxy } = await import('unpdf')
 
-          pages.push({
-            pageNumber: currentPage,
-            text: pageText,
-            textItems: textContent.items,
-            viewport: { height: viewport.height, width: viewport.width },
-          })
-          return pageText
-        })
-      },
+    // Convert Buffer to Uint8Array for unpdf
+    console.log('🔧 Converting Buffer to Uint8Array...')
+    const uint8Array = new Uint8Array(pdfBuffer)
+    console.log('✅ Uint8Array created, length:', uint8Array.length)
+
+    // Extract text with page information
+    console.log('📖 Calling extractText...')
+    const { text: fullText, totalPages } = await extractText(uint8Array, {
+      mergePages: false,
     })
 
-    const numPages = pdfData.numpages
-    console.log(`✅ Extracted ${numPages} pages`)
+    console.log(`✅ Extracted ${totalPages} pages`)
+
+    // Get document proxy for detailed page access
+    console.log('🔧 Getting document proxy...')
+    const pdfDoc = await getDocumentProxy(uint8Array)
+
+    // Extract detailed page information
+    for (let i = 1; i <= totalPages; i++) {
+      const page = await pdfDoc.getPage(i)
+      const textContent = await page.getTextContent()
+      const viewport = page.getViewport({ scale: 1.0 })
+      const pageText = textContent.items.map((item: any) => item.str).join(' ')
+
+      pages.push({
+        pageNumber: i,
+        text: pageText,
+        textItems: textContent.items,
+        viewport: { height: viewport.height, width: viewport.width },
+      })
+    }
+
+    const numPages = totalPages
+    console.log(`✅ Processed ${pages.length} pages with detailed text items`)
 
     // Step 1: Find pages with specific patterns using regex
     console.log('🔍 Searching for key data patterns...')
@@ -317,16 +361,15 @@ Return null for values not found. Be precise with page numbers.`,
       let coords = null
 
       if (page && page.viewport && page.textItems) {
+        // Simple Cmd+F style search for the text on the page
         coords = findTextCoordinatesInPage(
           text,
           page,
           page.viewport.height,
           page.viewport.width
         )
-        if (coords) {
-          console.log(`✅ Found coordinates for ${dataType} on page ${pageNum}:`, coords)
-        } else {
-          console.log(`⚠️  Could not find text for ${dataType} on page ${pageNum}`)
+        if (!coords) {
+          console.log(`⚠️ Text not found on page ${pageNum} for ${dataType}`)
         }
       }
 
@@ -492,12 +535,41 @@ Return null for values not found. Be precise with page numbers.`,
       console.log('⚠️ Skipping project update - projectId:', projectId, 'extractedData:', !!extractedData)
     }
 
+    // Manually serialize highlights to avoid DataCloneError from unpdf objects
+    // Only include serializable fields
+    const serializedHighlights = highlights.map(h => ({
+      id: h.id,
+      content: h.content,
+      quote: h.quote,
+      highlightAreas: h.highlightAreas ? h.highlightAreas.map((area: any) => ({
+        pageIndex: area.pageIndex,
+        left: area.left,
+        top: area.top,
+        width: area.width,
+        height: area.height,
+      })) : [],
+      dataType: h.dataType,
+      value: h.value,
+      page: h.page,
+    }))
+
+    // Serialize extractedData to remove any unpdf objects
+    const serializedExtractedData = extractedData ? {
+      npv: extractedData.npv ? { text: extractedData.npv.text, value: extractedData.npv.value, page: extractedData.npv.page } : null,
+      irr: extractedData.irr ? { text: extractedData.irr.text, value: extractedData.irr.value, page: extractedData.irr.page } : null,
+      capex: extractedData.capex ? { text: extractedData.capex.text, value: extractedData.capex.value, page: extractedData.capex.page } : null,
+      resources: extractedData.resources ? { text: extractedData.resources.text, page: extractedData.resources.page } : null,
+      reserves: extractedData.reserves ? { text: extractedData.reserves.text, page: extractedData.reserves.page } : null,
+      location: extractedData.location ? { text: extractedData.location.text, value: extractedData.location.value, page: extractedData.location.page } : null,
+      commodities: extractedData.commodities ? { text: extractedData.commodities.text, value: extractedData.commodities.value, page: extractedData.commodities.page } : null,
+    } : null
+
     return NextResponse.json({
       success: true,
-      highlights,
-      extractedData,
+      highlights: serializedHighlights,
+      extractedData: serializedExtractedData,
       numPages,
-      relevantPages: topPages.map(p => p.pageNumber),
+      relevantPages: topPages.map((p: any) => p.pageNumber),
       saved: !!savedHighlights,
       projectUpdated,
     })

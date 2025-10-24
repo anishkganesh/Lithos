@@ -33,6 +33,10 @@ export interface MiningProject {
   irr: number | null; // Internal Rate of Return as percentage
   capex: number | null; // Capital Expenditure in millions USD
 
+  // Resource and Reserve estimates
+  resource: string | null; // Resource estimate text
+  reserve: string | null; // Reserve estimate text
+
   // Computed/display fields (for backward compatibility)
   project?: string; // Alias for name
   company?: string; // Company name (joined)

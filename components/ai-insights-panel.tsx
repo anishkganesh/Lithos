@@ -145,11 +145,13 @@ export function AIInsightsPanel({
         })
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate insights')
+        const errorText = await response.text()
+        console.error('AI insights API error:', response.status, errorText)
+        throw new Error(`Failed to generate insights: ${response.status}`)
       }
+
+      const data = await response.json()
 
       setInsight(data.insight)
 
