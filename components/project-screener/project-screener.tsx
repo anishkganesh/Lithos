@@ -238,29 +238,38 @@ export function ProjectScreener() {
     {
       accessorKey: "name",
       header: "Project",
-      cell: ({ row }) => (
-        <ContextMenuChat
-          data={row.original}
-          dataType="project"
-          context={row.original.name}
-        >
-          <div className="space-y-1">
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault()
-                handleProjectClick(row.original.id)
-              }}
-              className="text-sm font-semibold text-blue-600 hover:underline block"
-            >
-              {row.original.name}
-            </a>
-            <div className="text-xs text-gray-500">
-              {row.original.company || 'N/A'}
+      cell: ({ row }) => {
+        return (
+          <ContextMenuChat
+            data={row.original}
+            dataType="project"
+            context={row.original.name}
+          >
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleProjectClick(row.original.id)
+                  }}
+                  className="text-sm font-semibold text-blue-600 hover:underline"
+                >
+                  {row.original.name}
+                </a>
+                {row.original.is_private && (
+                  <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-purple-100 text-purple-700 border-purple-300">
+                    Private
+                  </Badge>
+                )}
+              </div>
+              <div className="text-xs text-gray-500">
+                {row.original.company || 'N/A'}
+              </div>
             </div>
-          </div>
-        </ContextMenuChat>
-      ),
+          </ContextMenuChat>
+        )
+      },
     },
     {
       accessorKey: "stage",

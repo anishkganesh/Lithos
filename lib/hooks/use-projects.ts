@@ -76,23 +76,35 @@ export function useProjects() {
       const companiesMap = new Map(companies?.map(c => [c.id, c.name]) || [])
 
       // Transform database data to match MiningProject interface
-      const transformedProjects: MiningProject[] = (allData || []).map((project: any) => ({
-        // Database fields
-        id: project.id,
-        company_id: project.company_id,
-        name: project.name,
-        location: project.location,
-        stage: project.stage,
-        commodities: project.commodities,
-        resource_estimate: project.resource_estimate,
-        reserve_estimate: project.reserve_estimate,
-        ownership_percentage: project.ownership_percentage,
-        status: project.status,
-        description: project.description,
-        urls: project.urls,
-        watchlist: project.watchlist || false,
-        created_at: project.created_at,
-        updated_at: project.updated_at,
+      const transformedProjects: MiningProject[] = (allData || []).map((project: any) => {
+        // Debug logging for is_private field
+        if (project.is_private === true) {
+          console.log(`🔒 Found private project: ${project.name} (is_private=${project.is_private})`);
+        }
+
+        return {
+          // Database fields
+          id: project.id,
+          company_id: project.company_id,
+          name: project.name,
+          location: project.location,
+          stage: project.stage,
+          commodities: project.commodities,
+          resource_estimate: project.resource_estimate,
+          reserve_estimate: project.reserve_estimate,
+          ownership_percentage: project.ownership_percentage,
+          status: project.status,
+          description: project.description,
+          urls: project.urls,
+          watchlist: project.watchlist || false,
+          created_at: project.created_at,
+          updated_at: project.updated_at,
+
+          // User upload fields
+          user_id: project.user_id,
+          is_private: project.is_private || false,
+          uploaded_at: project.uploaded_at,
+          document_storage_path: project.document_storage_path,
 
         // Financial metrics
         npv: project.npv,
@@ -109,8 +121,9 @@ export function useProjects() {
         // Optional fields
         project_id: project.id,
         watchlisted_at: project.watchlisted_at,
-        technicalReportUrl: project.urls?.[0]
-      }))
+        technicalReportUrl: project.urls?.[0],
+      }
+      })
 
       setProjects(transformedProjects)
       setError(null)

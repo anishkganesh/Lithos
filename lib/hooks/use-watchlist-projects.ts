@@ -62,41 +62,54 @@ export function useWatchlistProjects() {
       const companiesMap = new Map(companies?.map(c => [c.id, c.name]) || [])
 
       // Transform database data to match MiningProject interface
-      const transformedProjects: MiningProject[] = (data || []).map((project: any) => ({
-        // Database fields
-        id: project.id,
-        company_id: project.company_id,
-        name: project.name,
-        location: project.location,
-        stage: project.stage,
-        commodities: project.commodities,
-        resource_estimate: project.resource_estimate,
-        reserve_estimate: project.reserve_estimate,
-        ownership_percentage: project.ownership_percentage,
-        status: project.status,
-        description: project.description,
-        urls: project.urls,
-        watchlist: true, // Always true for watchlisted projects
-        created_at: project.created_at,
-        updated_at: project.updated_at,
+      const transformedProjects: MiningProject[] = (data || []).map((project: any) => {
+        // Debug logging for is_private field
+        if (project.is_private === true) {
+          console.log(`🔒 Found private watchlisted project: ${project.name} (is_private=${project.is_private})`);
+        }
 
-        // Financial metrics
-        npv: project.npv,
-        irr: project.irr,
-        capex: project.capex,
+        return {
+          // Database fields
+          id: project.id,
+          company_id: project.company_id,
+          name: project.name,
+          location: project.location,
+          stage: project.stage,
+          commodities: project.commodities,
+          resource_estimate: project.resource_estimate,
+          reserve_estimate: project.reserve_estimate,
+          ownership_percentage: project.ownership_percentage,
+          status: project.status,
+          description: project.description,
+          urls: project.urls,
+          watchlist: true, // Always true for watchlisted projects
+          created_at: project.created_at,
+          updated_at: project.updated_at,
 
-        // Computed/display fields for backward compatibility
-        project: project.name,
-        company: project.company_id ? (companiesMap.get(project.company_id) || 'Unknown') : 'Unknown',
-        primaryCommodity: project.commodities?.[0] || 'Unknown',
-        jurisdiction: project.location || 'Unknown',
-        riskLevel: 'Medium' as const, // Default risk level
+          // User upload fields
+          user_id: project.user_id,
+          is_private: project.is_private || false,
+          uploaded_at: project.uploaded_at,
+          document_storage_path: project.document_storage_path,
 
-        // Optional fields
-        project_id: project.id,
-        watchlisted_at: project.watchlisted_at,
-        technicalReportUrl: project.urls?.[0]
-      }))
+          // Financial metrics
+          npv: project.npv,
+          irr: project.irr,
+          capex: project.capex,
+
+          // Computed/display fields for backward compatibility
+          project: project.name,
+          company: project.company_id ? (companiesMap.get(project.company_id) || 'Unknown') : 'Unknown',
+          primaryCommodity: project.commodities?.[0] || 'Unknown',
+          jurisdiction: project.location || 'Unknown',
+          riskLevel: 'Medium' as const, // Default risk level
+
+          // Optional fields
+          project_id: project.id,
+          watchlisted_at: project.watchlisted_at,
+          technicalReportUrl: project.urls?.[0]
+        }
+      })
 
       setProjects(transformedProjects)
       setError(null)

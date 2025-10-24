@@ -498,42 +498,114 @@ export function ChatSidebar({
   const handleAttachmentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    
+
     // Check if we already have 5 files
     if (uploadedFiles.length + files.length > 5) {
       alert('You can only upload up to 5 files at a time.')
       return
     }
-    
+
     // Process all selected files
     const newFiles = Array.from(files)
-    const processedFiles: Array<{file: File, content: string | null}> = []
-    
+    const processedFiles: Array<{file: File, content: string | null, projectId?: string}> = []
+
     for (const file of newFiles) {
       try {
         let content: string | null = null
-        
+        let projectId: string | undefined = undefined
+
+        // For ALL PDFs, upload to Supabase and attempt extraction
+        if (file.type === 'application/pdf') {
+          console.log(`📤 Uploading PDF to database: ${file.name}`);
+
+          try {
+            // Get auth token
+            const { supabase } = await import('@/lib/supabase/client');
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session) {
+              console.warn('No auth session, PDF will be processed for chat only');
+            } else {
+              // Show "Upload Started" message FIRST
+              const uploadMsgId = Math.random().toString();
+              setMessages(prev => [...prev, {
+                id: uploadMsgId,
+                role: 'assistant',
+                content: `**Uploading Document**\n\nUploading "${file.name}" to your private projects. Extracting financial data...`,
+                createdAt: new Date()
+              }]);
+
+              // Upload to our document API
+              const formData = new FormData();
+              formData.append('file', file);
+
+              const response = await fetch('/api/documents/upload', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${session.access_token}`
+                },
+                body: formData
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                projectId = result.project?.id;
+                console.log(`✅ Document uploaded and parsed! Project ID: ${projectId}`);
+
+                // Trigger a refresh of the projects table
+                window.dispatchEvent(new Event('refreshProjects'));
+                console.log('🔄 Dispatched refreshProjects event');
+
+                // Update the message with extraction results
+                setMessages(prev => prev.map(msg =>
+                  msg.id === uploadMsgId
+                    ? {
+                        ...msg,
+                        content: `**Document Uploaded Successfully**\n\nUploaded and parsed "${file.name}". Document added to your private projects.\n\n**Extracted Data:**\n${result.extracted?.company_name ? `- Company: ${result.extracted.company_name}\n` : ''}- Project: ${result.project?.name || 'N/A'}\n- Location: ${result.extracted?.location || 'N/A'}\n- NPV: ${result.extracted?.npv ? '$' + result.extracted.npv + 'M' : 'N/A'}\n- IRR: ${result.extracted?.irr ? result.extracted.irr + '%' : 'N/A'}\n- CAPEX: ${result.extracted?.capex ? '$' + result.extracted.capex + 'M' : 'N/A'}\n- Commodities: ${result.extracted?.commodities?.join(', ') || 'N/A'}\n- Stage: ${result.extracted?.stage || 'N/A'}\n\nYou can now ask me questions about this document.`
+                      }
+                    : msg
+                ));
+              } else {
+                console.warn('Upload API failed, will process locally for chat');
+                // Update message to show failure
+                setMessages(prev => prev.map(msg =>
+                  msg.id === uploadMsgId
+                    ? {
+                        ...msg,
+                        content: `**Upload Failed**\n\nFailed to upload "${file.name}". Processing for chat only.`
+                      }
+                    : msg
+                ));
+              }
+            }
+          } catch (uploadError) {
+            console.error('Upload error:', uploadError);
+            console.log('Falling back to local processing');
+          }
+        }
+
         // For PDFs over 8MB, extract key sections
         if (file.type === 'application/pdf' && file.size > 8 * 1024 * 1024) {
           console.log(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
-          
+
           // Process on client side
           const { extractPDFTextClient } = await import('@/lib/client-pdf-processor');
           const result = await extractPDFTextClient(file);
-          
+
           // If we have a subset PDF, use that
           if (result.subsetBase64) {
             content = result.subsetBase64;
-            
+
             // Create a smaller file name to indicate it's a subset
             const subsetFileName = file.name.replace('.pdf', '_subset.pdf');
-            
+
             // The content is already base64 encoded
-            processedFiles.push({ 
+            processedFiles.push({
               file: new File([file.slice(0, 1000)], subsetFileName, { type: 'application/pdf' }), // Small file object for tracking
-              content: content  // The actual subset PDF as base64
+              content: content,  // The actual subset PDF as base64
+              projectId
             });
-            
+
             // Don't add a message here - let it process normally
           } else {
             // Fallback: just skip the file if we couldn't process it
@@ -541,7 +613,7 @@ export function ChatSidebar({
           }
           continue;
         }
-        
+
         if (file.type.startsWith('image/') || file.type === 'application/pdf') {
           // For images and PDFs, create base64
           const reader = new FileReader()
@@ -549,7 +621,7 @@ export function ChatSidebar({
             reader.onload = (event) => resolve(event.target?.result as string)
             reader.readAsDataURL(file)
           })
-          
+
           // Show special message for large PDFs
           if (file.type === 'application/pdf' && file.size > 5000000) {
             console.log(`Processing large PDF: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
@@ -559,16 +631,16 @@ export function ChatSidebar({
           // For text files, read as text
           content = await file.text()
         }
-        
-        processedFiles.push({ file, content })
+
+        processedFiles.push({ file, content, projectId })
       } catch (error) {
         console.error('Error reading file:', error)
         alert(`Could not read file: ${file.name}`)
       }
     }
-    
+
     setUploadedFiles([...uploadedFiles, ...processedFiles])
-    
+
     // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -1369,9 +1441,9 @@ export function ChatSidebar({
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
+                multiple
                 onChange={handleAttachmentChange}
                 accept=".txt,.md,.json,.csv,.xlsx,.xls,.html,.xml,.js,.ts,.jsx,.tsx,.css,.py,.png,.jpg,.jpeg,.pdf,.docx,.doc,.ppt,.pptx"
-                multiple
               />
               
               {/* Tool buttons positioned at top */}

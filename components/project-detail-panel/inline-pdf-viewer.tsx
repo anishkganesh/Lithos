@@ -39,7 +39,9 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
   const [highlights, setHighlights] = React.useState<Highlight[]>([])
   const [loading, setLoading] = React.useState(true)
   const [autoExtracting, setAutoExtracting] = React.useState(false)
+  const [documentLoaded, setDocumentLoaded] = React.useState(false)
   const hasAttemptedAutoExtract = React.useRef(false)
+  const jumpToPageRef = React.useRef<((pageIndex: number) => void) | null>(null)
 
   // Auto-extract function
   const autoExtractKeyData = React.useCallback(async () => {
@@ -284,6 +286,11 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
   const pageNavigationPluginInstance = pageNavigationPlugin()
   const { jumpToPage } = pageNavigationPluginInstance
 
+  // Store jumpToPage in ref for reliable access
+  React.useEffect(() => {
+    jumpToPageRef.current = jumpToPage
+  }, [jumpToPage])
+
   const searchPluginInstance = searchPlugin()
 
   function handleDownload() {
@@ -434,6 +441,11 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
                     theme={{
                       theme: "light",
                     }}
+                    onDocumentLoad={() => {
+                      console.log('📄 PDF document fully loaded and ready for navigation')
+                      setDocumentLoaded(true)
+                      setLoading(false)
+                    }}
                   />
                 </div>
               </Worker>
@@ -467,11 +479,31 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
                           onClick={() => {
                             console.log('🖱️ Clicked highlight:', highlight)
                             console.log('  - Page:', highlight.page)
+                            console.log('  - Document loaded:', documentLoaded)
+                            console.log('  - jumpToPageRef available:', !!jumpToPageRef.current)
 
-                            // Jump to the page
-                            if (highlight.page !== null && highlight.page !== undefined) {
+                            // Ensure document is loaded before attempting navigation
+                            if (!documentLoaded) {
+                              console.warn('⚠️ Document not fully loaded yet, waiting...')
+                              // Wait a bit and try again
+                              setTimeout(() => {
+                                if (jumpToPageRef.current && highlight.page !== null && highlight.page !== undefined) {
+                                  console.log('  - Retrying jump to page', highlight.page - 1)
+                                  jumpToPageRef.current(highlight.page - 1)
+                                }
+                              }, 500)
+                              return
+                            }
+
+                            // Use ref to ensure we have the latest jumpToPage function
+                            if (highlight.page !== null && highlight.page !== undefined && jumpToPageRef.current) {
                               console.log('  - Jumping to page', highlight.page - 1)
-                              jumpToPage(highlight.page - 1)
+                              // Add small delay to ensure viewer is ready
+                              setTimeout(() => {
+                                if (jumpToPageRef.current) {
+                                  jumpToPageRef.current(highlight.page - 1)
+                                }
+                              }, 100)
                             } else {
                               console.log('  - No navigation info available')
                             }

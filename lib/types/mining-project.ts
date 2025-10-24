@@ -37,6 +37,12 @@ export interface MiningProject {
   resource: string | null; // Resource estimate text
   reserve: string | null; // Reserve estimate text
 
+  // User upload and privacy fields
+  user_id: string | null; // User who uploaded (for private documents)
+  is_private: boolean; // Whether this is a user-uploaded private document
+  uploaded_at: string | null; // When the document was uploaded
+  document_storage_path: string | null; // Path to document in Supabase Storage
+
   // Computed/display fields (for backward compatibility)
   project?: string; // Alias for name
   company?: string; // Company name (joined)

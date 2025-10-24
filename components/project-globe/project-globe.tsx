@@ -381,9 +381,18 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
         <Card className="absolute top-4 right-4 z-10 w-80 shadow-lg">
           <div className="p-3">
             <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-sm leading-tight pr-2">
-                {selectedProject.name}
-              </h3>
+              <div className="flex-1 pr-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="font-semibold text-sm leading-tight">
+                    {selectedProject.name}
+                  </h3>
+                  {selectedProject.is_private && (
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-purple-100 text-purple-700 border-purple-300">
+                      Private
+                    </Badge>
+                  )}
+                </div>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"

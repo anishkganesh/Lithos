@@ -276,7 +276,14 @@ What is your assessment of this project?`
       <div className="space-y-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <h2 className="text-xl font-medium">{currentProject.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-medium">{currentProject.name}</h2>
+              {currentProject.is_private && (
+                <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-purple-100 text-purple-700 border-purple-300">
+                  Private
+                </Badge>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
               {currentProject.company || 'Unknown'} • {currentProject.location || 'N/A'}
             </p>
