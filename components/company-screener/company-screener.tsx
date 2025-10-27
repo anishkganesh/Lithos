@@ -17,6 +17,7 @@ import {
 import { ArrowUpDown, Bookmark, Loader2, BookmarkCheck, Search, ChevronDown } from "lucide-react"
 import { LinksPopover } from "@/components/ui/links-popover"
 import { Checkbox } from "@/components/ui/checkbox"
+import { formatCurrency } from "@/lib/format-utils"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -302,11 +303,10 @@ export function CompanyScreener() {
         const marketCap = row.original.market_cap
         if (!marketCap) return <div className="text-sm text-muted-foreground text-right">N/A</div>
 
-        const formatted = marketCap >= 1e9
-          ? `$${(marketCap / 1e9).toFixed(2)}B`
-          : marketCap >= 1e6
-          ? `$${(marketCap / 1e6).toFixed(2)}M`
-          : `$${marketCap.toLocaleString()}`
+        // Market cap is stored in billions (e.g., 126.0 = $126B)
+        // Convert to millions for formatCurrency utility: 126.0B -> 126000M
+        const marketCapInMillions = marketCap * 1000
+        const formatted = formatCurrency(marketCapInMillions, { decimals: marketCap >= 1 ? 1 : 0, unit: 'M' })
 
         return <div className="text-sm font-medium text-right">{formatted}</div>
       },

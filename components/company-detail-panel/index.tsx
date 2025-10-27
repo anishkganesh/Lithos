@@ -1,21 +1,34 @@
 'use client'
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { X, ArrowLeft, ExternalLink, Bookmark, BookmarkCheck, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Card } from "@/components/ui/card"
 import { Company } from "@/lib/hooks/use-companies"
 import { supabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { CompanyComparisonView } from "./company-comparison-view"
+import { formatCurrency } from "@/lib/format-utils"
+
+interface Project {
+  id: string
+  name: string
+  location?: string
+  stage?: string
+  commodities?: string[]
+  description?: string
+  status?: string
+}
 
 interface CompanyDetailPanelProps {
   isOpen: boolean
   onClose: () => void
   companies: Company[]
   mode?: "single" | "comparison"
+  onProjectSelect?: (projectId: string) => void
 }
 
 export function CompanyDetailPanel({
@@ -23,10 +36,13 @@ export function CompanyDetailPanel({
   onClose,
   companies,
   mode = "single",
+  onProjectSelect,
 }: CompanyDetailPanelProps) {
   const company = companies[0] // For single mode
   const [updatingWatchlist, setUpdatingWatchlist] = useState(false)
   const [isWatchlisted, setIsWatchlisted] = useState(company?.watchlist || false)
+  const [companyProjects, setCompanyProjects] = useState<Project[]>([])
+  const [loadingProjects, setLoadingProjects] = useState(false)
 
   // Update local state when company prop changes
   React.useEffect(() => {
@@ -34,6 +50,36 @@ export function CompanyDetailPanel({
       setIsWatchlisted(company.watchlist || false)
     }
   }, [company])
+
+  // Fetch projects belonging to this company
+  useEffect(() => {
+    async function fetchCompanyProjects() {
+      if (!company?.id || mode !== "single") return
+
+      setLoadingProjects(true)
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, name, location, stage, commodities, description, status')
+          .eq('company_id', company.id)
+          .order('name')
+
+        if (error) {
+          console.error('Error fetching company projects:', error)
+        } else {
+          setCompanyProjects(data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching company projects:', error)
+      } finally {
+        setLoadingProjects(false)
+      }
+    }
+
+    if (isOpen) {
+      fetchCompanyProjects()
+    }
+  }, [company?.id, isOpen, mode])
 
   // Close on ESC key
   React.useEffect(() => {
@@ -155,9 +201,7 @@ export function CompanyDetailPanel({
                 </div>
                 {company.market_cap && (
                   <Badge variant="outline" className="text-sm">
-                    {company.market_cap >= 1e9
-                      ? `$${(company.market_cap / 1e9).toFixed(2)}B`
-                      : `$${(company.market_cap / 1e6).toFixed(2)}M`}
+                    {formatCurrency(company.market_cap * 1000, { decimals: company.market_cap >= 1 ? 1 : 0, unit: 'M' })}
                   </Badge>
                 )}
               </div>
@@ -240,11 +284,7 @@ export function CompanyDetailPanel({
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Market Cap</span>
                       <span className="text-sm font-medium">
-                        {company.market_cap >= 1e9
-                          ? `$${(company.market_cap / 1e9).toFixed(2)}B`
-                          : company.market_cap >= 1e6
-                          ? `$${(company.market_cap / 1e6).toFixed(2)}M`
-                          : `$${company.market_cap.toLocaleString()}`}
+                        {formatCurrency(company.market_cap * 1000, { decimals: company.market_cap >= 1 ? 1 : 0, unit: 'M' })}
                       </span>
                     </div>
                   </div>
@@ -316,6 +356,67 @@ export function CompanyDetailPanel({
                   </div>
                 </div>
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Company Projects */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">
+                Projects {companyProjects.length > 0 && `(${companyProjects.length})`}
+              </h3>
+              {loadingProjects ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : companyProjects.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {companyProjects.map((project) => (
+                    <Card
+                      key={project.id}
+                      className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => onProjectSelect?.(project.id)}
+                    >
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium line-clamp-1">{project.name}</h4>
+                        {project.commodities && project.commodities.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {project.commodities.slice(0, 3).map((commodity, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {commodity}
+                              </Badge>
+                            ))}
+                            {project.commodities.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{project.commodities.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex gap-3 text-xs text-muted-foreground">
+                          {project.location && (
+                            <span className="line-clamp-1">{project.location}</span>
+                          )}
+                          {project.stage && (
+                            <Badge variant="outline" className="text-xs">
+                              {project.stage}
+                            </Badge>
+                          )}
+                        </div>
+                        {project.status && (
+                          <div className="text-xs text-muted-foreground">
+                            Status: {project.status}
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-6">
+                  No projects linked to this company yet.
+                </div>
+              )}
             </div>
           </div>
           ) : null}

@@ -47,6 +47,7 @@ import { toast } from "sonner"
 import { Toaster } from "@/components/ui/toaster"
 import { supabase } from "@/lib/supabase/client"
 import { BulkActionsToolbar } from "./bulk-actions-toolbar"
+import { formatCurrency } from "@/lib/format-utils"
 
 export function CompanyScreenerGlobal() {
   const { companies: initialData, loading, error, refetch } = useCompanies()
@@ -89,6 +90,12 @@ export function CompanyScreenerGlobal() {
       setDetailPanelMode("single")
       setDetailPanelOpen(true)
     }
+  }
+
+  const handleProjectSelect = (projectId: string) => {
+    // Navigate to project detail view by opening the project detail panel
+    // We need to trigger the global project selection
+    window.location.href = `/dashboard?project=${projectId}`
   }
 
   const handleCompanyAnalysis = () => {
@@ -293,11 +300,10 @@ export function CompanyScreenerGlobal() {
         const marketCap = row.original.market_cap
         if (!marketCap) return <span className="text-sm text-muted-foreground">N/A</span>
 
-        const formatted = marketCap >= 1e9
-          ? `$${(marketCap / 1e9).toFixed(2)}B`
-          : marketCap >= 1e6
-          ? `$${(marketCap / 1e6).toFixed(2)}M`
-          : `$${marketCap.toLocaleString()}`
+        // Market cap is stored in billions (e.g., 126.0 = $126B)
+        // Convert to millions for formatCurrency utility: 126.0B -> 126000M
+        const marketCapInMillions = marketCap * 1000
+        const formatted = formatCurrency(marketCapInMillions, { decimals: marketCap >= 1 ? 1 : 0, unit: 'M' })
 
         return <div className="text-sm font-medium text-right">{formatted}</div>
       },
@@ -519,6 +525,7 @@ export function CompanyScreenerGlobal() {
           onClose={() => setDetailPanelOpen(false)}
           companies={selectedCompanies}
           mode={detailPanelMode}
+          onProjectSelect={handleProjectSelect}
         />
       )}
       <Toaster />

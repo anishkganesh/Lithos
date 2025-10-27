@@ -56,7 +56,7 @@ export interface Company {
   website_url?: string
   stock_ticker?: string
   exchange?: string
-  market_cap_usd_m?: number
+  market_cap?: number  // Stored in billions (e.g., 126.0 = $126B)
   description?: string
   logo_url?: string
   founded_year?: number
@@ -412,22 +412,28 @@ export function CompaniesTable() {
       },
     },
     {
-      accessorKey: "market_cap_usd_m",
+      accessorKey: "market_cap",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            Market Cap (USD M)
+            Market Cap
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
       cell: ({ row }) => {
-        const amount = row.getValue("market_cap_usd_m") as number | null
-        const formatted = formatCurrency(amount, { decimals: 0, unit: 'M' })
-        return <div className="text-sm text-right">{formatted}</div>
+        const marketCap = row.getValue("market_cap") as number | null
+        if (!marketCap) return <div className="text-sm text-right text-muted-foreground">N/A</div>
+
+        // Market cap is stored in billions (e.g., 126.0 = $126B)
+        // Convert to millions for formatCurrency utility: 126.0B -> 126000M
+        const marketCapInMillions = marketCap * 1000
+        const formatted = formatCurrency(marketCapInMillions, { decimals: marketCap >= 1 ? 1 : 0, unit: 'M' })
+
+        return <div className="text-sm text-right font-medium">{formatted}</div>
       },
     },
     {

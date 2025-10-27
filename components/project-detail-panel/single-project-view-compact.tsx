@@ -511,12 +511,35 @@ What is your assessment of this project?`
         </div>
       )}
 
-      {/* Project URLs */}
-      {project.urls && project.urls.length > 0 && (
+      {/* Project Documents - Prefer Supabase Storage over FactSet URLs */}
+      {(currentProject.document_storage_path || (project.urls && project.urls.length > 0)) && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium">Technical Documents</h3>
           <div className="flex flex-wrap gap-2">
-            {project.urls.map((url, i) => {
+            {/* Show Supabase Storage document if available */}
+            {currentProject.document_storage_path && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const url = currentProject.document_storage_path!
+                  const isPdf = url.toLowerCase().includes('.pdf')
+                  const isHtml = url.toLowerCase().includes('.html')
+
+                  if (isPdf || isHtml) {
+                    handleViewPdf(url, `${project.name} - Technical Report`)
+                  } else {
+                    window.open(url, '_blank')
+                  }
+                }}
+              >
+                <FileText className="h-3 w-3 mr-1" />
+                Technical Report
+              </Button>
+            )}
+
+            {/* Show FactSet URLs only if no Supabase document available */}
+            {!currentProject.document_storage_path && project.urls && project.urls.map((url, i) => {
               const isPdf = url.toLowerCase().includes('.pdf')
               return (
                 <Button
