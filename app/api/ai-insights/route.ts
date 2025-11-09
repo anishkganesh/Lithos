@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
+import { extractDocumentContext, extractNewsContext } from '@/lib/ai/document-context-extractor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -33,11 +34,23 @@ interface RiskAnalysisResult {
  */
 async function generateRiskAnalysis(
   project: any,
+  projectId: string,
   useWebSearch: boolean = false
 ): Promise<RiskAnalysisResult> {
   const startTime = Date.now();
 
-  const projectContext = `
+  // Extract document context using our agentic workflow
+  console.log(`Extracting document context for project ${projectId}...`);
+  const documentContext = await extractDocumentContext(projectId);
+  console.log(`Document extraction complete. Found ${documentContext.documentCount} documents, ${documentContext.tokenCount} tokens`);
+
+  // Extract news context
+  console.log(`Extracting news context for project ${projectId}...`);
+  const newsContext = await extractNewsContext(projectId);
+  console.log(`News extraction complete. Found ${newsContext.newsItems.length} news items, ${newsContext.tokenCount} tokens`);
+
+  // Build comprehensive project context
+  let projectContext = `
 **Project Details:**
 - Name: ${project.name}
 - Location: ${project.location || 'N/A'}
@@ -53,41 +66,110 @@ async function generateRiskAnalysis(
 - Company Description: ${project.company_description || 'N/A'}
 
 **Financial Metrics:**
-- NPV (Net Present Value): ${project.npv !== null && project.npv !== undefined ? `$${project.npv}M` : 'N/A'}
-- IRR (Internal Rate of Return): ${project.irr !== null && project.irr !== undefined ? `${project.irr}%` : 'N/A'}
-- CAPEX (Capital Expenditure): ${project.capex !== null && project.capex !== undefined ? `$${project.capex}M` : 'N/A'}
+- NPV (Net Present Value): ${project.npv !== null && project.npv !== undefined ? `$${project.npv.toFixed(1)}M` : 'N/A'}
+- IRR (Internal Rate of Return): ${project.irr !== null && project.irr !== undefined ? `${project.irr.toFixed(1)}%` : 'N/A'}
+- CAPEX (Capital Expenditure): ${project.capex !== null && project.capex !== undefined ? `$${project.capex.toFixed(1)}M` : 'N/A'}
+- AISC (All-In Sustaining Cost): ${project.aisc !== null && project.aisc !== undefined ? `$${project.aisc.toFixed(0)}/unit` : 'N/A'}
 - Payback Period: ${project.payback_period !== null && project.payback_period !== undefined ? `${project.payback_period} years` : 'N/A'}
 - Annual Production: ${project.annual_production || 'N/A'}
 - Mine Life: ${project.mine_life !== null && project.mine_life !== undefined ? `${project.mine_life} years` : 'N/A'}
 
 **Additional Context:**
-- Resource/Reserve: ${project.resource_reserve || 'N/A'}
+- Resource/Reserve: ${project.resource_reserve || project.resource || 'N/A'}
 - Mining Method: ${project.mining_method || 'N/A'}
 - Processing Method: ${project.processing_method || 'N/A'}
 - Infrastructure: ${project.infrastructure || 'N/A'}
   `.trim();
 
+  // Add document context if available
+  if (documentContext.hasDocuments) {
+    projectContext += `\n\n**Technical Report Analysis (${documentContext.documentCount} documents):**`;
+
+    if (documentContext.executiveSummary) {
+      projectContext += `\n\n*Executive Summary:*\n${documentContext.executiveSummary}`;
+    }
+
+    if (documentContext.keyFindings.length > 0) {
+      projectContext += `\n\n*Key Findings from Technical Reports:*\n${documentContext.keyFindings.map(f => `- ${f}`).join('\n')}`;
+    }
+
+    if (Object.keys(documentContext.financialMetrics).length > 0) {
+      projectContext += `\n\n*Extracted Financial Metrics:*\n${JSON.stringify(documentContext.financialMetrics, null, 2)}`;
+    }
+
+    if (documentContext.qualifiedPersons.length > 0) {
+      projectContext += `\n\n*Qualified Persons:*\n${documentContext.qualifiedPersons.map(qp => `- ${qp.name}, ${qp.credentials} (${qp.company})`).join('\n')}`;
+    }
+
+    if (documentContext.riskFactors.length > 0) {
+      projectContext += `\n\n*Risk Factors from Reports:*\n${documentContext.riskFactors.map(r => `- ${r}`).join('\n')}`;
+    }
+
+    if (documentContext.technicalHighlights.length > 0) {
+      projectContext += `\n\n*Technical Highlights:*\n${documentContext.technicalHighlights.map(t => `- ${t}`).join('\n')}`;
+    }
+  } else {
+    projectContext += `\n\n**Note:** No technical reports available for this project. Analysis based on project metadata only.`;
+  }
+
+  // Add news context if available
+  if (newsContext.newsItems.length > 0) {
+    projectContext += `\n\n**Recent News & Updates (${newsContext.newsItems.length} items):**`;
+    newsContext.newsItems.forEach((item, idx) => {
+      projectContext += `\n\n${idx + 1}. ${item.headline}`;
+      if (item.summary) {
+        projectContext += `\n   ${item.summary}`;
+      }
+      if (item.sentiment) {
+        projectContext += `\n   Sentiment: ${item.sentiment}`;
+      }
+      projectContext += `\n   Date: ${new Date(item.publishedAt).toLocaleDateString()}`;
+    });
+  }
+
   const systemPrompt = `You are an expert mining industry risk analyst specializing in comprehensive project evaluation. Your analysis must be data-driven, objective, and actionable.
+
+**CRITICAL REQUIREMENT - NO GENERIC RESPONSES:**
+You MUST quote actual numbers and specific data from the project context. Do NOT provide generic industry observations.
+
+**MANDATORY RULES:**
+1. ALWAYS quote specific financial metrics with exact values (e.g., "NPV of $485M" not "strong NPV")
+2. ALWAYS mention actual qualified persons by name and credentials (e.g., "Dr. Sarah Chen, P.Eng." not "experienced team")
+3. ALWAYS reference specific technical parameters (e.g., "grade of 1.2 g/t Au" not "good grade")
+4. ALWAYS cite actual news headlines or report findings (e.g., "2023 feasibility study" not "recent studies")
+5. If a value is not provided, state "data not available" - DO NOT make assumptions or provide generic statements
+
+**When technical reports are available:**
+- Quote exact NPV, IRR, CAPEX, AISC values with units
+- Name specific qualified persons and their credentials
+- Reference actual risk factors from reports (quote them)
+- Use real project parameters (location, commodity, stage, mine life, production rates)
+
+**When no technical reports are available:**
+- Explicitly state "No technical report data available"
+- Only analyze based on provided metadata (name, location, stage, company)
+- Recommend specific due diligence steps
+- DO NOT fabricate or assume technical parameters
 
 Analyze the following mining project across four critical risk dimensions:
 
 1. **Geography Risk** - Political stability, infrastructure, mining jurisdiction quality, environmental regulations, social license to operate
 2. **Legal Risk** - Regulatory framework, permitting process, land rights, compliance requirements, legal precedents
 3. **Commodity Risk** - Market dynamics, price volatility, demand trends, supply competition, substitution threats
-4. **Team Risk** - Management experience, track record, technical expertise, financial management capability
+4. **Team Risk** - Management experience, track record, technical expertise, financial management capability (use qualified persons data if available)
 
 For each risk category, provide:
 - A score from 0-10 (0 = lowest risk, 10 = highest risk)
-- Detailed analysis (2-3 sentences) explaining the score
-- Specific evidence or factors considered
+- Detailed analysis (2-3 sentences) explaining the score with SPECIFIC data points from the project
+- Specific evidence or factors considered from the technical reports and news
 
 Then provide:
 - Overall risk score (weighted average)
-- Risk summary (executive summary of all risks)
-- 3-5 key opportunities (strengths and catalysts)
-- 3-5 key threats (weaknesses and concerns)
+- Risk summary (executive summary of all risks) - reference SPECIFIC project details
+- 3-5 key opportunities (strengths and catalysts) - use ACTUAL metrics and data
+- 3-5 key threats (weaknesses and concerns) - cite SPECIFIC concerns from reports
 - Investment recommendation: 'Strong Buy' (score 0-3), 'Buy' (3-5), 'Hold' (5-7), or 'Pass' (7-10)
-- Recommendation rationale (2-3 sentences)
+- Recommendation rationale (2-3 sentences) - reference SPECIFIC numbers and findings
 
 Return your analysis as a valid JSON object with this exact structure:
 {
@@ -292,8 +374,8 @@ async function generateInsightForProject(
     company_description: companyData.description
   };
 
-  // Generate risk analysis
-  const analysis = await generateRiskAnalysis(projectWithCompany, useWebSearch);
+  // Generate risk analysis with document context
+  const analysis = await generateRiskAnalysis(projectWithCompany, projectId, useWebSearch);
 
   // Save to ai_insights table
   const { data: savedInsight, error: saveError } = await supabase

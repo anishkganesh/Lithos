@@ -443,6 +443,16 @@ What is your assessment of this project?`
               </span>
             </div>
           </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">AISC (All-In Sustaining Cost)</span>
+              <span className="text-sm font-medium">
+                {currentProject.aisc !== null && currentProject.aisc !== undefined
+                  ? `$${currentProject.aisc.toFixed(0)}/unit`
+                  : 'N/A'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -512,6 +522,33 @@ What is your assessment of this project?`
               </span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Qualified Persons */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Qualified Persons</h3>
+        <div className="border rounded-lg">
+          {currentProject.qualified_persons && currentProject.qualified_persons.length > 0 ? (
+            <div className="divide-y">
+              {currentProject.qualified_persons.map((qp, idx) => (
+                <div key={idx} className="p-2.5">
+                  <div className="text-sm font-medium">{qp.name}</div>
+                  <div className="text-xs text-muted-foreground">{qp.credentials}</div>
+                  {qp.company && qp.company !== 'Not specified' && (
+                    <div className="text-xs text-muted-foreground mt-0.5">{qp.company}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-2.5">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Qualified Persons</span>
+                <span className="text-sm font-medium">-</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

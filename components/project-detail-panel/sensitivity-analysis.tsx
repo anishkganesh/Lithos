@@ -96,6 +96,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
 
   const baselineNPV = project.npv || 0
   const baselineIRR = project.irr || 0
+  const baselineAISC = project.aisc || 0
 
   const calculateNPVForValues = (vals: Record<string, number>) => {
     if (project.npv === null || project.npv === undefined) return 0
@@ -125,6 +126,20 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
     return project.irr + totalImpact
   }
 
+  const calculateAISCForValues = (vals: Record<string, number>) => {
+    if (project.aisc === null || project.aisc === undefined) return 0
+
+    // AISC impacts (inverse for throughput, grade, recovery)
+    const throughputImpact = -(vals.throughput - 100) * 0.007 // Higher throughput spreads fixed costs
+    const gradeImpact = -(vals.grade - 100) * 0.008 // Higher grade reduces cost per unit
+    const opexImpact = (vals.opex - 100) * 0.009 // Direct impact
+    const capexImpact = (vals.capex - 100) * 0.002 // Sustaining capex component
+    const recoveryImpact = -(vals.recovery - 100) * 0.007 // Higher recovery reduces cost per unit
+
+    const totalImpact = 1 + throughputImpact + gradeImpact + opexImpact + capexImpact + recoveryImpact
+    return project.aisc * totalImpact
+  }
+
   const generateAIInsight = React.useCallback(async (currentValues: Record<string, number>) => {
     const changes = parameters
       .filter(p => Math.abs(currentValues[p.key] - p.baseline) > 0.1)
@@ -141,56 +156,69 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
 
     setIsGeneratingInsight(true)
     try {
-      const npvCalc = calculateNPVForValues(currentValues)
-      const irrCalc = calculateIRRForValues(currentValues)
-      const npvChange = baselineNPV > 0 ? ((npvCalc - baselineNPV) / baselineNPV) * 100 : 0
-      const irrChange = baselineIRR > 0 ? irrCalc - baselineIRR : 0
+      // Calculate parameter changes as percentages from baseline
+      const parameterChanges = {
+        commodityPrice: currentValues.price - 100,
+        throughput: currentValues.throughput - 100,
+        grade: currentValues.grade - 100,
+        opex: currentValues.opex - 100,
+        capex: currentValues.capex - 100,
+        recovery: currentValues.recovery - 100
+      }
 
-      const changesDescription = changes.map(c => `${c.name} adjusted to ${c.value}% (${c.change > 0 ? '+' : ''}${c.change}% from baseline)`).join(', ')
-
-      const response = await fetch('/api/chat', {
+      // Call new sensitivity analysis API with GPT integration
+      const response = await fetch('/api/sensitivity-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: `You are a financial analyst specializing in mining project economics. Your role is to provide clear, actionable insights about how parameter changes affect project viability. Always explain the implications for project economics in practical terms.`
-            },
-            {
-              role: 'user',
-              content: `Analyze this mining project sensitivity scenario:
-
-**Parameter Adjustments:**
-${changesDescription}
-
-**Financial Impact:**
-- NPV changed from $${baselineNPV}M to $${npvCalc.toFixed(0)}M (${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}% change)
-- IRR changed from ${baselineIRR}% to ${irrCalc.toFixed(1)}% (${irrChange > 0 ? '+' : ''}${irrChange.toFixed(1)} percentage points change)
-
-Provide 2-3 sentences explaining: (1) what these changes mean for project economics, (2) which parameter changes are driving the impact, and (3) any risk or opportunity this reveals. Be specific and actionable.`
-            }
-          ]
+          baseCase: {
+            npv: baselineNPV,
+            irr: baselineIRR,
+            aisc: baselineAISC
+          },
+          parameters: parameterChanges,
+          projectContext: {
+            name: project.name,
+            commodity: project.commodities?.[0],
+            mineLife: project.mine_life,
+            annualProduction: project.annual_production
+          }
         })
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API error response:', errorText)
         throw new Error(`API error: ${response.status}`)
       }
+
       const data = await response.json()
-      console.log('AI Insight response:', data)
-      setAiInsight(data.content || data.message || "Parameter adjustments applied to sensitivity scenario.")
+      if (data.success && data.result) {
+        const { explanation, assumptions, riskFactors } = data.result
+
+        let insightText = explanation
+
+        if (assumptions && assumptions.length > 0) {
+          insightText += `\n\nKey Assumptions: ${assumptions.join('; ')}`
+        }
+
+        if (riskFactors && riskFactors.length > 0) {
+          insightText += `\n\nRisk Factors: ${riskFactors.join('; ')}`
+        }
+
+        setAiInsight(insightText)
+      } else {
+        throw new Error('Invalid API response')
+      }
     } catch (error) {
       console.error('AI Insight error:', error)
+      // Fallback to simple calculation-based insight
       const npvCalc = calculateNPVForValues(currentValues)
+      const aiscCalc = calculateAISCForValues(currentValues)
       const npvChange = baselineNPV > 0 ? ((npvCalc - baselineNPV) / baselineNPV) * 100 : 0
-      setAiInsight(`Sensitivity scenario with ${changes.length} parameter${changes.length > 1 ? 's' : ''} adjusted from baseline. NPV impact: ${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%.`)
+      setAiInsight(`Sensitivity scenario with ${changes.length} parameter${changes.length > 1 ? 's' : ''} adjusted. NPV impact: ${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%. ${baselineAISC > 0 ? `AISC: $${aiscCalc.toFixed(0)}/unit` : ''}`)
     } finally {
       setIsGeneratingInsight(false)
     }
-  }, [parameters, baselineNPV, baselineIRR, calculateNPVForValues])
+  }, [parameters, baselineNPV, baselineIRR, baselineAISC, calculateNPVForValues, calculateAISCForValues, project])
 
   const debouncedGenerateInsight = React.useCallback((newValues: Record<string, number>) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
@@ -216,6 +244,7 @@ Provide 2-3 sentences explaining: (1) what these changes mean for project econom
 
   const calculateNPV = () => calculateNPVForValues(values)
   const calculateIRR = () => calculateIRRForValues(values)
+  const calculateAISC = () => calculateAISCForValues(values)
 
   const getPercentChange = (current: number, base: number) => {
     return ((current - base) / base * 100).toFixed(1)
@@ -223,8 +252,10 @@ Provide 2-3 sentences explaining: (1) what these changes mean for project econom
 
   const npv = calculateNPV()
   const irr = calculateIRR()
+  const aisc = calculateAISC()
   const npvTrend = baselineNPV > 0 ? ((npv - baselineNPV) / baselineNPV) * 100 : 0
   const irrTrend = baselineIRR > 0 ? irr - baselineIRR : 0
+  const aiscTrend = baselineAISC > 0 ? ((aisc - baselineAISC) / baselineAISC) * 100 : 0
 
   const groupedParams = {
     market: parameters.filter(p => p.category === 'market'),
@@ -335,31 +366,45 @@ Provide 2-3 sentences explaining: (1) what these changes mean for project econom
         {/* Right - Results */}
         <div className="space-y-4">
           {/* Metrics */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardContent className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">NPV (Net Present Value)</div>
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-xs text-muted-foreground mb-1">NPV</div>
+                <div className="text-2xl font-bold text-blue-600">
                   {baselineNPV > 0 ? `$${npv.toFixed(0)}M` : 'N/A'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {baselineNPV > 0 && npvTrend !== 0
-                    ? `${npvTrend > 0 ? '+' : ''}${npvTrend.toFixed(1)}% from baseline`
-                    : '0.0% from baseline'}
+                    ? `${npvTrend > 0 ? '+' : ''}${npvTrend.toFixed(1)}%`
+                    : '0.0%'}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">IRR (Internal Rate of Return)</div>
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-xs text-muted-foreground mb-1">IRR</div>
+                <div className="text-2xl font-bold text-green-600">
                   {baselineIRR > 0 ? `${irr.toFixed(1)}%` : 'N/A'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {baselineIRR > 0 && irrTrend !== 0
-                    ? `${irrTrend > 0 ? '+' : ''}${irrTrend.toFixed(1)}% pts from baseline`
-                    : '0.0% pts from baseline'}
+                    ? `${irrTrend > 0 ? '+' : ''}${irrTrend.toFixed(1)} pts`
+                    : '0.0 pts'}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs text-muted-foreground mb-1">AISC</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {baselineAISC > 0 ? `$${aisc.toFixed(0)}` : 'N/A'}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {baselineAISC > 0 && aiscTrend !== 0
+                    ? `${aiscTrend > 0 ? '+' : ''}${aiscTrend.toFixed(1)}%`
+                    : '0.0%'}
                 </div>
               </CardContent>
             </Card>

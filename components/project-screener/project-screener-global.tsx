@@ -414,6 +414,26 @@ export function ProjectScreenerGlobal() {
       },
     },
     {
+      accessorKey: "aisc",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          AISC ($/unit)
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const aisc = row.original.aisc
+        return (
+          <div className="text-sm text-center font-medium">
+            {aisc !== null && aisc !== undefined ? `$${aisc.toFixed(0)}` : 'N/A'}
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {

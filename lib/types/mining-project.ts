@@ -13,6 +13,13 @@ export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Very High';
 
 export type ESGGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
+// Qualified Person interface
+export interface QualifiedPerson {
+  name: string;
+  credentials: string;
+  company: string;
+}
+
 // Database schema (actual columns from Supabase)
 export interface MiningProject {
   id: string;
@@ -32,10 +39,14 @@ export interface MiningProject {
   npv: number | null; // Net Present Value in millions USD
   irr: number | null; // Internal Rate of Return as percentage
   capex: number | null; // Capital Expenditure in millions USD
+  aisc: number | null; // All-In Sustaining Cost in USD per unit (oz, lb, tonne)
 
   // Resource and Reserve estimates
   resource: string | null; // Resource estimate text
   reserve: string | null; // Reserve estimate text
+
+  // Qualified Persons (added in migration 013)
+  qualified_persons: QualifiedPerson[] | null; // Array of qualified persons who prepared technical reports
 
   // User upload and privacy fields
   user_id: string | null; // User who uploaded (for private documents)
@@ -65,6 +76,7 @@ export interface ProjectFilter {
   npvRange?: { min: number; max: number };
   irrRange?: { min: number; max: number };
   capexRange?: { min: number; max: number };
+  aiscRange?: { min: number; max: number };
   searchQuery?: string;
 }
 

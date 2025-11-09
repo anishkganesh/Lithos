@@ -14,6 +14,10 @@ export interface Company {
   watchlist: boolean
   created_at: string
   updated_at: string
+  // NOTE: AISC is NOT included at company level because:
+  // - Different projects have different commodities ($/oz vs $/lb vs $/tonne)
+  // - AISC is project/mine-specific, not company-wide
+  // - Use project-level AISC instead
 }
 
 export function useCompanies() {
