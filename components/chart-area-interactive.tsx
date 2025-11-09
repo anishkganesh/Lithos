@@ -157,7 +157,7 @@ const chartConfig = {
 
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("90d")
+  const [timeRange, setTimeRange] = React.useState("7d")
   const [projectData, setProjectData] = React.useState<any[]>([])
   const [totalProjects, setTotalProjects] = React.useState(0)
   const [totalCompanies, setTotalCompanies] = React.useState(0)
@@ -210,20 +210,73 @@ export function ChartAreaInteractive() {
 
     // Fetch actual historical data from database using created_at timestamps
     try {
-      const { data: projects } = await supabase
-        .from('projects')
-        .select('created_at')
-        .order('created_at', { ascending: true })
+      // Fetch ALL projects with pagination to bypass limits
+      let allProjects: any[] = []
+      let offset = 0
+      const pageSize = 1000
+      let hasMore = true
 
-      const { data: companies } = await supabase
-        .from('companies')
-        .select('created_at')
-        .order('created_at', { ascending: true })
+      while (hasMore) {
+        const { data: projectsBatch } = await supabase
+          .from('projects')
+          .select('created_at')
+          .order('created_at', { ascending: true })
+          .range(offset, offset + pageSize - 1)
 
-      const { data: news } = await supabase
-        .from('news')
-        .select('created_at')
-        .order('created_at', { ascending: true })
+        if (projectsBatch && projectsBatch.length > 0) {
+          allProjects = [...allProjects, ...projectsBatch]
+          offset += pageSize
+          hasMore = projectsBatch.length === pageSize
+        } else {
+          hasMore = false
+        }
+      }
+
+      // Fetch ALL companies with pagination
+      let allCompanies: any[] = []
+      offset = 0
+      hasMore = true
+
+      while (hasMore) {
+        const { data: companiesBatch } = await supabase
+          .from('companies')
+          .select('created_at')
+          .order('created_at', { ascending: true })
+          .range(offset, offset + pageSize - 1)
+
+        if (companiesBatch && companiesBatch.length > 0) {
+          allCompanies = [...allCompanies, ...companiesBatch]
+          offset += pageSize
+          hasMore = companiesBatch.length === pageSize
+        } else {
+          hasMore = false
+        }
+      }
+
+      // Fetch ALL news with pagination
+      let allNews: any[] = []
+      offset = 0
+      hasMore = true
+
+      while (hasMore) {
+        const { data: newsBatch } = await supabase
+          .from('news')
+          .select('created_at')
+          .order('created_at', { ascending: true })
+          .range(offset, offset + pageSize - 1)
+
+        if (newsBatch && newsBatch.length > 0) {
+          allNews = [...allNews, ...newsBatch]
+          offset += pageSize
+          hasMore = newsBatch.length === pageSize
+        } else {
+          hasMore = false
+        }
+      }
+
+      const projects = allProjects
+      const companies = allCompanies
+      const news = allNews
 
       // If we have actual data, use it to generate realistic historical counts
       if (projects && projects.length > 0 && companies && companies.length > 0) {
