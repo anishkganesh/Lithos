@@ -17,7 +17,7 @@ export function useWatchlistCompanies() {
         .channel('watchlist-companies')
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'companies', filter: 'watchlist=eq.true' },
+          { event: '*', schema: 'public', table: 'user_company_watchlist' },
           () => {
             fetchCompanies()
           }
@@ -41,11 +41,38 @@ export function useWatchlistCompanies() {
         return
       }
 
-      // Fetch only watchlisted companies
+      // Get current user
+      const { data: { user } } = await client.auth.getUser()
+      if (!user) {
+        setCompanies([])
+        setError(null)
+        setLoading(false)
+        return
+      }
+
+      // Fetch user's watchlisted companies using the junction table
+      const { data: watchlistData, error: watchlistError } = await client
+        .from('user_company_watchlist')
+        .select('company_id')
+        .eq('user_id', user.id)
+
+      if (watchlistError) throw watchlistError
+
+      // If no watchlisted companies, return empty array
+      if (!watchlistData || watchlistData.length === 0) {
+        setCompanies([])
+        setError(null)
+        setLoading(false)
+        return
+      }
+
+      const companyIds = watchlistData.map(w => w.company_id)
+
+      // Fetch the actual company data
       const { data, error } = await client
         .from('companies')
         .select('*')
-        .eq('watchlist', true)
+        .in('id', companyIds)
         .order('updated_at', { ascending: false })
 
       if (error) throw error

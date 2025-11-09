@@ -17,7 +17,7 @@ export function useWatchlistProjects() {
         .channel('watchlist-projects')
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'projects', filter: 'watchlist=eq.true' },
+          { event: '*', schema: 'public', table: 'user_project_watchlist' },
           () => {
             fetchProjects()
           }
@@ -45,11 +45,38 @@ export function useWatchlistProjects() {
         return
       }
 
-      // Fetch only watchlisted projects from the projects table
+      // Get current user
+      const { data: { user } } = await client.auth.getUser()
+      if (!user) {
+        setProjects([])
+        setError(null)
+        setLoading(false)
+        return
+      }
+
+      // Fetch user's watchlisted projects using the junction table
+      const { data: watchlistData, error: watchlistError } = await client
+        .from('user_project_watchlist')
+        .select('project_id')
+        .eq('user_id', user.id)
+
+      if (watchlistError) throw watchlistError
+
+      // If no watchlisted projects, return empty array
+      if (!watchlistData || watchlistData.length === 0) {
+        setProjects([])
+        setError(null)
+        setLoading(false)
+        return
+      }
+
+      const projectIds = watchlistData.map(w => w.project_id)
+
+      // Fetch the actual project data
       const { data, error } = await client
         .from('projects')
         .select('*')
-        .eq('watchlist', true)
+        .in('id', projectIds)
         .order('updated_at', { ascending: false })
 
       if (error) throw error

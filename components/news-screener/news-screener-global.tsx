@@ -80,6 +80,14 @@ export function NewsScreenerGlobal() {
       setUpdatingWatchlist(newsItem.id)
       const newWatchlistStatus = !newsItem.watchlist
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('You must be logged in to use watchlist')
+        setUpdatingWatchlist(null)
+        return
+      }
+
       // Optimistically update local state
       const updatedData = data.map(n =>
         n.id === newsItem.id
@@ -88,20 +96,40 @@ export function NewsScreenerGlobal() {
       )
       setData(updatedData)
 
-      const { error } = await supabase
-        .from('news')
-        .update({ watchlist: newWatchlistStatus })
-        .eq('id', newsItem.id)
+      if (newWatchlistStatus) {
+        // Add to watchlist
+        const { error } = await supabase
+          .from('user_news_watchlist')
+          .insert({ user_id: user.id, news_id: newsItem.id })
 
-      if (error) {
-        // Revert on error
-        const revertedData = data.map(n =>
-          n.id === newsItem.id
-            ? { ...n, watchlist: !newWatchlistStatus }
-            : n
-        )
-        setData(revertedData)
-        throw error
+        if (error) {
+          // Revert on error
+          const revertedData = data.map(n =>
+            n.id === newsItem.id
+              ? { ...n, watchlist: false }
+              : n
+          )
+          setData(revertedData)
+          throw error
+        }
+      } else {
+        // Remove from watchlist
+        const { error } = await supabase
+          .from('user_news_watchlist')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('news_id', newsItem.id)
+
+        if (error) {
+          // Revert on error
+          const revertedData = data.map(n =>
+            n.id === newsItem.id
+              ? { ...n, watchlist: true }
+              : n
+          )
+          setData(revertedData)
+          throw error
+        }
       }
 
       toast.success(newWatchlistStatus ? 'Added to watchlist' : 'Removed from watchlist')

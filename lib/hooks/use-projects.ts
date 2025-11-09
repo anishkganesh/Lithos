@@ -75,6 +75,19 @@ export function useProjects() {
 
       const companiesMap = new Map(companies?.map(c => [c.id, c.name]) || [])
 
+      // Get current user's watchlist
+      const { data: { user } } = await client.auth.getUser()
+      let userWatchlistSet = new Set<string>()
+
+      if (user) {
+        const { data: watchlistData } = await client
+          .from('user_project_watchlist')
+          .select('project_id')
+          .eq('user_id', user.id)
+
+        userWatchlistSet = new Set(watchlistData?.map(w => w.project_id) || [])
+      }
+
       // Transform database data to match MiningProject interface
       const transformedProjects: MiningProject[] = (allData || []).map((project: any) => {
         // Debug logging for is_private field
@@ -96,7 +109,7 @@ export function useProjects() {
           status: project.status,
           description: project.description,
           urls: project.urls,
-          watchlist: project.watchlist || false,
+          watchlist: userWatchlistSet.has(project.id),
           created_at: project.created_at,
           updated_at: project.updated_at,
 

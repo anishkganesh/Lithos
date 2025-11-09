@@ -79,7 +79,26 @@ export function useCompanies() {
         }
       }
 
-      setCompanies(allData)
+      // Get current user's watchlist
+      const { data: { user } } = await client.auth.getUser()
+      let userWatchlistSet = new Set<string>()
+
+      if (user) {
+        const { data: watchlistData } = await client
+          .from('user_company_watchlist')
+          .select('company_id')
+          .eq('user_id', user.id)
+
+        userWatchlistSet = new Set(watchlistData?.map(w => w.company_id) || [])
+      }
+
+      // Update watchlist status based on user's watchlist
+      const companiesWithWatchlist = allData.map(company => ({
+        ...company,
+        watchlist: userWatchlistSet.has(company.id)
+      }))
+
+      setCompanies(companiesWithWatchlist)
       setError(null)
     } catch (err) {
       console.error('Error fetching companies:', err)

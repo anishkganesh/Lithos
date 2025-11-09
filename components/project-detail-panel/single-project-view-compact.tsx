@@ -119,7 +119,14 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
     async function loadFullProjectData() {
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
+        .select(`
+          *,
+          companies (
+            id,
+            name,
+            ticker
+          )
+        `)
         .eq('id', project.id)
         .single()
 
@@ -130,7 +137,12 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
         console.log('✅ Full project data loaded:', data)
         console.log('📊 Resource:', data.resource)
         console.log('📊 Reserve:', data.reserve)
-        setCurrentProject(data as MiningProject)
+        // Set the company name from the joined data
+        const projectWithCompany = {
+          ...data,
+          company: data.companies?.name || data.company || 'Unknown'
+        } as MiningProject
+        setCurrentProject(projectWithCompany)
       }
     }
 
@@ -541,13 +553,14 @@ What is your assessment of this project?`
             {/* Show FactSet URLs only if no Supabase document available */}
             {!currentProject.document_storage_path && project.urls && project.urls.map((url, i) => {
               const isPdf = url.toLowerCase().includes('.pdf')
+              const isHtml = url.toLowerCase().includes('.html')
               return (
                 <Button
                   key={i}
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    if (isPdf) {
+                    if (isPdf || isHtml) {
                       handleViewPdf(url, `${project.name} - Document ${i + 1}`)
                     } else {
                       window.open(url, '_blank')
@@ -555,7 +568,7 @@ What is your assessment of this project?`
                   }}
                 >
                   <FileText className="h-3 w-3 mr-1" />
-                  {isPdf ? `PDF ${i + 1}` : `Source ${i + 1}`}
+                  {isPdf ? `PDF ${i + 1}` : isHtml ? `HTML ${i + 1}` : `Source ${i + 1}`}
                 </Button>
               )
             })}
@@ -691,14 +704,56 @@ What is your assessment of this project?`
               <FileText className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start text-sm">
-                <FileText className="mr-2 h-4 w-4" />
-                NI 43-101 Technical Report (2024)
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-sm">
-                <FileText className="mr-2 h-4 w-4" />
-                Feasibility Study Update (2023)
-              </Button>
+              {project.document_storage_path ? (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-sm"
+                  onClick={() => {
+                    // Construct the full Supabase storage URL
+                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+                    const bucketPath = project.document_storage_path
+
+                    // If it's already a full URL, use it as is
+                    if (project.document_storage_path.startsWith('http')) {
+                      handleViewPdf(project.document_storage_path, `${project.name} - Technical Report`)
+                    } else {
+                      // Otherwise construct the Supabase storage URL
+                      const fullUrl = `${supabaseUrl}/storage/v1/object/public/${bucketPath}`
+                      handleViewPdf(fullUrl, `${project.name} - Technical Report`)
+                    }
+                  }}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Technical Report - View Document
+                </Button>
+              ) : project.urls && project.urls.length > 0 ? (
+                // Fallback to URLs array if document_storage_path is not available
+                project.urls.map((url, i) => {
+                  const isPdf = url.toLowerCase().endsWith('.pdf')
+                  const isHtml = url.toLowerCase().endsWith('.html')
+                  return (
+                    <Button
+                      key={i}
+                      variant="outline"
+                      className="w-full justify-start text-sm"
+                      onClick={() => {
+                        if (isPdf || isHtml) {
+                          handleViewPdf(url, `${project.name} - Document ${i + 1}`)
+                        } else {
+                          window.open(url, '_blank')
+                        }
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Technical Report {project.urls && project.urls.length > 1 ? `(${i + 1})` : ''}
+                    </Button>
+                  )
+                })
+              ) : (
+                <div className="text-sm text-muted-foreground p-2 text-center">
+                  No technical documentation available
+                </div>
+              )}
             </div>
           </Card>
         </TabsContent>

@@ -16,6 +16,7 @@ import {
 import { ArrowUpDown, ChevronDown, Eye, Plus, Search, Bookmark, BookmarkCheck } from "lucide-react"
 import { ContextMenuChat } from "@/components/ui/context-menu-chat"
 import { LinksPopover } from "@/components/ui/links-popover"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -66,6 +67,7 @@ function getRiskBadgeColor(risk: RiskLevel) {
 }
 
 export function ProjectScreenerGlobal() {
+  const router = useRouter()
   const { projects: initialData, loading, error, refetch } = useProjects()
   const [data, setData] = useState<MiningProject[]>(initialData)
   const [sorting, setSorting] = useState<SortingState>([])
@@ -103,13 +105,8 @@ export function ProjectScreenerGlobal() {
   }, [refetch])
 
   const handleProjectClick = (projectId: string) => {
-    const project = data.find(p => String(p.id) === String(projectId))
-
-    if (project) {
-      setSelectedProjects([project])
-      setDetailPanelMode("single")
-      setDetailPanelOpen(true)
-    }
+    // Navigate to the project detail page
+    router.push(`/projects/${projectId}`)
   }
 
   const handleMiningAgentProgress = (isRunning: boolean, message?: string) => {
@@ -154,6 +151,14 @@ export function ProjectScreenerGlobal() {
       setUpdatingWatchlist(project.id)
       const newWatchlistStatus = !project.watchlist
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('You must be logged in to use watchlist')
+        setUpdatingWatchlist(null)
+        return
+      }
+
       // Optimistically update local state
       const updatedData = data.map(p =>
         p.id === project.id
@@ -162,20 +167,40 @@ export function ProjectScreenerGlobal() {
       )
       setData(updatedData)
 
-      const { error } = await supabase
-        .from('projects')
-        .update({ watchlist: newWatchlistStatus })
-        .eq('id', project.id)
+      if (newWatchlistStatus) {
+        // Add to watchlist
+        const { error } = await supabase
+          .from('user_project_watchlist')
+          .insert({ user_id: user.id, project_id: project.id })
 
-      if (error) {
-        // Revert on error
-        const revertedData = data.map(p =>
-          p.id === project.id
-            ? { ...p, watchlist: !newWatchlistStatus }
-            : p
-        )
-        setData(revertedData)
-        throw error
+        if (error) {
+          // Revert on error
+          const revertedData = data.map(p =>
+            p.id === project.id
+              ? { ...p, watchlist: false }
+              : p
+          )
+          setData(revertedData)
+          throw error
+        }
+      } else {
+        // Remove from watchlist
+        const { error } = await supabase
+          .from('user_project_watchlist')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('project_id', project.id)
+
+        if (error) {
+          // Revert on error
+          const revertedData = data.map(p =>
+            p.id === project.id
+              ? { ...p, watchlist: true }
+              : p
+          )
+          setData(revertedData)
+          throw error
+        }
       }
 
       toast.success(newWatchlistStatus ? 'Added to watchlist' : 'Removed from watchlist')

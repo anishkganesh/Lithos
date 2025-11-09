@@ -126,6 +126,14 @@ export function CompanyScreenerGlobal() {
       setUpdatingWatchlist(company.id)
       const newWatchlistStatus = !company.watchlist
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('You must be logged in to use watchlist')
+        setUpdatingWatchlist(null)
+        return
+      }
+
       // Optimistically update local state
       const updatedData = data.map(c =>
         c.id === company.id
@@ -134,20 +142,40 @@ export function CompanyScreenerGlobal() {
       )
       setData(updatedData)
 
-      const { error } = await supabase
-        .from('companies')
-        .update({ watchlist: newWatchlistStatus })
-        .eq('id', company.id)
+      if (newWatchlistStatus) {
+        // Add to watchlist
+        const { error } = await supabase
+          .from('user_company_watchlist')
+          .insert({ user_id: user.id, company_id: company.id })
 
-      if (error) {
-        // Revert on error
-        const revertedData = data.map(c =>
-          c.id === company.id
-            ? { ...c, watchlist: !newWatchlistStatus }
-            : c
-        )
-        setData(revertedData)
-        throw error
+        if (error) {
+          // Revert on error
+          const revertedData = data.map(c =>
+            c.id === company.id
+              ? { ...c, watchlist: false }
+              : c
+          )
+          setData(revertedData)
+          throw error
+        }
+      } else {
+        // Remove from watchlist
+        const { error } = await supabase
+          .from('user_company_watchlist')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('company_id', company.id)
+
+        if (error) {
+          // Revert on error
+          const revertedData = data.map(c =>
+            c.id === company.id
+              ? { ...c, watchlist: true }
+              : c
+          )
+          setData(revertedData)
+          throw error
+        }
       }
 
       toast.success(newWatchlistStatus ? 'Added to watchlist' : 'Removed from watchlist')

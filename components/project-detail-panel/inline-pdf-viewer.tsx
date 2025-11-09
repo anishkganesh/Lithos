@@ -8,7 +8,7 @@ import { searchPlugin, RenderSearchProps } from "@react-pdf-viewer/search"
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { X, Download, Maximize2, Sparkles, Loader2, Search, ChevronDown, ChevronUp, GripHorizontal } from "lucide-react"
+import { X, Download, Maximize2, Sparkles, Loader2, Search, ChevronDown, ChevronUp, GripHorizontal, ExternalLink, FileText } from "lucide-react"
 
 import "@react-pdf-viewer/core/lib/styles/index.css"
 import "@react-pdf-viewer/highlight/lib/styles/index.css"
@@ -40,6 +40,7 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
   const [loading, setLoading] = React.useState(true)
   const [autoExtracting, setAutoExtracting] = React.useState(false)
   const [documentLoaded, setDocumentLoaded] = React.useState(false)
+  const [pdfError, setPdfError] = React.useState<string | null>(null)
   const hasAttemptedAutoExtract = React.useRef(false)
   const jumpToPageRef = React.useRef<((pageIndex: number) => void) | null>(null)
 
@@ -434,19 +435,45 @@ export function InlinePDFViewer({ url, title, onClose, projectId, onProjectUpdat
             <div className="h-full overflow-auto bg-background">
               <Worker workerUrl="/pdf.worker.min.js">
                 <div className="h-full">
-                  <Viewer
-                    fileUrl={url}
-                    plugins={[highlightPluginInstance, pageNavigationPluginInstance, searchPluginInstance]}
-                    defaultScale={SpecialZoomLevel.PageWidth}
-                    theme={{
-                      theme: "light",
-                    }}
-                    onDocumentLoad={() => {
-                      console.log('📄 PDF document fully loaded and ready for navigation')
-                      setDocumentLoaded(true)
-                      setLoading(false)
-                    }}
-                  />
+                  {pdfError ? (
+                    <div className="flex flex-col items-center justify-center h-full p-8">
+                      <div className="text-destructive mb-4">
+                        <FileText className="h-12 w-12 opacity-50" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Unable to load document</h3>
+                      <p className="text-sm text-muted-foreground text-center mb-4">
+                        {pdfError}
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open(url, '_blank')}
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Try opening in a new tab
+                      </Button>
+                    </div>
+                  ) : (
+                    <Viewer
+                      fileUrl={url}
+                      plugins={[highlightPluginInstance, pageNavigationPluginInstance, searchPluginInstance]}
+                      defaultScale={SpecialZoomLevel.PageWidth}
+                      theme={{
+                        theme: "light",
+                      }}
+                      onDocumentLoad={() => {
+                        console.log('📄 PDF document fully loaded and ready for navigation')
+                        setDocumentLoaded(true)
+                        setLoading(false)
+                        setPdfError(null)
+                      }}
+                      onLoadError={(error: any) => {
+                        console.error('❌ Failed to load PDF:', error)
+                        setLoading(false)
+                        setPdfError('Failed to load the document. The file may be unavailable or in an unsupported format.')
+                      }}
+                    />
+                  )}
                 </div>
               </Worker>
             </div>

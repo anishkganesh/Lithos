@@ -88,8 +88,8 @@ export function ProjectDetailPanel({
                 Back to Screener
               </Button>
               <h2 className="text-lg font-semibold">
-                {mode === "single" 
-                  ? projects[0]?.project 
+                {mode === "single"
+                  ? projects[0]?.name
                   : `Project Comparison (${projects.length} projects selected)`}
               </h2>
             </div>

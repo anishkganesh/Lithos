@@ -32,7 +32,26 @@ export function useNews() {
 
       if (fetchError) throw fetchError
 
-      setNews(data || [])
+      // Get current user's watchlist
+      const { data: { user } } = await supabase.auth.getUser()
+      let userWatchlistSet = new Set<string>()
+
+      if (user) {
+        const { data: watchlistData } = await supabase
+          .from('user_news_watchlist')
+          .select('news_id')
+          .eq('user_id', user.id)
+
+        userWatchlistSet = new Set(watchlistData?.map(w => w.news_id) || [])
+      }
+
+      // Update watchlist status based on user's watchlist
+      const newsWithWatchlist = (data || []).map(item => ({
+        ...item,
+        watchlist: userWatchlistSet.has(item.id)
+      }))
+
+      setNews(newsWithWatchlist)
       setError(null)
     } catch (err: any) {
       console.error('Error fetching news:', err)
