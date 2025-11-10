@@ -66,9 +66,9 @@ async function generateRiskAnalysis(
 - Company Description: ${project.company_description || 'N/A'}
 
 **Financial Metrics:**
-- NPV (Net Present Value): ${project.npv !== null && project.npv !== undefined ? `$${(project.npv / 1000000).toFixed(1)}M` : 'N/A'}
+- NPV (Net Present Value): ${project.npv !== null && project.npv !== undefined ? `$${project.npv.toFixed(1)}M` : 'N/A'}
 - IRR (Internal Rate of Return): ${project.irr !== null && project.irr !== undefined ? `${project.irr.toFixed(1)}%` : 'N/A'}
-- CAPEX (Capital Expenditure): ${project.capex !== null && project.capex !== undefined ? `$${(project.capex / 1000000).toFixed(1)}M` : 'N/A'}
+- CAPEX (Capital Expenditure): ${project.capex !== null && project.capex !== undefined ? `$${project.capex.toFixed(1)}M` : 'N/A'}
 - AISC (All-In Sustaining Cost): ${project.aisc !== null && project.aisc !== undefined ? `$${project.aisc.toFixed(2)}/unit` : 'N/A'}
 - Payback Period: ${project.payback_period !== null && project.payback_period !== undefined ? `${project.payback_period} years` : 'N/A'}
 - Annual Production: ${project.annual_production || 'N/A'}
@@ -112,18 +112,27 @@ async function generateRiskAnalysis(
     projectContext += `\n\n**Note:** No technical reports available for this project. Analysis based on project metadata only.`;
   }
 
-  // Add news context if available
+  // Add news context if available with citations
   if (newsContext.newsItems.length > 0) {
-    projectContext += `\n\n**Recent News & Updates (${newsContext.newsItems.length} items):**`;
+    projectContext += `\n\n**Recent News & Market Context (${newsContext.newsItems.length} relevant articles):**`;
     newsContext.newsItems.forEach((item, idx) => {
-      projectContext += `\n\n${idx + 1}. ${item.headline}`;
+      projectContext += `\n\n${idx + 1}. "${item.title}"`;
+      if (item.source) {
+        projectContext += `\n   Source: ${item.source}`;
+      }
+      if (item.url) {
+        projectContext += `\n   URL: ${item.url}`;
+      }
       if (item.summary) {
-        projectContext += `\n   ${item.summary}`;
+        projectContext += `\n   Summary: ${item.summary}`;
       }
       if (item.sentiment) {
         projectContext += `\n   Sentiment: ${item.sentiment}`;
       }
-      projectContext += `\n   Date: ${new Date(item.publishedAt).toLocaleDateString()}`;
+      projectContext += `\n   Published: ${new Date(item.publishedAt).toLocaleDateString()}`;
+      if (item.relevanceScore) {
+        projectContext += `\n   Relevance Score: ${item.relevanceScore}/20`;
+      }
     });
   }
 
@@ -140,6 +149,15 @@ You MUST quote actual numbers and specific data from the project context. Do NOT
 5. EVERY analysis paragraph MUST include at least 2 specific numbers or names from the project context
 6. If a value is not provided, state "data not available" - DO NOT make assumptions or provide generic statements
 
+**MANDATORY NEWS CITATION RULES:**
+When referencing recent events, market conditions, or news from the "Recent News & Market Context" section:
+1. ALWAYS cite the specific news article using this exact format: [Source - "Article Title"](URL)
+2. Include the publication date when citing news (e.g., "reported on Feb 10, 2025")
+3. NEVER make claims about recent events without citing the specific news source
+4. If multiple news items support a point, cite all relevant articles
+5. Prefer project-specific news over general commodity news when available
+6. Extract and quote specific numbers, dates, or facts from the cited news articles
+
 **EXAMPLES OF GOOD vs BAD RESPONSES:**
 
 ❌ BAD: "Strong annual production of gold and silver, contributing to significant cash flow."
@@ -153,6 +171,20 @@ You MUST quote actual numbers and specific data from the project context. Do NOT
 
 ❌ BAD: "Commodity price volatility could affect profitability."
 ✅ GOOD: "At AISC of $850/oz, project requires gold >$900/oz for positive margins; 10% price decline to $1,755/oz would reduce NPV from $485M to $312M (-36%)."
+
+**EXAMPLES OF PROPER NEWS CITATIONS:**
+
+❌ BAD: "Recent permitting issues may delay the project."
+✅ GOOD: "According to [Northern Miner - "B2Gold faces Mali permit delays"](https://url...), reported on Jan 15, 2025, permitting delays reduced Q4 2024 production by 25,000 oz, representing $50M revenue impact at $2,000/oz gold."
+
+❌ BAD: "Gold prices have been volatile recently."
+✅ GOOD: "Per [Kitco News - "Gold hits $2,100 amid Fed uncertainty"](https://url...), Feb 10, 2025, gold surged 8.5% in Q1 2025 to $2,100/oz, improving this project's NPV by estimated $85M given AISC of $850/oz and 150,000 oz annual production."
+
+❌ BAD: "The company announced positive exploration results."
+✅ GOOD: "In [Mining.com - "Liberty Gold reports high-grade intercepts at Black Pine"](https://url...), Jan 22, 2025, the company announced 15m @ 5.2 g/t Au in Zone 2, extending known mineralization 200m beyond the existing 2.1M oz resource estimate."
+
+❌ BAD: "Market sentiment for lithium remains weak."
+✅ GOOD: "According to [Mining Weekly - "Lithium prices fall 12% in Q1"](https://url...), Feb 18, 2025, lithium carbonate prices declined from $15,000/t to $13,200/t, reducing project economics by $8M annually at current 5,000t production."
 
 **When technical reports are available:**
 - Quote exact NPV, IRR, CAPEX, AISC values with units
@@ -169,14 +201,26 @@ You MUST quote actual numbers and specific data from the project context. Do NOT
 Analyze the following mining project across four critical risk dimensions:
 
 1. **Geography Risk** - Political stability, infrastructure, mining jurisdiction quality, environmental regulations, social license to operate
+   - IF recent news articles about the region/country are provided, CITE them with [Source - "Title"](URL)
+   - DO NOT make generic claims about political instability, corruption, or regional issues without citing specific news sources
+
 2. **Legal Risk** - Regulatory framework, permitting process, land rights, compliance requirements, legal precedents
+   - IF recent news about permitting, regulatory changes, or legal issues are provided, CITE them with [Source - "Title"](URL)
+   - DO NOT make claims about regulatory changes or legal challenges without citing specific news sources
+
 3. **Commodity Risk** - Market dynamics, price volatility, demand trends, supply competition, substitution threats
+   - IF recent commodity price news or market analysis is provided, CITE them with [Source - "Title"](URL) and include specific price data
+   - DO NOT make claims about price movements or market conditions without citing specific news sources
+
 4. **Team Risk** - Management experience, track record, technical expertise, financial management capability (use qualified persons data if available)
+   - IF recent news about management changes, operational results, or company announcements are provided, CITE them with [Source - "Title"](URL)
+   - Use qualified persons from technical reports when available
 
 For each risk category, provide:
 - A score from 0-10 (0 = lowest risk, 10 = highest risk)
 - Detailed analysis (2-3 sentences) with MINIMUM 2 specific data points (numbers, names, locations, dates) from the project context
 - MUST include actual values like NPV, IRR, AISC, CAPEX, qualified persons names, specific locations, or technical parameters
+- IF making claims based on recent events or market conditions, MUST cite the specific news article with [Source - "Title"](URL) format
 
 Then provide:
 - Overall risk score (weighted average)
@@ -198,6 +242,13 @@ Then provide:
 
 - Investment recommendation: 'Strong Buy' (score 0-3), 'Buy' (3-5), 'Hold' (5-7), or 'Pass' (7-10)
 - Recommendation rationale (2-3 sentences) - MUST include at least 3 specific numbers from context (NPV, IRR, AISC, CAPEX, mine life, production rate, etc.)
+
+**FINAL CRITICAL REMINDER:**
+- DO NOT mention corruption indices, political rankings, or tax rates unless they appear in the provided news context with citations
+- DO NOT make claims about "recent tax increases," "regulatory changes," or "political instability" unless citing specific news articles
+- DO NOT reference external data sources (Transparency International, World Bank, etc.) unless they appear in cited news articles
+- IF no relevant news is provided for a risk dimension, base analysis ONLY on the technical data and project metadata provided
+- When in doubt, omit unsourced claims rather than fabricate generic risk statements
 
 Return your analysis as a valid JSON object with this exact structure:
 {

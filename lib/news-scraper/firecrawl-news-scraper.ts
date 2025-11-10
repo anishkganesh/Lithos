@@ -1,5 +1,6 @@
 import FirecrawlApp from '@mendable/firecrawl-js';
 import { supabase } from '@/lib/supabase/client-server';
+import OpenAI from 'openai';
 
 interface ScrapedArticle {
   title: string;
@@ -20,11 +21,30 @@ interface ExtractedArticle {
 
 export class FirecrawlNewsScraper {
   private firecrawl: FirecrawlApp;
+  private openai: OpenAI;
 
   private newsSources = [
+    // Major Mining News Sites
     { name: 'Mining.com', url: 'https://www.mining.com/latest-news/' },
     { name: 'Northern Miner', url: 'https://www.northernminer.com/' },
     { name: 'Kitco News', url: 'https://www.kitco.com/news/category/commodities/' },
+    { name: 'Mining Journal', url: 'https://www.mining-journal.com/news/' },
+    { name: 'Mining Weekly', url: 'https://www.miningweekly.com/' },
+    { name: 'Mining Technology', url: 'https://www.mining-technology.com/news/' },
+
+    // Regional Mining News
+    { name: 'Australian Mining', url: 'https://www.australianmining.com.au/news/' },
+    { name: 'Mining Review Africa', url: 'https://www.miningreview.com/news/' },
+    { name: 'Canadian Mining Journal', url: 'https://www.canadianminingjournal.com/news/' },
+
+    // Commodity-Specific
+    { name: 'Gold News', url: 'https://www.mining.com/category/gold-2/' },
+    { name: 'Copper News', url: 'https://www.mining.com/category/copper/' },
+    { name: 'Lithium News', url: 'https://www.mining.com/category/lithium/' },
+
+    // Industry Publications
+    { name: 'S&P Global Market Intelligence', url: 'https://www.spglobal.com/marketintelligence/en/news-insights/latest-news-headlines?category=metals-mining' },
+    { name: 'Reuters Mining', url: 'https://www.reuters.com/business/energy/' },
   ];
 
   constructor() {
@@ -33,6 +53,12 @@ export class FirecrawlNewsScraper {
       throw new Error('FIRECRAWL_API_KEY is not configured');
     }
     this.firecrawl = new FirecrawlApp({ apiKey });
+
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
+    this.openai = new OpenAI({ apiKey: openaiKey });
   }
 
   async scrapeSource(sourceUrl: string, sourceName: string, maxArticles: number = 10): Promise<ScrapedArticle[]> {
@@ -262,6 +288,35 @@ export class FirecrawlNewsScraper {
     return 'Neutral';
   }
 
+  private async generateSummaryWithAI(title: string): Promise<string> {
+    try {
+      console.log(`  🤖 Generating AI summary for: ${title.substring(0, 50)}...`);
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a mining industry news analyst. Generate concise, informative summaries of mining news articles. Focus on key facts: company names, project names, commodities, locations, financial figures, and operational updates. Keep summaries to 2-3 sentences.'
+          },
+          {
+            role: 'user',
+            content: `Summarize this mining news headline:\n\n${title}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 150,
+      });
+
+      const summary = response.choices[0].message.content?.trim() || 'Summary unavailable';
+      console.log(`  ✅ AI summary generated: ${summary.substring(0, 60)}...`);
+      return summary;
+    } catch (error) {
+      console.error(`  ⚠️  Error generating AI summary:`, error);
+      return `Summary not available for: ${title}`;
+    }
+  }
+
   async saveToDatabase(articles: ScrapedArticle[]): Promise<number> {
     let saved = 0;
 
@@ -291,6 +346,12 @@ export class FirecrawlNewsScraper {
           continue;
         }
 
+        // Generate summary with AI if not provided
+        let summary = article.summary;
+        if (!summary || summary.trim() === '' || summary === 'N/A') {
+          summary = await this.generateSummaryWithAI(article.title);
+        }
+
         // Insert new article
         const { error } = await supabase
           .from('news')
@@ -299,7 +360,7 @@ export class FirecrawlNewsScraper {
             urls: [article.url],
             source: article.source,
             published_at: article.published_at,
-            summary: article.summary,
+            summary: summary,
             commodities: article.commodities,
             sentiment: article.sentiment,
             watchlist: false,

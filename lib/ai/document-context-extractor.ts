@@ -344,38 +344,139 @@ ${sections.technicalHighlights.slice(0, 3).join('\n\n')}
 }
 
 /**
- * Fetch recent news context for a project
+ * Fetch recent news context for a project with relevance scoring
  */
-export async function extractNewsContext(projectId: string, limit: number = 5): Promise<{
+export async function extractNewsContext(projectId: string, limit: number = 10): Promise<{
   newsItems: Array<{
-    headline: string;
+    title: string;
     summary: string;
     publishedAt: string;
     sentiment?: string;
+    source?: string;
+    url?: string;
+    relevanceScore?: number;
   }>;
   tokenCount: number;
 }> {
   try {
+    // First, get the project details for relevance matching
+    const { data: project } = await supabase
+      .from('projects')
+      .select('name, company_id, commodities, location, country')
+      .eq('id', projectId)
+      .single();
+
+    // Get company name if available
+    let companyName = '';
+    if (project?.company_id) {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name')
+        .eq('id', project.company_id)
+        .single();
+      companyName = company?.name || '';
+    }
+
+    // Fetch recent news (last 90 days, broader set for filtering)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
     const { data: news, error } = await supabase
       .from('news')
-      .select('headline, summary, published_at, sentiment')
-      .contains('project_ids', [projectId])
+      .select('title, summary, published_at, sentiment, source, urls, commodities, project_ids')
+      .gte('published_at', ninetyDaysAgo.toISOString())
       .order('published_at', { ascending: false })
-      .limit(limit);
+      .limit(50); // Fetch more to filter by relevance
 
     if (error || !news || news.length === 0) {
       return { newsItems: [], tokenCount: 0 };
     }
 
-    const newsItems = news.map(item => ({
-      headline: item.headline || '',
+    // Score each news item by relevance to this project
+    const scoredNews = news.map(item => {
+      let score = 0;
+      const titleLower = (item.title || '').toLowerCase();
+      const summaryLower = (item.summary || '').toLowerCase();
+      const combinedText = `${titleLower} ${summaryLower}`;
+
+      // Project name match (highest priority)
+      if (project?.name) {
+        const projectNameLower = project.name.toLowerCase();
+        const projectWords = projectNameLower.split(/\s+/).filter(w => w.length > 3);
+        const matchedWords = projectWords.filter(word => combinedText.includes(word));
+        if (matchedWords.length >= 2) score += 10; // Multiple words match
+        else if (matchedWords.length === 1) score += 5; // Single word match
+      }
+
+      // Company name match
+      if (companyName) {
+        const companyLower = companyName.toLowerCase();
+        if (combinedText.includes(companyLower)) score += 8;
+      }
+
+      // Commodity match
+      if (project?.commodities && Array.isArray(project.commodities)) {
+        const projectCommodities = project.commodities.map(c => c.toLowerCase());
+        const newsCommodities = (item.commodities || []).map(c => c.toLowerCase());
+        const matches = projectCommodities.filter(c =>
+          newsCommodities.includes(c) || combinedText.includes(c)
+        );
+        score += matches.length * 5; // 5 points per commodity match
+      }
+
+      // Location/country match
+      if (project?.location) {
+        const locationLower = project.location.toLowerCase();
+        if (combinedText.includes(locationLower)) score += 5;
+      }
+      if (project?.country) {
+        const countryLower = project.country.toLowerCase();
+        if (combinedText.includes(countryLower)) score += 5;
+      }
+
+      // Project IDs direct link (if available)
+      if (item.project_ids && Array.isArray(item.project_ids) && item.project_ids.includes(projectId)) {
+        score += 15; // Highest priority - direct link
+      }
+
+      // Recency bonus (articles <30 days get extra points)
+      const daysOld = (Date.now() - new Date(item.published_at || '').getTime()) / (1000 * 60 * 60 * 24);
+      if (daysOld < 30) score += 2;
+
+      // Sentiment relevance (for risk analysis)
+      if (item.sentiment === 'Negative' || item.sentiment === 'Positive') {
+        score += 1; // Slight boost for articles with clear sentiment
+      }
+
+      return {
+        ...item,
+        relevanceScore: score
+      };
+    });
+
+    // Filter to only relevant news (score >= 7) and sort by relevance
+    const relevantNews = scoredNews
+      .filter(item => item.relevanceScore >= 7)
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, limit);
+
+    // If no highly relevant news, fall back to recent general mining news
+    const finalNews = relevantNews.length > 0
+      ? relevantNews
+      : scoredNews.slice(0, Math.min(5, limit));
+
+    const newsItems = finalNews.map(item => ({
+      title: item.title || '',
       summary: item.summary || '',
       publishedAt: item.published_at || '',
-      sentiment: item.sentiment || undefined
+      sentiment: item.sentiment || undefined,
+      source: item.source || undefined,
+      url: item.urls && item.urls.length > 0 ? item.urls[0] : undefined,
+      relevanceScore: item.relevanceScore
     }));
 
     const newsText = newsItems
-      .map(item => `${item.headline}\n${item.summary}`)
+      .map(item => `${item.title}\n${item.summary}`)
       .join('\n\n');
 
     return {

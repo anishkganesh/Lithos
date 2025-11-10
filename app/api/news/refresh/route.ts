@@ -58,13 +58,19 @@ export async function GET(request: Request) {
       lastRefresh: null, // Could query database for last fetched_at
       sources: [
         'Mining.com',
-        'Kitco News', 
         'Northern Miner',
+        'Kitco News',
         'Mining Journal',
-        'SEDAR+',
-        'SEC EDGAR',
-        'ASX Announcements',
-        'LSE RNS'
+        'Mining Weekly',
+        'Mining Technology',
+        'Australian Mining',
+        'Mining Review Africa',
+        'Canadian Mining Journal',
+        'Gold News',
+        'Copper News',
+        'Lithium News',
+        'S&P Global Market Intelligence',
+        'Reuters Mining'
       ]
     });
   } catch (error) {

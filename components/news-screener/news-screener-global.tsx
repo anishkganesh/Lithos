@@ -15,7 +15,6 @@ import {
   RowSelectionState,
 } from "@tanstack/react-table"
 import { ArrowUpDown, Bookmark, Loader2, BookmarkCheck, Search, ChevronDown, RefreshCw } from "lucide-react"
-import { LinksPopover } from "@/components/ui/links-popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -240,18 +239,33 @@ export function NewsScreenerGlobal() {
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => (
-        <div className="space-y-1">
-          <div className="text-sm font-semibold text-blue-600">
-            {row.original.title}
+      cell: ({ row }) => {
+        const firstUrl = row.original.urls?.[0]
+        return (
+          <div className="space-y-1">
+            {firstUrl ? (
+              <a
+                href={firstUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {row.original.title}
+              </a>
+            ) : (
+              <div className="text-sm font-semibold text-foreground">
+                {row.original.title}
+              </div>
+            )}
+            {row.original.source && (
+              <div className="text-xs text-gray-500">
+                {row.original.source}
+              </div>
+            )}
           </div>
-          {row.original.source && (
-            <div className="text-xs text-gray-500">
-              {row.original.source}
-            </div>
-          )}
-        </div>
-      ),
+        )
+      },
     },
     {
       accessorKey: "published_at",
@@ -322,11 +336,6 @@ export function NewsScreenerGlobal() {
           {row.original.summary || 'N/A'}
         </div>
       ),
-    },
-    {
-      accessorKey: "urls",
-      header: "Links",
-      cell: ({ row }) => <LinksPopover urls={row.original.urls || []} />,
     },
   ]
 
