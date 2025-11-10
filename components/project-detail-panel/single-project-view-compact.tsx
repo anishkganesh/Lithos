@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from "react"
+import { useRouter } from "next/navigation"
 import { MiningProject } from "@/lib/types/mining-project"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -44,6 +45,7 @@ const getRiskBadgeColor = (risk: string) => {
 }
 
 export function SingleProjectView({ project, onProjectSelect, onClose, initialPdfUrl, initialPdfTitle }: SingleProjectViewProps) {
+  const router = useRouter()
   const [updatingWatchlist, setUpdatingWatchlist] = useState(false)
   const [generatingImage, setGeneratingImage] = useState(false)
   const [isWatchlisted, setIsWatchlisted] = useState(project.watchlist || false)
@@ -91,6 +93,20 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
       console.error('Error refreshing project:', error)
     }
   }
+
+  // Sync currentProject state when project prop changes
+  React.useEffect(() => {
+    console.log('🔄 Project prop changed, updating state:', project.id, project.name)
+    setCurrentProject(project)
+    setIsWatchlisted(project.watchlist || false)
+    setGeneratedImageUrl(project.generated_image_url || null)
+    // Reset PDF viewer when switching projects
+    setPdfViewerOpen(false)
+    setSelectedPdfUrl(null)
+    setSelectedPdfTitle(null)
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [project.id])
 
   // Load similar projects
   React.useEffect(() => {
@@ -864,10 +880,15 @@ What is your assessment of this project?`
             {similarProjects.map((similar) => (
               <Card
                 key={similar.id}
-                className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => onProjectSelect?.(similar.id)}
+                className="p-3 cursor-pointer hover:bg-muted/50 hover:shadow-md transition-all active:scale-95"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  console.log('🔗 Navigating to similar project:', similar.id, similar.name)
+                  router.push(`/projects/${similar.id}`)
+                }}
               >
-                <div className="space-y-2">
+                <div className="space-y-2 pointer-events-none">
                   <h4 className="text-sm font-medium line-clamp-1">{similar.name}</h4>
                   {similar.commodities && similar.commodities.length > 0 && (
                     <div className="flex flex-wrap gap-1">

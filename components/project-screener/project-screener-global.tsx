@@ -694,10 +694,15 @@ export function ProjectScreenerGlobal() {
         projects={selectedProjects}
         mode={detailPanelMode}
         onProjectSelect={(projectId) => {
+          console.log('🎯 onProjectSelect called with projectId:', projectId)
           const project = data.find(p => String(p.id) === String(projectId))
+          console.log('🔍 Found project:', project?.name, project?.id)
           if (project) {
+            console.log('✅ Setting selected project:', project.name)
             setSelectedProjects([project])
             setDetailPanelMode("single")
+          } else {
+            console.warn('⚠️ Project not found in data array')
           }
         }}
         initialPdfUrl={pdfUrl}

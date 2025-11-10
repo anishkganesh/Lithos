@@ -151,10 +151,10 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
 
     if (changes.length === 0) {
       const insights = [`Base case scenario for ${project.name}.`]
-      if (baselineNPV) insights.push(`NPV: $${(baselineNPV / 1000000).toFixed(1)}M`)
+      if (baselineNPV) insights.push(`NPV: $${baselineNPV.toFixed(1)}M`)
       if (baselineIRR) insights.push(`IRR: ${baselineIRR.toFixed(1)}%`)
       if (baselineAISC) insights.push(`AISC: $${baselineAISC.toFixed(2)}`)
-      if (project.capex) insights.push(`CAPEX: $${(project.capex / 1000000).toFixed(1)}M`)
+      if (project.capex) insights.push(`CAPEX: $${project.capex.toFixed(1)}M`)
       if (project.mine_life) insights.push(`Mine Life: ${project.mine_life} years`)
       setAiInsight(insights.join(' | '))
       return
@@ -229,7 +229,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
       ]
 
       if (baselineNPV) {
-        insights.push(`NPV: $${(npvCalc / 1000000).toFixed(1)}M (${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%)`)
+        insights.push(`NPV: $${npvCalc.toFixed(1)}M (${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%)`)
       }
       if (baselineIRR) {
         insights.push(`IRR: ${irrCalc.toFixed(1)}% (${irrChange > 0 ? '+' : ''}${irrChange.toFixed(1)} pts)`)
