@@ -123,6 +123,18 @@ export function useProjects() {
         npv: project.npv,
         irr: project.irr,
         capex: project.capex,
+        aisc: project.aisc,
+
+        // Resource and Reserve estimates
+        resource: project.resource,
+        reserve: project.reserve,
+
+        // Qualified persons
+        qualified_persons: project.qualified_persons,
+
+        // Geospatial coordinates
+        latitude: project.latitude,
+        longitude: project.longitude,
 
         // Computed/display fields for backward compatibility
         project: project.name,

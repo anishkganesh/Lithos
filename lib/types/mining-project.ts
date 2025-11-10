@@ -48,6 +48,10 @@ export interface MiningProject {
   // Qualified Persons (added in migration 013)
   qualified_persons: QualifiedPerson[] | null; // Array of qualified persons who prepared technical reports
 
+  // Geospatial coordinates (added in migration 014)
+  latitude: number | null; // Latitude in decimal degrees (-90 to 90)
+  longitude: number | null; // Longitude in decimal degrees (-180 to 180)
+
   // User upload and privacy fields
   user_id: string | null; // User who uploaded (for private documents)
   is_private: boolean; // Whether this is a user-uploaded private document

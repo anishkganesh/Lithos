@@ -8,6 +8,8 @@ import { MapPin, Loader2 } from 'lucide-react'
 
 interface InteractiveMapboxProps {
   location: string
+  latitude?: number | null
+  longitude?: number | null
   width?: number
   height?: number
   initialZoom?: number
@@ -106,6 +108,8 @@ function getCoordinatesFromLocationFallback(location: string): Coordinates | nul
 
 export function InteractiveMapbox({
   location,
+  latitude,
+  longitude,
   width = 600,
   height = 300,
   initialZoom = 8,
@@ -125,6 +129,17 @@ export function InteractiveMapbox({
       setLoading(true)
       setError(false)
 
+      // Priority 1: Use provided latitude/longitude if available
+      if (latitude !== null && latitude !== undefined &&
+          longitude !== null && longitude !== undefined) {
+        if (mounted) {
+          setCoords({ lat: latitude, lng: longitude })
+          setLoading(false)
+        }
+        return
+      }
+
+      // Priority 2: Try fallback location mapping
       const fallbackCoords = getCoordinatesFromLocationFallback(location)
       if (fallbackCoords && mounted) {
         setCoords(fallbackCoords)
@@ -132,6 +147,7 @@ export function InteractiveMapbox({
         return
       }
 
+      // Priority 3: Try geocoding API
       try {
         const geocodedCoords = await geocodeLocation(location)
         if (mounted) {
@@ -155,7 +171,7 @@ export function InteractiveMapbox({
     return () => {
       mounted = false
     }
-  }, [location])
+  }, [location, latitude, longitude])
 
   // Initialize map
   useEffect(() => {

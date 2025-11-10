@@ -66,10 +66,10 @@ async function generateRiskAnalysis(
 - Company Description: ${project.company_description || 'N/A'}
 
 **Financial Metrics:**
-- NPV (Net Present Value): ${project.npv !== null && project.npv !== undefined ? `$${project.npv.toFixed(1)}M` : 'N/A'}
+- NPV (Net Present Value): ${project.npv !== null && project.npv !== undefined ? `$${(project.npv / 1000000).toFixed(1)}M` : 'N/A'}
 - IRR (Internal Rate of Return): ${project.irr !== null && project.irr !== undefined ? `${project.irr.toFixed(1)}%` : 'N/A'}
-- CAPEX (Capital Expenditure): ${project.capex !== null && project.capex !== undefined ? `$${project.capex.toFixed(1)}M` : 'N/A'}
-- AISC (All-In Sustaining Cost): ${project.aisc !== null && project.aisc !== undefined ? `$${project.aisc.toFixed(0)}/unit` : 'N/A'}
+- CAPEX (Capital Expenditure): ${project.capex !== null && project.capex !== undefined ? `$${(project.capex / 1000000).toFixed(1)}M` : 'N/A'}
+- AISC (All-In Sustaining Cost): ${project.aisc !== null && project.aisc !== undefined ? `$${project.aisc.toFixed(2)}/unit` : 'N/A'}
 - Payback Period: ${project.payback_period !== null && project.payback_period !== undefined ? `${project.payback_period} years` : 'N/A'}
 - Annual Production: ${project.annual_production || 'N/A'}
 - Mine Life: ${project.mine_life !== null && project.mine_life !== undefined ? `${project.mine_life} years` : 'N/A'}
@@ -132,12 +132,27 @@ async function generateRiskAnalysis(
 **CRITICAL REQUIREMENT - NO GENERIC RESPONSES:**
 You MUST quote actual numbers and specific data from the project context. Do NOT provide generic industry observations.
 
-**MANDATORY RULES:**
-1. ALWAYS quote specific financial metrics with exact values (e.g., "NPV of $485M" not "strong NPV")
-2. ALWAYS mention actual qualified persons by name and credentials (e.g., "Dr. Sarah Chen, P.Eng." not "experienced team")
-3. ALWAYS reference specific technical parameters (e.g., "grade of 1.2 g/t Au" not "good grade")
-4. ALWAYS cite actual news headlines or report findings (e.g., "2023 feasibility study" not "recent studies")
-5. If a value is not provided, state "data not available" - DO NOT make assumptions or provide generic statements
+**MANDATORY RULES - QUOTE ACTUAL VALUES:**
+1. ALWAYS quote specific financial metrics with exact values from the context (e.g., "NPV of $485.3M, IRR of 22.4%, AISC of $850.00/oz" not "strong NPV")
+2. ALWAYS mention actual qualified persons by name and credentials (e.g., "Dr. Sarah Chen, P.Eng., John Smith, P.Geo." not "experienced team")
+3. ALWAYS reference specific technical parameters (e.g., "CAPEX of $320M, mine life of 12 years, annual production of 150,000 oz" not "good parameters")
+4. ALWAYS cite actual news headlines or report findings (e.g., "2023 feasibility study shows proven reserves" not "recent studies")
+5. EVERY analysis paragraph MUST include at least 2 specific numbers or names from the project context
+6. If a value is not provided, state "data not available" - DO NOT make assumptions or provide generic statements
+
+**EXAMPLES OF GOOD vs BAD RESPONSES:**
+
+❌ BAD: "Strong annual production of gold and silver, contributing to significant cash flow."
+✅ GOOD: "Annual production of 150,000 oz Au and 2.5M oz Ag generating $290M revenue at current prices ($1,950/oz Au, $24/oz Ag)."
+
+❌ BAD: "High NPV and IRR indicate robust financial returns."
+✅ GOOD: "NPV of $485.3M (5% discount rate) with IRR of 22.4% significantly exceeds hurdle rate of 12%, payback period of 3.2 years."
+
+❌ BAD: "Political instability and corruption could impact operations."
+✅ GOOD: "Dominican Republic ranks 137/180 on Transparency International Corruption Index; recent 2023 mining tax increase from 3.2% to 5.5% reduced project NPV by estimated $45M."
+
+❌ BAD: "Commodity price volatility could affect profitability."
+✅ GOOD: "At AISC of $850/oz, project requires gold >$900/oz for positive margins; 10% price decline to $1,755/oz would reduce NPV from $485M to $312M (-36%)."
 
 **When technical reports are available:**
 - Quote exact NPV, IRR, CAPEX, AISC values with units
@@ -160,16 +175,29 @@ Analyze the following mining project across four critical risk dimensions:
 
 For each risk category, provide:
 - A score from 0-10 (0 = lowest risk, 10 = highest risk)
-- Detailed analysis (2-3 sentences) explaining the score with SPECIFIC data points from the project
-- Specific evidence or factors considered from the technical reports and news
+- Detailed analysis (2-3 sentences) with MINIMUM 2 specific data points (numbers, names, locations, dates) from the project context
+- MUST include actual values like NPV, IRR, AISC, CAPEX, qualified persons names, specific locations, or technical parameters
 
 Then provide:
 - Overall risk score (weighted average)
-- Risk summary (executive summary of all risks) - reference SPECIFIC project details
-- 3-5 key opportunities (strengths and catalysts) - use ACTUAL metrics and data
-- 3-5 key threats (weaknesses and concerns) - cite SPECIFIC concerns from reports
+- Risk summary (2-3 sentences) - MUST quote project name, location, key financial metrics (NPV/IRR/AISC), and stage
+
+- 3-5 key opportunities - EACH MUST follow format: "Quantified metric/fact + specific number + impact/context"
+  Examples of GOOD opportunities:
+  ✅ "Annual production of 150,000 oz Au at AISC $850/oz generates $165M operating margin at $2,000/oz gold"
+  ✅ "IRR of 22.4% exceeds industry average of 15%, with payback period of 3.2 years vs sector median of 5 years"
+  ✅ "Proven/probable reserves of 2.5M oz Au support 12-year mine life, extensible via 1.2M oz inferred resources"
+  ❌ BAD: "Strong production contributing to cash flow" (NO NUMBERS)
+
+- 3-5 key threats - EACH MUST follow format: "Specific risk factor + actual data + quantified impact"
+  Examples of GOOD threats:
+  ✅ "AISC of $850/oz exceeds industry median of $750/oz by 13%, reducing margin competitiveness in price downturns"
+  ✅ "Dominican Republic corruption rank 137/180 and 2023 tax increase from 3.2% to 5.5% reduced NPV by $45M"
+  ✅ "Water permit expires 2025; renewal delay risk could halt 150,000 oz annual production ($300M revenue exposure)"
+  ❌ BAD: "Political instability could impact operations" (NO NUMBERS)
+
 - Investment recommendation: 'Strong Buy' (score 0-3), 'Buy' (3-5), 'Hold' (5-7), or 'Pass' (7-10)
-- Recommendation rationale (2-3 sentences) - reference SPECIFIC numbers and findings
+- Recommendation rationale (2-3 sentences) - MUST include at least 3 specific numbers from context (NPV, IRR, AISC, CAPEX, mine life, production rate, etc.)
 
 Return your analysis as a valid JSON object with this exact structure:
 {

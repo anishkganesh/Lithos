@@ -29,10 +29,15 @@ export default function GlobePage() {
     try {
       setLoadingProjects(true)
 
-      const { data, error } = await supabase
+      // Fetch only top 1000 projects for smooth globe performance
+      // Prioritize projects with NPV for most important mining projects
+      const { data, error, count } = await supabase
         .from('projects')
-        .select('*')
+        .select('*', { count: 'exact' })
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
         .order('npv', { ascending: false, nullsFirst: false })
+        .limit(1000)
 
       if (error) {
         console.error('Error fetching projects:', error.message || error)
@@ -40,6 +45,8 @@ export default function GlobePage() {
         return
       }
 
+      console.log(`✅ Loaded ${data?.length || 0} projects for globe (filtered to projects with coords, showing top by NPV)`)
+      console.log(`📊 Total projects with coords in DB: ${count}`)
       setProjects(data || [])
     } catch (error: any) {
       console.error('Error fetching projects:', error?.message || error)

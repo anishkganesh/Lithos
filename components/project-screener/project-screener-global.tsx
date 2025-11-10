@@ -434,6 +434,30 @@ export function ProjectScreenerGlobal() {
       },
     },
     {
+      accessorKey: "latitude",
+      header: "Latitude",
+      cell: ({ row }) => {
+        const lat = row.original.latitude
+        return (
+          <div className="text-xs text-center text-muted-foreground">
+            {lat !== null && lat !== undefined ? lat.toFixed(4) : '-'}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "longitude",
+      header: "Longitude",
+      cell: ({ row }) => {
+        const lng = row.original.longitude
+        return (
+          <div className="text-xs text-center text-muted-foreground">
+            {lng !== null && lng !== undefined ? lng.toFixed(4) : '-'}
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {

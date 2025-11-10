@@ -47,18 +47,32 @@ function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector
   return new THREE.Vector3(x, y, z)
 }
 
-// Helper function to get coordinates from location string
+// Helper function to get coordinates from location string (fallback only)
 function getCoordinatesFromLocation(location: string): { lat: number; lng: number } | null {
+  // Comprehensive location map for mining regions worldwide
   const locationMap: Record<string, { lat: number; lng: number }> = {
+    // North America
     'USA': { lat: 37.0902, lng: -95.7129 },
     'United States': { lat: 37.0902, lng: -95.7129 },
     'Canada': { lat: 56.1304, lng: -106.3468 },
     'Mexico': { lat: 23.6345, lng: -102.5528 },
+    'Alaska': { lat: 64.2008, lng: -149.4937 },
+    'Nevada': { lat: 39.8494, lng: -117.2365 },
+    'Arizona': { lat: 34.0489, lng: -111.0937 },
+    'Ontario': { lat: 51.2538, lng: -85.3232 },
+    'Quebec': { lat: 52.9399, lng: -73.5491 },
+    'British Columbia': { lat: 53.7267, lng: -127.6476 },
+
+    // South America
     'Chile': { lat: -35.6751, lng: -71.5430 },
     'Peru': { lat: -9.1900, lng: -75.0152 },
     'Brazil': { lat: -14.2350, lng: -51.9253 },
     'Argentina': { lat: -38.4161, lng: -63.6167 },
     'Bolivia': { lat: -16.2902, lng: -63.5887 },
+    'Colombia': { lat: 4.5709, lng: -74.2973 },
+    'Ecuador': { lat: -1.8312, lng: -78.1834 },
+
+    // Europe
     'Sweden': { lat: 60.1282, lng: 18.6435 },
     'Finland': { lat: 61.9241, lng: 25.7482 },
     'Norway': { lat: 60.4720, lng: 8.4689 },
@@ -66,6 +80,14 @@ function getCoordinatesFromLocation(location: string): { lat: number; lng: numbe
     'United Kingdom': { lat: 55.3781, lng: -3.4360 },
     'Spain': { lat: 40.4637, lng: -3.7492 },
     'Portugal': { lat: 39.3999, lng: -8.2245 },
+    'France': { lat: 46.2276, lng: 2.2137 },
+    'Germany': { lat: 51.1657, lng: 10.4515 },
+    'Poland': { lat: 51.9194, lng: 19.1451 },
+    'Russia': { lat: 61.5240, lng: 105.3188 },
+    'Serbia': { lat: 44.0165, lng: 21.0059 },
+    'Turkey': { lat: 38.9637, lng: 35.2433 },
+
+    // Africa
     'South Africa': { lat: -30.5595, lng: 22.9375 },
     'DRC': { lat: -4.0383, lng: 21.7587 },
     'Congo': { lat: -4.0383, lng: 21.7587 },
@@ -74,23 +96,51 @@ function getCoordinatesFromLocation(location: string): { lat: number; lng: numbe
     'Namibia': { lat: -22.9576, lng: 18.4904 },
     'Botswana': { lat: -22.3285, lng: 24.6849 },
     'Zimbabwe': { lat: -19.0154, lng: 29.1549 },
+    'Mali': { lat: 17.5707, lng: -3.9962 },
+    'Mauritania': { lat: 21.0079, lng: -10.9408 },
+    'Ghana': { lat: 7.9465, lng: -1.0232 },
+    'Burkina Faso': { lat: 12.2383, lng: -1.5616 },
+    'Niger': { lat: 17.6078, lng: 8.0817 },
+    'Ethiopia': { lat: 9.1450, lng: 40.4897 },
+    'Kenya': { lat: -0.0236, lng: 37.9062 },
+    'Madagascar': { lat: -18.7669, lng: 46.8691 },
+    'Morocco': { lat: 31.7917, lng: -7.0926 },
+    'Egypt': { lat: 26.8206, lng: 30.8025 },
+    'Algeria': { lat: 28.0339, lng: 1.6596 },
+
+    // Asia
     'China': { lat: 35.8617, lng: 104.1954 },
     'Mongolia': { lat: 46.8625, lng: 103.8467 },
     'Kazakhstan': { lat: 48.0196, lng: 66.9237 },
     'India': { lat: 20.5937, lng: 78.9629 },
     'Indonesia': { lat: -0.7893, lng: 113.9213 },
     'Philippines': { lat: 12.8797, lng: 121.7740 },
+    'Vietnam': { lat: 14.0583, lng: 108.2772 },
+    'Laos': { lat: 19.8563, lng: 102.4955 },
+    'Myanmar': { lat: 21.9162, lng: 95.9560 },
+    'Thailand': { lat: 15.8700, lng: 100.9925 },
+    'Malaysia': { lat: 4.2105, lng: 101.9758 },
+    'Pakistan': { lat: 30.3753, lng: 69.3451 },
+    'Afghanistan': { lat: 33.9391, lng: 67.7100 },
+    'Uzbekistan': { lat: 41.3775, lng: 64.5853 },
+    'Kyrgyzstan': { lat: 41.2044, lng: 74.7661 },
+    'Iran': { lat: 32.4279, lng: 53.6880 },
+    'Saudi Arabia': { lat: 23.8859, lng: 45.0792 },
+
+    // Oceania
     'Australia': { lat: -25.2744, lng: 133.7751 },
+    'Western Australia': { lat: -25.0, lng: 121.0 },
+    'Queensland': { lat: -20.9176, lng: 142.7028 },
+    'New South Wales': { lat: -31.8407, lng: 145.6119 },
     'Papua New Guinea': { lat: -6.3150, lng: 143.9555 },
     'New Zealand': { lat: -40.9006, lng: 174.8860 },
+    'Solomon Islands': { lat: -9.6457, lng: 160.1562 },
+    'Fiji': { lat: -17.7134, lng: 178.0650 },
   }
 
   for (const [country, coords] of Object.entries(locationMap)) {
     if (location.toLowerCase().includes(country.toLowerCase())) {
-      return {
-        lat: coords.lat + (Math.random() - 0.5) * 2,
-        lng: coords.lng + (Math.random() - 0.5) * 4
-      }
+      return coords
     }
   }
 
@@ -124,6 +174,84 @@ function getCommodityColor(commodities: string[] | null): string {
   return '#6366f1'
 }
 
+// Project Point component - using cylinder pins with sphere heads
+function ProjectPoint({ point, onClick, onHover }: {
+  point: GlobePoint
+  onClick: (point: GlobePoint, event: any) => void
+  onHover: (point: GlobePoint | null) => void
+}) {
+  const groupRef = useRef<THREE.Group>(null)
+  const [hovered, setHovered] = useState(false)
+
+  // Calculate normal direction for pin orientation
+  const normal = useMemo(() => point.position.clone().normalize(), [point.position])
+  const quaternion = useMemo(() => {
+    const q = new THREE.Quaternion()
+    q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal)
+    return q
+  }, [normal])
+
+  return (
+    <group
+      ref={groupRef}
+      position={point.position}
+      quaternion={quaternion}
+      scale={hovered ? 1.3 : 1}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick(point, e)
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        setHovered(true)
+        onHover(point)
+        document.body.style.cursor = 'pointer'
+      }}
+      onPointerOut={() => {
+        setHovered(false)
+        onHover(null)
+        document.body.style.cursor = 'auto'
+      }}
+    >
+      {/* Pin cylinder */}
+      <mesh position={[0, 0.025, 0]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.05, 8]} />
+        <meshStandardMaterial
+          color={point.color}
+          emissive={point.color}
+          emissiveIntensity={hovered ? 0.8 : 0.3}
+          metalness={0.3}
+          roughness={0.4}
+        />
+      </mesh>
+
+      {/* Pin head (small sphere on top) */}
+      <mesh position={[0, 0.055, 0]}>
+        <sphereGeometry args={[0.015, 12, 12]} />
+        <meshStandardMaterial
+          color={point.color}
+          emissive={point.color}
+          emissiveIntensity={hovered ? 1.2 : 0.5}
+          metalness={0.4}
+          roughness={0.3}
+        />
+      </mesh>
+
+      {/* Glowing base ring when hovered */}
+      {hovered && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.02, 0.035, 16]} />
+          <meshBasicMaterial
+            color={point.color}
+            transparent
+            opacity={0.6}
+          />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
 // Earth component with points as children
 function Earth({ points, onPointClick, onPointHover }: {
   points: GlobePoint[]
@@ -132,8 +260,8 @@ function Earth({ points, onPointClick, onPointHover }: {
 }) {
   const earthRef = useRef<THREE.Group>(null)
 
-  // Load high-quality blue marble texture from reliable CDN
-  const texture = useLoader(THREE.TextureLoader, '//cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg')
+  // Load high-quality blue marble texture from CDN
+  const texture = useLoader(THREE.TextureLoader, 'https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg')
 
   useFrame(() => {
     if (earthRef.current) {
@@ -176,95 +304,17 @@ function Earth({ points, onPointClick, onPointHover }: {
   )
 }
 
-// Project Point component - using cylinder pins instead of spheres
-function ProjectPoint({ point, onClick, onHover }: {
-  point: GlobePoint
-  onClick: (point: GlobePoint, event: any) => void
-  onHover: (point: GlobePoint | null) => void
-}) {
-  const groupRef = useRef<THREE.Group>(null)
-  const [hovered, setHovered] = useState(false)
-
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.scale.setScalar(hovered ? 1.3 : 1)
-    }
-  })
-
-  // Calculate normal direction for pin orientation
-  const normal = point.position.clone().normalize()
-  const quaternion = new THREE.Quaternion()
-  quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal)
-
-  return (
-    <group
-      ref={groupRef}
-      position={point.position}
-      quaternion={quaternion}
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick(point, e)
-      }}
-      onPointerOver={(e) => {
-        e.stopPropagation()
-        setHovered(true)
-        onHover(point)
-        document.body.style.cursor = 'pointer'
-      }}
-      onPointerOut={() => {
-        setHovered(false)
-        onHover(null)
-        document.body.style.cursor = 'auto'
-      }}
-    >
-      {/* Pin cylinder */}
-      <mesh position={[0, 0.025, 0]}>
-        <cylinderGeometry args={[0.008, 0.008, 0.05, 8]} />
-        <meshStandardMaterial
-          color={point.color}
-          emissive={point.color}
-          emissiveIntensity={hovered ? 0.8 : 0.3}
-          metalness={0.3}
-          roughness={0.4}
-        />
-      </mesh>
-
-      {/* Pin head (small sphere on top) */}
-      <mesh position={[0, 0.055, 0]}>
-        <sphereGeometry args={[0.015, 12, 12]} />
-        <meshStandardMaterial
-          color={point.color}
-          emissive={point.color}
-          emissiveIntensity={hovered ? 1.2 : 0.5}
-          metalness={0.4}
-          roughness={0.3}
-        />
-      </mesh>
-
-      {/* Glowing base ring */}
-      {hovered && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.02, 0.035, 16]} />
-          <meshBasicMaterial
-            color={point.color}
-            transparent
-            opacity={0.6}
-          />
-        </mesh>
-      )}
-    </group>
-  )
-}
-
 // Scene component
 function GlobeScene({
   points,
   onPointClick,
-  onPointHover
+  onPointHover,
+  stopRotation
 }: {
   points: GlobePoint[]
   onPointClick: (point: GlobePoint, event: any) => void
   onPointHover: (point: GlobePoint | null) => void
+  stopRotation: boolean
 }) {
   return (
     <>
@@ -292,7 +342,7 @@ function GlobeScene({
         enableRotate={true}
         minDistance={3}
         maxDistance={10}
-        autoRotate={true}
+        autoRotate={!stopRotation}
         autoRotateSpeed={0.5}
       />
     </>
@@ -314,11 +364,31 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
   // Convert filtered projects to globe points
   const globePoints = useMemo(() => {
     const points: GlobePoint[] = []
+    let withExactCoords = 0
+    let withLocationFallback = 0
+    let noCoords = 0
 
     filteredProjects.forEach(project => {
-      if (!project.location) return
+      let coords: { lat: number; lng: number } | null = null
 
-      const coords = getCoordinatesFromLocation(project.location)
+      // Priority 1: Use project's exact latitude/longitude if available
+      if (project.latitude !== null && project.latitude !== undefined &&
+          project.longitude !== null && project.longitude !== undefined) {
+        coords = { lat: project.latitude, lng: project.longitude }
+        withExactCoords++
+      }
+      // Priority 2: Fallback to country-level location
+      else if (project.location) {
+        coords = getCoordinatesFromLocation(project.location)
+        if (coords) {
+          withLocationFallback++
+        } else {
+          noCoords++
+        }
+      } else {
+        noCoords++
+      }
+
       if (!coords) return
 
       const position = latLngToVector3(coords.lat, coords.lng, 2.05)
@@ -333,6 +403,12 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
         position
       })
     })
+
+    console.log(`🌍 Globe Points Created:`)
+    console.log(`  - With exact coords: ${withExactCoords}`)
+    console.log(`  - With location fallback: ${withLocationFallback}`)
+    console.log(`  - No coords (filtered out): ${noCoords}`)
+    console.log(`  - TOTAL PINS: ${points.length}`)
 
     return points
   }, [filteredProjects])
@@ -374,6 +450,7 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
         <GlobeFilters
           projects={projects}
           onFilterChange={setFilteredProjects}
+          filteredCount={filteredProjects.length}
         />
       </div>
 
@@ -408,6 +485,8 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
             {selectedProject.location && (
               <InteractiveMapbox
                 location={selectedProject.location}
+                latitude={selectedProject.latitude}
+                longitude={selectedProject.longitude}
                 width={280}
                 height={150}
                 initialZoom={7}
@@ -510,6 +589,7 @@ export function ProjectGlobe({ projects, onProjectClick, className }: ProjectGlo
           points={globePoints}
           onPointClick={handlePointClick}
           onPointHover={setHoveredPoint}
+          stopRotation={selectedProject !== null}
         />
       </Canvas>
     </div>

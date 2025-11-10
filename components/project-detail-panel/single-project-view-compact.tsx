@@ -384,6 +384,8 @@ What is your assessment of this project?`
         {currentProject.location && (
           <InteractiveMapbox
             location={currentProject.location}
+            latitude={currentProject.latitude}
+            longitude={currentProject.longitude}
             width={600}
             height={300}
             initialZoom={8}
@@ -465,7 +467,27 @@ What is your assessment of this project?`
           <div className="p-2.5">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Location</span>
-              <span className="text-sm font-medium">{project.location || 'N/A'}</span>
+              <span className="text-sm font-medium">{currentProject.location || 'N/A'}</span>
+            </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Latitude</span>
+              <span className="text-sm font-medium">
+                {currentProject.latitude !== null && currentProject.latitude !== undefined
+                  ? currentProject.latitude.toFixed(4)
+                  : 'N/A'}
+              </span>
+            </div>
+          </div>
+          <div className="p-2.5">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Longitude</span>
+              <span className="text-sm font-medium">
+                {currentProject.longitude !== null && currentProject.longitude !== undefined
+                  ? currentProject.longitude.toFixed(4)
+                  : 'N/A'}
+              </span>
             </div>
           </div>
           <div className="p-2.5">
@@ -821,7 +843,7 @@ What is your assessment of this project?`
       {/* Sensitivity Analysis */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium">Sensitivity Analysis</h3>
-        <SensitivityAnalysis project={project} />
+        <SensitivityAnalysis project={currentProject} />
       </div>
 
       <Separator />

@@ -17,6 +17,7 @@ import { MiningProject } from "@/lib/types/mining-project"
 interface GlobeFiltersProps {
   projects: MiningProject[]
   onFilterChange: (filteredProjects: MiningProject[]) => void
+  filteredCount?: number
 }
 
 const stages = [
@@ -41,7 +42,7 @@ const commodities = [
   "Silver",
 ]
 
-export function GlobeFilters({ projects, onFilterChange }: GlobeFiltersProps) {
+export function GlobeFilters({ projects, onFilterChange, filteredCount }: GlobeFiltersProps) {
   const [selectedStages, setSelectedStages] = React.useState<string[]>([])
   const [selectedCommodities, setSelectedCommodities] = React.useState<string[]>([])
   const [isOpen, setIsOpen] = React.useState(false)
@@ -96,7 +97,7 @@ export function GlobeFilters({ projects, onFilterChange }: GlobeFiltersProps) {
     <Card className="p-2">
       <div className="mb-2">
         <div className="text-xs text-muted-foreground mb-1">Total Projects</div>
-        <div className="text-2xl font-semibold">{projects.length}</div>
+        <div className="text-2xl font-semibold">{projects.length.toLocaleString()}</div>
       </div>
       <div>
         <Popover open={isOpen} onOpenChange={setIsOpen}>

@@ -150,7 +150,13 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
       }))
 
     if (changes.length === 0) {
-      setAiInsight("Base case scenario with all parameters at 100% baseline. This represents the original project assumptions with no sensitivity adjustments applied.")
+      const insights = [`Base case scenario for ${project.name}.`]
+      if (baselineNPV) insights.push(`NPV: $${(baselineNPV / 1000000).toFixed(1)}M`)
+      if (baselineIRR) insights.push(`IRR: ${baselineIRR.toFixed(1)}%`)
+      if (baselineAISC) insights.push(`AISC: $${baselineAISC.toFixed(2)}`)
+      if (project.capex) insights.push(`CAPEX: $${(project.capex / 1000000).toFixed(1)}M`)
+      if (project.mine_life) insights.push(`Mine Life: ${project.mine_life} years`)
+      setAiInsight(insights.join(' | '))
       return
     }
 
@@ -210,11 +216,29 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
       }
     } catch (error) {
       console.error('AI Insight error:', error)
-      // Fallback to simple calculation-based insight
+      // Fallback to detailed calculation-based insight
       const npvCalc = calculateNPVForValues(currentValues)
+      const irrCalc = calculateIRRForValues(currentValues)
       const aiscCalc = calculateAISCForValues(currentValues)
-      const npvChange = baselineNPV > 0 ? ((npvCalc - baselineNPV) / baselineNPV) * 100 : 0
-      setAiInsight(`Sensitivity scenario with ${changes.length} parameter${changes.length > 1 ? 's' : ''} adjusted. NPV impact: ${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%. ${baselineAISC > 0 ? `AISC: $${aiscCalc.toFixed(0)}/unit` : ''}`)
+      const npvChange = baselineNPV ? ((npvCalc - baselineNPV) / baselineNPV) * 100 : 0
+      const irrChange = baselineIRR ? irrCalc - baselineIRR : 0
+      const aiscChange = baselineAISC ? ((aiscCalc - baselineAISC) / baselineAISC) * 100 : 0
+
+      const insights = [
+        `${project.name} with ${changes.length} parameter${changes.length > 1 ? 's' : ''} adjusted:`
+      ]
+
+      if (baselineNPV) {
+        insights.push(`NPV: $${(npvCalc / 1000000).toFixed(1)}M (${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%)`)
+      }
+      if (baselineIRR) {
+        insights.push(`IRR: ${irrCalc.toFixed(1)}% (${irrChange > 0 ? '+' : ''}${irrChange.toFixed(1)} pts)`)
+      }
+      if (baselineAISC) {
+        insights.push(`AISC: $${aiscCalc.toFixed(2)} (${aiscChange > 0 ? '+' : ''}${aiscChange.toFixed(1)}%)`)
+      }
+
+      setAiInsight(insights.join(' | '))
     } finally {
       setIsGeneratingInsight(false)
     }
@@ -399,12 +423,12 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
               <CardContent className="p-4">
                 <div className="text-xs text-muted-foreground mb-1">AISC</div>
                 <div className="text-2xl font-bold text-orange-600">
-                  {baselineAISC > 0 ? `$${aisc.toFixed(0)}` : 'N/A'}
+                  {baselineAISC ? `$${aisc.toFixed(2)}` : 'N/A'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {baselineAISC > 0 && aiscTrend !== 0
+                  {baselineAISC && aiscTrend !== 0
                     ? `${aiscTrend > 0 ? '+' : ''}${aiscTrend.toFixed(1)}%`
-                    : '0.0%'}
+                    : baselineAISC ? '0.0%' : 'N/A'}
                 </div>
               </CardContent>
             </Card>
