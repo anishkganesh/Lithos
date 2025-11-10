@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -50,6 +51,7 @@ import { BulkActionsToolbar } from "./bulk-actions-toolbar"
 import { formatCurrency } from "@/lib/format-utils"
 
 export function CompanyScreenerGlobal() {
+  const router = useRouter()
   const { companies: initialData, loading, error, refetch } = useCompanies()
   const [data, setData] = useState<Company[]>(initialData)
   const [sorting, setSorting] = useState<SortingState>([])
@@ -93,9 +95,8 @@ export function CompanyScreenerGlobal() {
   }
 
   const handleProjectSelect = (projectId: string) => {
-    // Navigate to project detail view by opening the project detail panel
-    // We need to trigger the global project selection
-    window.location.href = `/dashboard?project=${projectId}`
+    // Navigate to standalone project detail page
+    router.push(`/projects/${projectId}`)
   }
 
   const handleCompanyAnalysis = () => {
@@ -328,10 +329,9 @@ export function CompanyScreenerGlobal() {
         const marketCap = row.original.market_cap
         if (!marketCap) return <span className="text-sm text-muted-foreground">N/A</span>
 
-        // Market cap is stored in billions (e.g., 126.0 = $126B)
-        // Convert to millions for formatCurrency utility: 126.0B -> 126000M
-        const marketCapInMillions = marketCap * 1000
-        const formatted = formatCurrency(marketCapInMillions, { decimals: marketCap >= 1 ? 1 : 0, unit: 'M' })
+        // Market cap is stored in millions (e.g., 73307 = $73,307M)
+        // formatCurrency will auto-scale to B if >= 1000M
+        const formatted = formatCurrency(marketCap, { decimals: marketCap >= 1000 ? 1 : 0, unit: 'M' })
 
         return <div className="text-sm font-medium text-right">{formatted}</div>
       },

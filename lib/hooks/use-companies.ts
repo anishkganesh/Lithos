@@ -69,7 +69,7 @@ export function useCompanies() {
         const { data, error } = await client
           .from('companies')
           .select('*')
-          .order('updated_at', { ascending: false })
+          .order('market_cap', { ascending: false, nullsFirst: false })
           .range(offset, offset + pageSize - 1)
 
         if (error) throw error

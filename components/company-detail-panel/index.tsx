@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { X, ArrowLeft, ExternalLink, Bookmark, BookmarkCheck, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -38,6 +39,7 @@ export function CompanyDetailPanel({
   mode = "single",
   onProjectSelect,
 }: CompanyDetailPanelProps) {
+  const router = useRouter()
   const company = companies[0] // For single mode
   const [updatingWatchlist, setUpdatingWatchlist] = useState(false)
   const [isWatchlisted, setIsWatchlisted] = useState(company?.watchlist || false)
@@ -201,7 +203,7 @@ export function CompanyDetailPanel({
                 </div>
                 {company.market_cap && (
                   <Badge variant="outline" className="text-sm">
-                    {formatCurrency(company.market_cap * 1000, { decimals: company.market_cap >= 1 ? 1 : 0, unit: 'M' })}
+                    {formatCurrency(company.market_cap, { decimals: company.market_cap >= 1000 ? 1 : 0, unit: 'M' })}
                   </Badge>
                 )}
               </div>
@@ -284,7 +286,7 @@ export function CompanyDetailPanel({
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Market Cap</span>
                       <span className="text-sm font-medium">
-                        {formatCurrency(company.market_cap * 1000, { decimals: company.market_cap >= 1 ? 1 : 0, unit: 'M' })}
+                        {formatCurrency(company.market_cap, { decimals: company.market_cap >= 1000 ? 1 : 0, unit: 'M' })}
                       </span>
                     </div>
                   </div>
@@ -374,8 +376,13 @@ export function CompanyDetailPanel({
                   {companyProjects.map((project) => (
                     <Card
                       key={project.id}
-                      className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => onProjectSelect?.(project.id)}
+                      className="p-3 cursor-pointer hover:bg-muted/50 hover:shadow-md transition-all active:scale-95"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        console.log('🔗 Navigating to project from company:', project.id, project.name)
+                        router.push(`/projects/${project.id}`)
+                      }}
                     >
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium line-clamp-1">{project.name}</h4>
