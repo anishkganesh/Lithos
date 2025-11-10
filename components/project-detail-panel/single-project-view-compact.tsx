@@ -140,7 +140,7 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
         // Set the company name from the joined data
         const projectWithCompany = {
           ...data,
-          company: data.companies?.name || data.company || 'Unknown'
+          company: data.companies?.name || data.company || null
         } as MiningProject
         setCurrentProject(projectWithCompany)
       }
@@ -244,10 +244,8 @@ export function SingleProjectView({ project, onProjectSelect, onClose, initialPd
 
 Project: ${project.name}
 Company: ${project.company || 'N/A'}
-Stage: ${project.stage || 'Unknown'}
 Location: ${project.location || 'N/A'}
-Commodities: ${(project.commodities || []).join(', ')}
-Status: ${project.status || 'Unknown'}
+Commodities: ${(project.commodities || []).join(', ')}${project.stage ? `\nStage: ${project.stage}` : ''}${project.status ? `\nStatus: ${project.status}` : ''}
 Ownership: ${project.ownership_percentage !== null ? `${project.ownership_percentage}%` : 'N/A'}
 Resource Estimate: ${currentProject.resource || 'N/A'}
 Reserve Estimate: ${currentProject.reserve || 'N/A'}
@@ -298,7 +296,9 @@ What is your assessment of this project?`
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {currentProject.company || 'Unknown'} • {currentProject.location || 'N/A'}
+              {currentProject.company && currentProject.location
+                ? `${currentProject.company} • ${currentProject.location}`
+                : currentProject.company || currentProject.location || ''}
             </p>
             {currentProject.commodities && currentProject.commodities.length > 0 && (
               <div className="flex items-center gap-2 mt-1">
@@ -490,18 +490,22 @@ What is your assessment of this project?`
               </span>
             </div>
           </div>
-          <div className="p-2.5">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Stage</span>
-              <Badge variant="outline" className="text-xs">{project.stage || 'Unknown'}</Badge>
+          {project.stage && (
+            <div className="p-2.5">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Stage</span>
+                <Badge variant="outline" className="text-xs">{project.stage}</Badge>
+              </div>
             </div>
-          </div>
-          <div className="p-2.5">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <Badge variant="outline" className="text-xs">{project.status || 'Unknown'}</Badge>
+          )}
+          {project.status && (
+            <div className="p-2.5">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge variant="outline" className="text-xs">{project.status}</Badge>
+              </div>
             </div>
-          </div>
+          )}
           <div className="p-2.5">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Commodities</span>

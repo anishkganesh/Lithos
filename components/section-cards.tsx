@@ -45,6 +45,9 @@ export function SectionCards() {
 
   const fetchDashboardStats = async () => {
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+
       // Fetch total projects
       const { count: projectCount } = await supabase
         .from('projects')
@@ -60,23 +63,36 @@ export function SectionCards() {
         .from('news')
         .select('*', { count: 'exact', head: true })
 
-      // Fetch watchlisted items (projects + companies + news)
-      const { count: watchlistedProjects } = await supabase
-        .from('projects')
-        .select('*', { count: 'exact', head: true })
-        .eq('watchlist', true)
+      // Fetch watchlisted items for CURRENT USER ONLY from dedicated watchlist tables
+      let watchlistedProjects = 0
+      let watchlistedCompanies = 0
+      let watchlistedNews = 0
 
-      const { count: watchlistedCompanies } = await supabase
-        .from('companies')
-        .select('*', { count: 'exact', head: true })
-        .eq('watchlist', true)
+      if (user) {
+        // Get watchlisted projects count from user_project_watchlist table
+        const { count: projectsCount } = await supabase
+          .from('user_project_watchlist')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
 
-      const { count: watchlistedNews } = await supabase
-        .from('news')
-        .select('*', { count: 'exact', head: true })
-        .eq('watchlist', true)
+        // Get watchlisted companies count from user_company_watchlist table (if exists)
+        const { count: companiesCount } = await supabase
+          .from('user_company_watchlist')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
 
-      const totalWatchlisted = (watchlistedProjects || 0) + (watchlistedCompanies || 0) + (watchlistedNews || 0)
+        // Get watchlisted news count from user_news_watchlist table (if exists)
+        const { count: newsWatchCount } = await supabase
+          .from('user_news_watchlist')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+
+        watchlistedProjects = projectsCount || 0
+        watchlistedCompanies = companiesCount || 0
+        watchlistedNews = newsWatchCount || 0
+      }
+
+      const totalWatchlisted = watchlistedProjects + watchlistedCompanies + watchlistedNews
 
       // Calculate growth (mock data for now - in production you'd compare with last month)
       const projectsLastMonth = Math.floor((projectCount || 0) * 0.88)
