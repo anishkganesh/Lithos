@@ -25,6 +25,47 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
+// Parse markdown-style links [text](url) and render as clickable anchors
+function parseMarkdownLinks(text: string) {
+  const parts: (string | JSX.Element)[] = []
+  let lastIndex = 0
+
+  // Regex to match [text](url) format
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+  let match
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    // Add text before the link
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index))
+    }
+
+    // Add the clickable link
+    const linkText = match[1]
+    const url = match[2]
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 dark:text-blue-400 hover:underline"
+      >
+        {linkText}
+      </a>
+    )
+
+    lastIndex = match.index + match[0].length
+  }
+
+  // Add remaining text after the last link
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+
+  return parts.length > 0 ? parts : text
+}
+
 interface AIInsight {
   id: string
   project_id: string
@@ -336,7 +377,7 @@ export function AIInsightsPanel({
             </Badge>
           </div>
           <Progress value={insight.overall_risk_score * 10} className="h-2" />
-          <p className="text-sm text-muted-foreground">{insight.risk_summary}</p>
+          <p className="text-sm text-muted-foreground">{parseMarkdownLinks(insight.risk_summary)}</p>
         </div>
 
         {/* Investment Recommendation */}
@@ -347,7 +388,7 @@ export function AIInsightsPanel({
               {insight.investment_recommendation}
             </Badge>
           </div>
-          <p className="text-sm">{insight.recommendation_rationale}</p>
+          <p className="text-sm">{parseMarkdownLinks(insight.recommendation_rationale)}</p>
         </div>
 
         {/* Risk Categories Tabs */}
@@ -379,7 +420,7 @@ export function AIInsightsPanel({
               </Badge>
             </div>
             <Progress value={insight.geography_risk_score * 10} className="h-1.5" />
-            <p className="text-sm text-muted-foreground">{insight.geography_risk_analysis}</p>
+            <p className="text-sm text-muted-foreground">{parseMarkdownLinks(insight.geography_risk_analysis)}</p>
           </TabsContent>
 
           <TabsContent value="legal" className="space-y-2 mt-4">
@@ -390,7 +431,7 @@ export function AIInsightsPanel({
               </Badge>
             </div>
             <Progress value={insight.legal_risk_score * 10} className="h-1.5" />
-            <p className="text-sm text-muted-foreground">{insight.legal_risk_analysis}</p>
+            <p className="text-sm text-muted-foreground">{parseMarkdownLinks(insight.legal_risk_analysis)}</p>
           </TabsContent>
 
           <TabsContent value="commodity" className="space-y-2 mt-4">
@@ -401,7 +442,7 @@ export function AIInsightsPanel({
               </Badge>
             </div>
             <Progress value={insight.commodity_risk_score * 10} className="h-1.5" />
-            <p className="text-sm text-muted-foreground">{insight.commodity_risk_analysis}</p>
+            <p className="text-sm text-muted-foreground">{parseMarkdownLinks(insight.commodity_risk_analysis)}</p>
           </TabsContent>
 
           <TabsContent value="team" className="space-y-2 mt-4">
@@ -412,7 +453,7 @@ export function AIInsightsPanel({
               </Badge>
             </div>
             <Progress value={insight.team_risk_score * 10} className="h-1.5" />
-            <p className="text-sm text-muted-foreground">{insight.team_risk_analysis}</p>
+            <p className="text-sm text-muted-foreground">{parseMarkdownLinks(insight.team_risk_analysis)}</p>
           </TabsContent>
         </Tabs>
 
@@ -427,7 +468,7 @@ export function AIInsightsPanel({
               {insight.key_opportunities.map((opp, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">{opp}</span>
+                  <span className="text-muted-foreground">{parseMarkdownLinks(opp)}</span>
                 </li>
               ))}
             </ul>
@@ -442,7 +483,7 @@ export function AIInsightsPanel({
               {insight.key_threats.map((threat, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
                   <XCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">{threat}</span>
+                  <span className="text-muted-foreground">{parseMarkdownLinks(threat)}</span>
                 </li>
               ))}
             </ul>
