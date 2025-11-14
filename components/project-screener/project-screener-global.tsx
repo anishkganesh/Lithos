@@ -104,6 +104,21 @@ export function ProjectScreenerGlobal() {
     }
   }, [refetch])
 
+  // Check for pre-selected project from sessionStorage
+  useEffect(() => {
+    const preselectId = sessionStorage.getItem('preselect-project')
+    if (preselectId && data.length > 0) {
+      // Find the index of the project in the data array
+      const projectIndex = data.findIndex(p => p.id === preselectId)
+      if (projectIndex !== -1) {
+        // Set the row selection using the index as the key
+        setRowSelection({ [projectIndex]: true })
+        // Clear the sessionStorage
+        sessionStorage.removeItem('preselect-project')
+      }
+    }
+  }, [data])
+
   const handleProjectClick = (projectId: string) => {
     // Navigate to the project detail page
     router.push(`/projects/${projectId}`)

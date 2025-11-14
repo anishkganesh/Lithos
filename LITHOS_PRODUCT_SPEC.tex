@@ -1,0 +1,310 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{helvet}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{fancyhdr}
+
+% Styling
+\renewcommand{\familydefault}{\sfdefault}
+\definecolor{primaryblue}{RGB}{37, 99, 235}
+\definecolor{sectiongray}{RGB}{75, 85, 99}
+
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{sectiongray}}{\thesubsection}{1em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\thepage}
+
+\setlist[itemize]{leftmargin=*, nosep, before=\vspace{-0.5\baselineskip}, after=\vspace{0.5\baselineskip}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue
+}
+
+\begin{document}
+
+% Header
+\begin{center}
+    {\Huge\bfseries\color{primaryblue} Lithos} \\[0.3em]
+    {\Large AI-Powered Critical Minerals Intelligence Platform} \\[0.5em]
+    {\large Product Specification Document} \\[0.2em]
+    \textit{Bloomberg Terminal for Mining — Built in 8 Weeks}
+\end{center}
+
+\vspace{0.5em}
+
+% Overview Section
+\section*{Product Overview}
+
+\textbf{Lithos} is an AI-powered research and diligence platform for the critical minerals mining industry. It automatically extracts structured data from 400--500 page technical reports, indexes 15,000+ mining projects worldwide, and provides instant AI-powered analysis that cuts analyst research time from \textbf{2 weeks to 2 minutes}.
+
+\subsection*{Core Value Proposition}
+\begin{itemize}
+    \item \textbf{Automated Data Extraction:} LLM-powered pipeline extracts NPV, IRR, CAPEX, reserves, resources, and AISC from NI 43-101 and JORC technical reports
+    \item \textbf{Global Coverage:} 15,000+ projects spanning gold, copper, lithium, nickel, rare earths, and other critical minerals
+    \item \textbf{Instant Intelligence:} AI chat interface for risk analysis, project comparisons, and due diligence queries
+    \item \textbf{Real-Time News Integration:} Automated tracking of permitting updates, production results, and commodity prices
+\end{itemize}
+
+% Core Features Section
+\section*{Core Features}
+
+\subsection*{1. Project Screener \& Database}
+\textbf{Dense, Bloomberg-style table interface with advanced filtering and search}
+\begin{itemize}
+    \item \textbf{15,000+ Indexed Projects:} Global coverage of exploration through production-stage projects
+    \item \textbf{Extracted Financial Metrics:} NPV, IRR, CAPEX, AISC, payback period, production rates
+    \item \textbf{Resource \& Reserve Data:} Measured, indicated, inferred resources; proven and probable reserves
+    \item \textbf{Advanced Multi-Filter System:}
+    \begin{itemize}[leftmargin=2em]
+        \item Filter by commodity (gold, copper, lithium, nickel, rare earths, etc.)
+        \item Filter by country/jurisdiction and stage (exploration, feasibility, production)
+        \item Range filters for NPV, IRR, CAPEX, AISC
+        \item Risk level filtering (Low, Medium, High, Very High)
+    \end{itemize}
+    \item \textbf{Real-Time Global Search:} Instant search across project names, companies, locations
+    \item \textbf{Column Management:} Show/hide columns, custom views, sortable headers
+    \item \textbf{Bulk Actions:} Watchlist management, CSV export, multi-project comparison
+    \item \textbf{Conditional Formatting:} Visual indicators for high IRR, low AISC, elevated risk
+\end{itemize}
+
+\subsection*{2. Project Detail Panel}
+\textbf{Comprehensive single-project analysis with embedded documents and metrics}
+\begin{itemize}
+    \item \textbf{Key Metrics Dashboard:} NPV, IRR, CAPEX, payback, production forecasts
+    \item \textbf{Technical Report Viewer:} Inline PDF viewer for NI 43-101 / JORC reports (400--500 pages)
+    \item \textbf{Resource \& Reserve Breakdown:} Measured, indicated, inferred resources; P\&P reserves
+    \item \textbf{Qualified Persons:} List of report authors with credentials and affiliations
+    \item \textbf{Interactive Maps:} Geospatial visualization with project coordinates
+    \item \textbf{Recent News \& Announcements:} Real-time permitting, production, and commodity updates
+    \item \textbf{Risk Alerts:} Jurisdiction risk, commodity volatility, legal challenges
+    \item \textbf{Similar Projects Recommendations:} AI-powered suggestions based on commodity, stage, location
+    \item \textbf{Multi-Tab Interface:} Overview, Technical Report, AI Insights, News, Experts
+\end{itemize}
+
+\subsection*{3. AI-Powered Insights \& Chat}
+\textbf{GPT-4-powered conversational interface for instant analysis}
+\begin{itemize}
+    \item \textbf{Project-Specific Questions:} "What are the main risks for Odyssey Project?"
+    \item \textbf{Comparative Analysis:} "How does this compare to other gold mines in Ontario?"
+    \item \textbf{Financial Deep Dives:} "What's driving the NPV? Break down the CAPEX."
+    \item \textbf{Risk Assessment:} Instant analysis across geography, legal, commodity, and team dimensions
+    \item \textbf{Document Grounding:} All answers cite technical reports, news, and regulatory filings
+    \item \textbf{Context-Aware:} Remembers conversation history, references previous queries
+    \item \textbf{Multi-Project Context:} Can analyze and compare multiple projects simultaneously
+    \item \textbf{Export Conversations:} Save and share AI analysis for due diligence reports
+\end{itemize}
+
+\subsection*{4. Project Comparison View}
+\textbf{Side-by-side multi-project analysis}
+\begin{itemize}
+    \item \textbf{Select 2--10 Projects:} Compare key metrics across multiple opportunities
+    \item \textbf{Percentage Differences:} Automatic calculation of NPV, IRR, CAPEX deltas
+    \item \textbf{Trend Indicators:} Visual up/down arrows for quick pattern recognition
+    \item \textbf{Detailed Comparison Table:} Stage, location, resource, reserve, financial metrics
+    \item \textbf{Toggle Filters:} Show/hide ESG scores, jurisdiction risk, commodity exposure
+    \item \textbf{Export to CSV/PDF:} Generate comparison reports for investment committees
+\end{itemize}
+
+\subsection*{5. Watchlist \& Portfolio Management}
+\textbf{Track and organize projects of interest}
+\begin{itemize}
+    \item \textbf{One-Click Watchlist:} Bookmark projects for later review
+    \item \textbf{Watchlist Filtering:} Filter screener to show only watchlisted projects
+    \item \textbf{Notifications:} Alerts for news, permitting updates, financial restatements (roadmap)
+    \item \textbf{Custom Tags \& Notes:} Organize projects by thesis, due diligence stage (roadmap)
+\end{itemize}
+
+\subsection*{6. Mining Agent — Automated Data Collection}
+\textbf{Real-time scraping and extraction orchestration system}
+\begin{itemize}
+    \item \textbf{Multi-Source Scraping:} SEDAR (Canada), SEC EDGAR (US), ASX (Australia), LSE (UK)
+    \item \textbf{Document Processor:} Firecrawl-powered extraction from technical reports
+    \item \textbf{LLM Extraction Pipeline:} GPT-4-powered structured data extraction
+    \item \textbf{Progress Tracking:} Real-time updates during scraping operations
+    \item \textbf{Validation System:} Cross-references metrics across multiple report sections
+    \item \textbf{Update Frequency:} New filings processed within 24 hours, news refreshed daily
+    \item \textbf{User Upload:} Upload private technical reports for proprietary project analysis
+\end{itemize}
+
+\subsection*{7. News \& Announcements Feed}
+\textbf{Real-time monitoring of mining industry developments}
+\begin{itemize}
+    \item \textbf{Project-Specific News:} Permitting updates, production results, expansion plans
+    \item \textbf{Commodity Price Tracking:} Gold, copper, lithium, nickel spot and futures prices
+    \item \textbf{Regulatory Filings:} NI 43-101, PEA, PFS, DFS, production reports
+    \item \textbf{AI Summarization:} Extract key points from lengthy announcements
+    \item \textbf{Impact Analysis:} Automatic assessment of news materiality (positive/neutral/negative)
+    \item \textbf{Historical Archive:} Search and filter past announcements
+\end{itemize}
+
+\subsection*{8. Interactive Globe \& Geospatial Views}
+\textbf{Visual exploration of mining projects worldwide}
+\begin{itemize}
+    \item \textbf{3D Globe Visualization:} 15,000 projects plotted with latitude/longitude coordinates
+    \item \textbf{Commodity Color Coding:} Gold (yellow), copper (orange), lithium (purple), etc.
+    \item \textbf{Cluster Analysis:} Identify mining districts and regional trends
+    \item \textbf{Zoom \& Pan:} Explore specific regions (Ontario, Quebec, Western Australia, etc.)
+    \item \textbf{Click-to-Detail:} Select projects directly from the globe for instant analysis
+    \item \textbf{Heatmaps:} Visualize NPV concentration, IRR distributions, risk hotspots (roadmap)
+\end{itemize}
+
+\subsection*{9. Company Screener}
+\textbf{Analyze mining companies and their project portfolios}
+\begin{itemize}
+    \item \textbf{Company Database:} Public and private mining companies with project holdings
+    \item \textbf{Portfolio View:} See all projects owned by a single company
+    \item \textbf{Aggregate Metrics:} Total NPV, CAPEX, production across company portfolio
+    \item \textbf{Market Data:} Stock price, market cap, enterprise value (for public companies)
+    \item \textbf{Management Team:} Key personnel with backgrounds and credentials
+    \item \textbf{Company Comparison:} Side-by-side analysis of competing operators
+\end{itemize}
+
+\subsection*{10. Document Upload \& Private Projects}
+\textbf{Proprietary document analysis for confidential diligence}
+\begin{itemize}
+    \item \textbf{Upload NI 43-101 / JORC Reports:} Drag-and-drop PDF upload
+    \item \textbf{Automatic Extraction:} Same LLM pipeline extracts NPV, IRR, CAPEX, reserves
+    \item \textbf{Private Projects:} User-specific projects invisible to other users
+    \item \textbf{Secure Storage:} Supabase Storage with user-level access control
+    \item \textbf{Full Feature Access:} AI chat, comparison, sensitivity analysis for private docs
+\end{itemize}
+
+\subsection*{11. Sensitivity Analysis}
+\textbf{Real-time financial modeling with adjustable assumptions}
+\begin{itemize}
+    \item \textbf{Commodity Price Scenarios:} Adjust gold, copper, lithium prices to see NPV impact
+    \item \textbf{Discount Rate Tuning:} Test NPV sensitivity to 5\%, 8\%, 10\%, 12\% discount rates
+    \item \textbf{CAPEX \& OPEX Multipliers:} Model cost overruns (1.2x, 1.5x, 2.0x scenarios)
+    \item \textbf{Production Rate Adjustments:} Test throughput changes on IRR and payback
+    \item \textbf{Interactive Sliders:} Real-time recalculation as inputs change
+    \item \textbf{Scenario Comparison:} Save and compare bull, base, and bear cases
+\end{itemize}
+
+\subsection*{12. Export \& Reporting}
+\textbf{Generate reports and export data for external use}
+\begin{itemize}
+    \item \textbf{CSV Export:} Full project screener data with all metrics
+    \item \textbf{PDF Reports:} Single-project summaries with charts and metrics (roadmap)
+    \item \textbf{Comparison Reports:} Multi-project analysis for investment committees
+    \item \textbf{API Access:} Programmatic access for integration with internal tools (roadmap)
+\end{itemize}
+
+% Technical Architecture
+\section*{Technical Stack}
+
+\begin{multicols}{2}
+\textbf{Frontend:}
+\begin{itemize}
+    \item Next.js 15.2.4 (App Router)
+    \item TypeScript (strict mode)
+    \item Tailwind CSS
+    \item Radix UI + shadcn/ui
+    \item TanStack Table
+    \item Recharts
+\end{itemize}
+
+\columnbreak
+
+\textbf{Backend:}
+\begin{itemize}
+    \item Supabase (PostgreSQL)
+    \item Supabase Auth
+    \item OpenAI GPT-4 API
+    \item Firecrawl API (scraping)
+    \item News API (announcements)
+    \item Next.js API Routes
+\end{itemize}
+\end{multicols}
+
+\textbf{Data Sources:}
+\begin{itemize}
+    \item SEDAR (Canadian regulatory filings)
+    \item SEC EDGAR (US regulatory filings)
+    \item ASX (Australian Stock Exchange)
+    \item LSE (London Stock Exchange)
+    \item Company websites and technical report repositories
+    \item News APIs and RSS feeds
+\end{itemize}
+
+% Traction & Metrics
+\section*{Current Traction}
+
+\begin{itemize}
+    \item \textbf{Projects Indexed:} 15,000+ mining projects worldwide
+    \item \textbf{Technical Reports Processed:} Thousands of NI 43-101 and JORC reports
+    \item \textbf{Development Timeline:} 8 weeks from concept to functional platform
+    \item \textbf{Design Partners:} 5 active users testing daily (mining analysts and fund managers)
+    \item \textbf{Early Feedback:} "Cuts research time from 2 weeks to 2 hours per project"
+    \item \textbf{LOIs Signed:} 2 letters of intent from mid-market funds
+\end{itemize}
+
+% Business Model
+\section*{Business Model}
+
+\textbf{SaaS Subscription Pricing:}
+\begin{itemize}
+    \item \textbf{Individual Analyst:} \$500/user/month
+    \item \textbf{Team Plan (5--20 users):} \$400/user/month
+    \item \textbf{Enterprise (20+ users):} \$50,000/year base + \$300/user/month
+    \item \textbf{Custom Data Feeds:} API access for integration with internal systems
+\end{itemize}
+
+\textbf{Target Customers:}
+\begin{itemize}
+    \item Mining-focused hedge funds and private equity firms
+    \item Investment banks (mining coverage teams)
+    \item Mining companies (corporate development, M\&A teams)
+    \item Junior mining companies (competitive intelligence)
+    \item Government agencies (resource assessment, policy planning)
+\end{itemize}
+
+% Roadmap
+\section*{Product Roadmap}
+
+\subsection*{Q2 2025 (Next 90 Days)}
+\begin{itemize}
+    \item \textbf{Expand to Oil \& Gas:} Same extraction pipeline, SEC reservoir reports
+    \item \textbf{Enhanced AI Models:} Fine-tune GPT-4 on mining-specific corpus
+    \item \textbf{Real-Time Alerts:} Push notifications for news, permitting, price changes
+    \item \textbf{Portfolio Construction:} Build and optimize portfolios across commodities
+\end{itemize}
+
+\subsection*{H2 2025 (6--12 Months)}
+\begin{itemize}
+    \item \textbf{Infrastructure \& Real Estate:} Extend to capital-intensive asset classes
+    \item \textbf{Collaboration Tools:} Team workspaces, shared annotations, version control
+    \item \textbf{Advanced Geospatial:} Satellite imagery analysis, mine site monitoring
+    \item \textbf{API \& Integrations:} Bloomberg Terminal plugin, Excel add-in, Slack bot
+\end{itemize}
+
+% Competitive Advantage
+\section*{Key Differentiators}
+
+\begin{itemize}
+    \item \textbf{Automated Extraction:} Only platform extracting structured data from 400--500 page reports at scale
+    \item \textbf{AI-First Architecture:} Built for LLMs from day one, not retrofitted onto legacy systems
+    \item \textbf{Speed:} 8-week build demonstrates rapid iteration and product velocity
+    \item \textbf{Vertical Focus:} Deep mining expertise vs. horizontal data platforms (Capital IQ, PitchBook)
+    \item \textbf{User Experience:} Modern, Bloomberg-inspired UI vs. clunky legacy interfaces
+\end{itemize}
+
+\vspace{1em}
+
+\begin{center}
+\textit{Lithos — Turning weeks of mining research into seconds.} \\
+\texttt{www.lithos.ai} $\cdot$ \texttt{team@lithos.ai}
+\end{center}
+
+\end{document}

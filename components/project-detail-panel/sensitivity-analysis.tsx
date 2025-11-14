@@ -394,7 +394,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
             <Card>
               <CardContent className="p-4">
                 <div className="text-xs text-muted-foreground mb-1">NPV</div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
                   {baselineNPV > 0 ? `$${npv.toFixed(0)}M` : 'N/A'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -408,7 +408,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
             <Card>
               <CardContent className="p-4">
                 <div className="text-xs text-muted-foreground mb-1">IRR</div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-300">
                   {baselineIRR > 0 ? `${irr.toFixed(1)}%` : 'N/A'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -422,7 +422,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
             <Card>
               <CardContent className="p-4">
                 <div className="text-xs text-muted-foreground mb-1">AISC</div>
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-300">
                   {baselineAISC ? `$${aisc.toFixed(2)}` : 'N/A'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -468,8 +468,8 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
                       <td className="py-2 text-right font-medium">{values.price}%</td>
                       <td className={`py-2 text-right font-medium ${
                         parseFloat(getPercentChange(values.price, parameters[0].baseline)) >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? 'text-green-600 dark:text-green-300'
+                          : 'text-red-600 dark:text-red-300'
                       }`}>
                         {getPercentChange(values.price, parameters[0].baseline)}%
                       </td>
@@ -480,8 +480,8 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
                       <td className="py-2 text-right font-medium">{values.grade}%</td>
                       <td className={`py-2 text-right font-medium ${
                         parseFloat(getPercentChange(values.grade, parameters[2].baseline)) >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? 'text-green-600 dark:text-green-300'
+                          : 'text-red-600 dark:text-red-300'
                       }`}>
                         {getPercentChange(values.grade, parameters[2].baseline)}%
                       </td>
@@ -490,7 +490,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
                       <td className="py-2 font-semibold">NPV</td>
                       <td className="py-2 text-right text-muted-foreground">${baselineNPV}M</td>
                       <td className="py-2 text-right font-semibold">${npv.toFixed(0)}M</td>
-                      <td className={`py-2 text-right font-semibold ${npvTrend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className={`py-2 text-right font-semibold ${npvTrend >= 0 ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
                         {npvTrend.toFixed(1)}%
                       </td>
                     </tr>

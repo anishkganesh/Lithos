@@ -915,8 +915,39 @@ What is your assessment of this project?`
       {/* Quick Actions */}
       <div className="sticky bottom-0 bg-background border-t pt-4 -mx-6 px-6 -mb-6">
         <div className="flex gap-2">
-          <Button className="flex-1" size="sm">Compare Projects</Button>
-          <Button className="flex-1" variant="outline" size="sm">Export Analysis</Button>
+          <Button
+            className="flex-1"
+            size="sm"
+            onClick={() => {
+              // Close the detail panel first if there's an onClose handler
+              if (onClose) {
+                onClose()
+              }
+
+              // Navigate back to global projects with this project pre-selected
+              // Use setTimeout to ensure the page loads before we try to select the row
+              router.push(`/global-projects`)
+
+              setTimeout(() => {
+                // Store the project ID in sessionStorage so the screener can pre-select it
+                sessionStorage.setItem('preselect-project', project.id)
+
+                toast.info('Select more projects to compare', {
+                  description: 'This project is selected. Pick 1+ more and click Compare.'
+                })
+              }, 100)
+            }}
+          >
+            Compare Projects
+          </Button>
+          <Button
+            className="flex-1"
+            variant="outline"
+            size="sm"
+            onClick={() => handleExport('excel')}
+          >
+            Export Analysis
+          </Button>
         </div>
       </div>
       <Toaster />

@@ -1,0 +1,1031 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{ebgaramond}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{fancyhdr}
+
+% Styling
+\definecolor{primaryblue}{RGB}{37, 99, 235}
+\definecolor{sectiongray}{RGB}{55, 65, 81}
+\definecolor{accentgold}{RGB}{202, 138, 4}
+
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{sectiongray}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{sectiongray}}{\thesubsubsection}{0.5em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{Lithos Product Specification}}
+\fancyhead[R]{\small\textit{Confidential}}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyfoot[C]{\thepage}
+
+\setlist[itemize]{leftmargin=*, nosep, before=\vspace{-0.3\baselineskip}, after=\vspace{0.3\baselineskip}}
+\setlist[enumerate]{leftmargin=*, nosep, before=\vspace{-0.3\baselineskip}, after=\vspace{0.3\baselineskip}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue
+}
+
+\begin{document}
+
+% Title Page
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+
+{\Huge\bfseries\color{primaryblue} Lithos} \\[0.5em]
+{\LARGE AI-Powered Critical Minerals Intelligence Platform} \\[2cm]
+
+{\Large\bfseries Product Specification Document} \\[0.5em]
+{\large Detailed Version} \\[3cm]
+
+{\large\textit{Bloomberg Terminal for Mining — Built in 8 Weeks}} \\[1cm]
+
+{\large\textit{Turning Weeks of Mining Research into Seconds}} \\[4cm]
+
+{\large \today} \\[0.5cm]
+
+\texttt{www.lithos.ai} $\cdot$ \texttt{team@lithos.ai}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% Executive Summary
+\section{Executive Summary}
+
+\textbf{Lithos} is an AI-powered research and diligence platform purpose-built for the critical minerals mining industry. We solve the fundamental problem that mining analysts face: extracting structured data from 400--500 page technical reports takes weeks per project, creating a massive bottleneck in the investment and operational decision-making process.
+
+Our solution uses a fine-tuned LLM extraction pipeline to automatically pull NPV, IRR, CAPEX, reserves, resources, and AISC from NI 43-101 and JORC technical reports. We've indexed 15,000+ mining projects worldwide and provide instant AI-powered analysis that cuts analyst research time from \textbf{2 weeks to 2 minutes}.
+
+\subsection{The Problem}
+
+Mining is a \$2 trillion industry where every investment decision depends on reading and analyzing massive technical documents:
+
+\begin{itemize}
+    \item \textbf{400--500 page technical reports:} NI 43-101 (Canada), JORC (Australia), 43-101F1 reports
+    \item \textbf{2 weeks per project:} Analysts manually extract NPV (page 201), reserves (page 87), CAPEX (page 143)
+    \item \textbf{15,000+ global projects:} Impossible for analysts to track systematically
+    \item \textbf{Scattered data sources:} SEDAR, SEC EDGAR, ASX, LSE, company websites
+    \item \textbf{No centralized intelligence:} Bloomberg has commodity prices but not project-level technical data
+\end{itemize}
+
+\subsection{Our Solution}
+
+\begin{enumerate}
+    \item \textbf{Automated Extraction:} LLM-powered pipeline extracts structured data from technical reports automatically
+    \item \textbf{Global Coverage:} 15,000+ projects across gold, copper, lithium, nickel, rare earths
+    \item \textbf{AI Intelligence:} GPT-4-powered chat for instant risk analysis, project comparisons, due diligence
+    \item \textbf{Real-Time Updates:} 24-hour processing of new filings, daily news refresh
+    \item \textbf{Modern Interface:} Bloomberg-inspired UI with advanced filtering, bulk actions, export
+\end{enumerate}
+
+\subsection{Traction \& Validation}
+
+\begin{itemize}
+    \item \textbf{8 weeks} from concept to functional platform
+    \item \textbf{15,000+} mining projects indexed worldwide
+    \item \textbf{5 design partners} using daily (mining analysts, fund managers)
+    \item \textbf{2 LOIs signed} from mid-market mining-focused funds
+    \item \textbf{User feedback:} "Cuts research time from 2 weeks to 2 hours per project"
+\end{itemize}
+
+\subsection{Market Opportunity}
+
+\begin{itemize}
+    \item \textbf{\$2 trillion} global mining industry
+    \item \textbf{10,000+} mining analysts, geologists, fund managers worldwide
+    \item \textbf{\$500--\$2,000/month} willingness to pay for research automation tools
+    \item \textbf{Adjacent markets:} Oil \& gas (\$3T), infrastructure (\$5T), real estate (\$10T)
+\end{itemize}
+
+\newpage
+
+\section{Product Overview}
+
+\subsection{Core Value Proposition}
+
+Lithos is the \textbf{only platform} that automatically extracts structured data from 400--500 page mining technical reports at scale, combines it with real-time news and regulatory filings, and provides AI-powered analysis in seconds.
+
+\begin{itemize}
+    \item \textbf{Automated Data Extraction:} LLM-powered pipeline extracts NPV, IRR, CAPEX, reserves, resources, AISC from NI 43-101 and JORC technical reports
+    \item \textbf{Global Coverage:} 15,000+ projects spanning gold, copper, lithium, nickel, rare earths, and other critical minerals
+    \item \textbf{Instant Intelligence:} AI chat interface for risk analysis, project comparisons, and due diligence queries in seconds
+    \item \textbf{Real-Time News Integration:} Automated tracking of permitting updates, production results, commodity prices
+    \item \textbf{Modern UX:} Bloomberg-inspired interface with advanced filtering, bulk actions, export capabilities
+\end{itemize}
+
+\subsection{Technical Architecture}
+
+\subsubsection{Frontend Stack}
+\begin{itemize}
+    \item \textbf{Framework:} Next.js 15.2.4 with App Router
+    \item \textbf{Language:} TypeScript (strict mode enabled)
+    \item \textbf{UI Components:} Radix UI primitives + shadcn/ui component library
+    \item \textbf{Styling:} Tailwind CSS with custom design system
+    \item \textbf{Tables:} TanStack Table (formerly React Table) for advanced data grids
+    \item \textbf{Charts:} Recharts for financial visualizations
+    \item \textbf{Maps:} Mapbox GL JS for interactive geospatial views
+\end{itemize}
+
+\subsubsection{Backend Stack}
+\begin{itemize}
+    \item \textbf{Database:} Supabase (PostgreSQL) with Row Level Security (RLS)
+    \item \textbf{Authentication:} Supabase Auth with email/password and OAuth providers
+    \item \textbf{Storage:} Supabase Storage for technical report PDFs (user-uploaded documents)
+    \item \textbf{AI/LLM:} OpenAI GPT-4 API for extraction and conversational intelligence
+    \item \textbf{Web Scraping:} Firecrawl API for document extraction from regulatory sites
+    \item \textbf{News:} News API for real-time mining industry announcements
+    \item \textbf{API Routes:} Next.js API routes for backend logic
+\end{itemize}
+
+\subsubsection{Data Sources}
+\begin{itemize}
+    \item \textbf{SEDAR:} Canadian regulatory filings (System for Electronic Document Analysis and Retrieval)
+    \item \textbf{SEC EDGAR:} US regulatory filings (Electronic Data Gathering, Analysis, and Retrieval)
+    \item \textbf{ASX:} Australian Stock Exchange announcements and technical reports
+    \item \textbf{LSE:} London Stock Exchange regulatory news service (RNS)
+    \item \textbf{Company Websites:} Technical report repositories and investor relations pages
+    \item \textbf{News APIs:} RSS feeds and news aggregation services
+\end{itemize}
+
+\subsubsection{Extraction Pipeline}
+
+\textbf{Step 1: Document Acquisition}
+\begin{itemize}
+    \item Automated scraping of SEDAR, SEC EDGAR, ASX, LSE
+    \item Firecrawl API extracts text from PDF technical reports (400--500 pages)
+    \item User uploads for private/proprietary documents
+\end{itemize}
+
+\textbf{Step 2: Document Processing}
+\begin{itemize}
+    \item GPT-4 with structured extraction prompts
+    \item Multi-pass extraction: executive summary $\rightarrow$ mineral resources $\rightarrow$ mineral reserves $\rightarrow$ economics section
+    \item Entity recognition for qualified persons, companies, locations
+\end{itemize}
+
+\textbf{Step 3: Validation}
+\begin{itemize}
+    \item Cross-reference metrics across multiple report sections
+    \item Sanity checks (e.g., NPV must be positive, IRR 5--40\%, CAPEX < \$10B)
+    \item Qualified person validation against professional directories (P.Geo, P.Eng, etc.)
+\end{itemize}
+
+\textbf{Step 4: Storage}
+\begin{itemize}
+    \item Structured data stored in Supabase PostgreSQL
+    \item Original PDFs stored in Supabase Storage with signed URLs
+    \item Geospatial coordinates indexed with PostGIS extension
+\end{itemize}
+
+\newpage
+
+\section{Core Features — Detailed Specifications}
+
+\subsection{1. Project Screener \& Database}
+
+\textbf{Overview:} Dense, Bloomberg-style table interface displaying 15,000+ mining projects with advanced filtering, search, sorting, and bulk actions.
+
+\subsubsection{Data Schema}
+
+Each project in the database contains:
+
+\begin{itemize}
+    \item \textbf{Identifiers:} Project ID, Company ID, Project Name, Company Name
+    \item \textbf{Location:} Country, Province/State, Latitude, Longitude
+    \item \textbf{Stage:} Exploration, Pre-Feasibility, Feasibility, Development, Construction, Production, On Hold
+    \item \textbf{Commodities:} Primary and secondary commodities (gold, copper, lithium, nickel, rare earths, etc.)
+    \item \textbf{Financial Metrics:}
+    \begin{itemize}
+        \item NPV (Net Present Value in millions USD)
+        \item IRR (Internal Rate of Return as percentage)
+        \item CAPEX (Capital Expenditure in millions USD)
+        \item AISC (All-In Sustaining Cost in USD per oz/lb/tonne)
+        \item Payback Period (years)
+        \item Production Rate (oz/year, tonnes/year)
+    \end{itemize}
+    \item \textbf{Resource Estimates:} Measured, Indicated, Inferred (tonnes @ grade)
+    \item \textbf{Reserve Estimates:} Proven \& Probable (tonnes @ grade)
+    \item \textbf{Qualified Persons:} Report authors with credentials (P.Geo, P.Eng, MAIG, etc.)
+    \item \textbf{Technical Reports:} URLs to NI 43-101, JORC, 43-101F1 reports
+    \item \textbf{Status:} Active, On Hold, Abandoned
+    \item \textbf{User Fields:} Watchlist flag, created\_at, updated\_at, user\_id (for private projects)
+\end{itemize}
+
+\subsubsection{Filtering System}
+
+\textbf{Multi-Select Filters:}
+\begin{itemize}
+    \item \textbf{Commodity:} Gold, Copper, Lithium, Nickel, Cobalt, Rare Earths, Uranium, Zinc, Silver, etc. (support for multiple selections)
+    \item \textbf{Country/Jurisdiction:} Canada, Australia, USA, Chile, Peru, Mexico, etc.
+    \item \textbf{Stage:} Exploration, Pre-Feasibility, Feasibility, Development, Construction, Production
+    \item \textbf{Risk Level:} Low, Medium, High, Very High (calculated from jurisdiction, commodity volatility, legal issues)
+\end{itemize}
+
+\textbf{Range Filters:}
+\begin{itemize}
+    \item \textbf{NPV Range:} Slider from \$0M to \$10,000M with custom input fields
+    \item \textbf{IRR Range:} Slider from 0\% to 50\% with custom input fields
+    \item \textbf{CAPEX Range:} Slider from \$0M to \$5,000M with custom input fields
+    \item \textbf{AISC Range:} Slider from \$0/oz to \$2,000/oz with custom input fields
+\end{itemize}
+
+\textbf{Search:}
+\begin{itemize}
+    \item Global search across project names, company names, locations
+    \item Real-time filtering as user types
+    \item Fuzzy matching for misspellings
+\end{itemize}
+
+\subsubsection{Table Features}
+
+\begin{itemize}
+    \item \textbf{Column Management:} Show/hide columns via dropdown menu
+    \item \textbf{Sortable Headers:} Click to sort by any column (ascending/descending)
+    \item \textbf{Row Selection:} Checkbox column for multi-select (supports Shift+Click for range selection)
+    \item \textbf{Pagination:} 25/50/100/200 rows per page with page navigation
+    \item \textbf{Conditional Formatting:}
+    \begin{itemize}
+        \item Green highlight for IRR > 20\%
+        \item Red highlight for IRR < 10\%
+        \item Yellow highlight for AISC in bottom quartile (low cost)
+        \item Red badge for "High" or "Very High" risk level
+    \end{itemize}
+    \item \textbf{Cell Tooltips:} Hover over cells to see full text (for truncated values)
+    \item \textbf{Row Actions:} Click row to open detail panel, right-click for context menu
+\end{itemize}
+
+\subsubsection{Bulk Actions}
+
+\begin{itemize}
+    \item \textbf{Add to Watchlist:} Select multiple projects, click "Add to Watchlist"
+    \item \textbf{Remove from Watchlist:} Select multiple watchlisted projects, click "Remove from Watchlist"
+    \item \textbf{Compare Projects:} Select 2--10 projects, click "Compare" to open comparison view
+    \item \textbf{Export to CSV:} Select projects (or export all filtered), download as CSV with all metrics
+    \item \textbf{Generate Report:} (Roadmap) Select projects, generate PDF summary report
+\end{itemize}
+
+\subsubsection{Saved Views}
+
+\begin{itemize}
+    \item \textbf{Create Custom View:} Save current filter state + visible columns + sort order
+    \item \textbf{Named Views:} "Canadian Gold Projects", "High-IRR Lithium", "Pre-Feasibility Copper", etc.
+    \item \textbf{Quick Load:} Dropdown menu to load saved views instantly
+    \item \textbf{Share Views:} (Roadmap) Share saved views with team members via URL
+\end{itemize}
+
+\subsection{2. Project Detail Panel}
+
+\textbf{Overview:} Full-screen panel that slides in from the right, displaying comprehensive project information with tabs for Overview, Technical Report, AI Insights, News, and Experts.
+
+\subsubsection{Tab 1: Overview}
+
+\textbf{Key Metrics Cards:}
+\begin{itemize}
+    \item \textbf{NPV Card:} Net Present Value in millions USD, with base discount rate (typically 8\%)
+    \item \textbf{IRR Card:} Internal Rate of Return as percentage, with color coding (green > 20\%, yellow 10--20\%, red < 10\%)
+    \item \textbf{CAPEX Card:} Capital Expenditure in millions USD, broken down by pre-production, sustaining, closure
+    \item \textbf{AISC Card:} All-In Sustaining Cost per unit (oz, lb, tonne), with benchmark comparison
+    \item \textbf{Payback Card:} Payback period in years
+    \item \textbf{Production Card:} Annual production rate (oz/year, tonnes/year), mine life
+\end{itemize}
+
+\textbf{Resource \& Reserve Tables:}
+\begin{itemize}
+    \item \textbf{Mineral Resources:} Measured, Indicated, Inferred (tonnes, grade, contained metal)
+    \item \textbf{Mineral Reserves:} Proven, Probable (tonnes, grade, contained metal)
+    \item \textbf{Visual Chart:} Bar chart showing resource/reserve breakdown by category
+\end{itemize}
+
+\textbf{Interactive Map:}
+\begin{itemize}
+    \item Mapbox GL JS map centered on project coordinates
+    \item Satellite or terrain base layer
+    \item Project marker with popup showing name, commodity, stage
+    \item Nearby projects shown as smaller markers (within 100km radius)
+\end{itemize}
+
+\textbf{Risk Alerts:}
+\begin{itemize}
+    \item \textbf{Jurisdiction Risk:} Red/yellow/green indicator based on mining policy, corruption index, permitting timeline
+    \item \textbf{Commodity Risk:} Volatility indicator based on historical price swings
+    \item \textbf{Legal Issues:} Flag for ongoing litigation, environmental challenges, indigenous disputes
+    \item \textbf{Financial Risk:} Flag for recent financing difficulties, project delays, cost overruns
+\end{itemize}
+
+\textbf{Similar Projects:}
+\begin{itemize}
+    \item AI-powered recommendations (same commodity, similar stage, same jurisdiction)
+    \item Click to open side-by-side comparison
+\end{itemize}
+
+\subsubsection{Tab 2: Technical Report}
+
+\begin{itemize}
+    \item \textbf{Inline PDF Viewer:} Embedded PDF.js viewer for 400--500 page NI 43-101 / JORC reports
+    \item \textbf{Navigation Sidebar:} Table of contents extracted from PDF bookmarks
+    \item \textbf{Search:} Full-text search within the PDF
+    \item \textbf{Highlight \& Annotate:} (Roadmap) Highlight text, add notes, share with team
+    \item \textbf{Download:} Download original PDF for offline reading
+\end{itemize}
+
+\subsubsection{Tab 3: AI Insights}
+
+\begin{itemize}
+    \item \textbf{Pre-Generated Insights:} Executive summary, key risks, investment highlights (generated on page load)
+    \item \textbf{Interactive Chat:} Ask questions like "What are the main risks?", "How does CAPEX compare to peers?", "What's driving the NPV?"
+    \item \textbf{Document Grounding:} All answers cite specific sections of the technical report (e.g., "According to Section 22.3 on page 143...")
+    \item \textbf{Conversation History:} Previous questions and answers preserved during session
+    \item \textbf{Export Conversation:} Download chat transcript as PDF or Markdown
+\end{itemize}
+
+\subsubsection{Tab 4: News \& Announcements}
+
+\begin{itemize}
+    \item \textbf{Project-Specific News:} Permitting updates, production results, expansion plans, M\&A activity
+    \item \textbf{Timeline View:} Chronological list of news articles with date, headline, source
+    \item \textbf{AI Summarization:} Click "Summarize" to extract key points from lengthy announcements
+    \item \textbf{Impact Analysis:} Automatic classification as positive/neutral/negative for NPV impact
+    \item \textbf{Filters:} Filter by date range, news type (permitting, production, financial, legal)
+\end{itemize}
+
+\subsubsection{Tab 5: Experts \& Qualified Persons}
+
+\begin{itemize}
+    \item \textbf{Qualified Persons:} List of report authors with names, credentials (P.Geo, P.Eng, MAIG), affiliations
+    \item \textbf{Professional Verification:} Links to professional association directories (APGO, PEO, AusIMM)
+    \item \textbf{Previous Reports:} Other projects where the same qualified person was involved
+    \item \textbf{Contact Info:} (If available) Email, LinkedIn profile
+\end{itemize}
+
+\subsection{3. AI-Powered Insights \& Chat}
+
+\textbf{Overview:} GPT-4-powered conversational interface for instant analysis, risk assessment, project comparisons, and due diligence.
+
+\subsubsection{Capabilities}
+
+\textbf{Project-Specific Questions:}
+\begin{itemize}
+    \item "What are the main risks for Odyssey Project?"
+    \item "What's driving the NPV for this project?"
+    \item "Break down the CAPEX by category."
+    \item "What are the qualified persons' credentials?"
+    \item "Summarize the resource estimate methodology."
+\end{itemize}
+
+\textbf{Comparative Analysis:}
+\begin{itemize}
+    \item "How does this compare to other gold mines in Ontario?"
+    \item "Is the IRR above or below the industry average for this commodity?"
+    \item "Compare AISC to peers in the same jurisdiction."
+    \item "Which similar projects have higher NPV?"
+\end{itemize}
+
+\textbf{Financial Deep Dives:}
+\begin{itemize}
+    \item "What commodity price was used in the NPV calculation?"
+    \item "What discount rate was applied?"
+    \item "What's the sensitivity of NPV to gold price changes?"
+    \item "What's the breakdown of OPEX (mining, processing, G\&A)?"
+\end{itemize}
+
+\textbf{Risk Assessment:}
+\begin{itemize}
+    \item "What are the jurisdiction risks for this project?"
+    \item "What environmental or social challenges might affect permitting?"
+    \item "What's the commodity price volatility risk?"
+    \item "What's the company's track record on project execution?"
+\end{itemize}
+
+\subsubsection{Technical Implementation}
+
+\begin{itemize}
+    \item \textbf{Model:} OpenAI GPT-4 (gpt-4-turbo or gpt-4o)
+    \item \textbf{Context Window:} Up to 128K tokens for long technical reports
+    \item \textbf{Document Retrieval:} Embedding-based search (OpenAI text-embedding-ada-002) to find relevant sections
+    \item \textbf{Prompt Engineering:} System prompts with mining domain knowledge, structured output formats
+    \item \textbf{Grounding:} All answers cite page numbers and sections from technical reports
+    \item \textbf{Conversation Memory:} Previous messages stored in session for context-aware follow-ups
+\end{itemize}
+
+\subsection{4. Project Comparison View}
+
+\textbf{Overview:} Side-by-side analysis of 2--10 projects with percentage differences, trend indicators, and detailed comparison tables.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{Select Projects:} From screener table, select 2--10 projects, click "Compare"
+    \item \textbf{Summary Cards:} Top row shows key metrics (NPV, IRR, CAPEX, AISC) for each project
+    \item \textbf{Percentage Differences:} Automatic calculation of deltas between projects (e.g., "Project A has 35\% higher NPV than Project B")
+    \item \textbf{Trend Indicators:} Up/down arrows for quick visual comparison (green up for better, red down for worse)
+    \item \textbf{Detailed Table:} Row-by-row comparison of stage, location, commodity, resource, reserve, financial metrics
+    \item \textbf{Toggle Filters:} Show/hide ESG scores, jurisdiction risk, commodity exposure
+    \item \textbf{Export:} Generate CSV or PDF comparison report for investment committees
+\end{itemize}
+
+\subsection{5. Watchlist \& Portfolio Management}
+
+\textbf{Overview:} Track and organize projects of interest for ongoing monitoring.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{One-Click Watchlist:} Bookmark icon in screener table and detail panel
+    \item \textbf{Watchlist View:} Filter screener to show only watchlisted projects
+    \item \textbf{Watchlist Badge:} Visual indicator (gold star) for watchlisted projects
+    \item \textbf{Notifications:} (Roadmap) Email/Slack alerts for news, permitting updates, financial restatements
+    \item \textbf{Custom Tags:} (Roadmap) Tag projects by investment thesis ("Near-term production", "High-risk/high-reward", "M\&A target")
+    \item \textbf{Notes:} (Roadmap) Add private notes to projects for due diligence tracking
+\end{itemize}
+
+\subsection{6. Mining Agent — Automated Data Collection}
+
+\textbf{Overview:} Real-time scraping and extraction orchestration system for ingesting new technical reports and regulatory filings.
+
+\subsubsection{Architecture}
+
+\textbf{Components:}
+\begin{enumerate}
+    \item \textbf{Scrapers:} SEDAR scraper, SEC EDGAR scraper, ASX scraper, LSE scraper, generic web scraper
+    \item \textbf{Document Processor:} Firecrawl API for PDF text extraction
+    \item \textbf{LLM Extractor:} GPT-4-powered structured data extraction
+    \item \textbf{Validator:} Cross-references metrics, sanity checks, qualified person verification
+    \item \textbf{Database Writer:} Stores extracted data in Supabase PostgreSQL
+    \item \textbf{Progress Tracker:} Real-time updates via WebSocket for UI progress bar
+\end{enumerate}
+
+\textbf{Workflow:}
+\begin{enumerate}
+    \item User clicks "Run Mining Agent" or agent runs on schedule (daily cron job)
+    \item Agent fetches new filings from SEDAR, SEC EDGAR, ASX, LSE (based on last run timestamp)
+    \item Identifies NI 43-101, JORC, PEA, PFS, DFS filings by keyword matching
+    \item Downloads PDFs, sends to Firecrawl API for text extraction
+    \item Sends extracted text to GPT-4 with structured prompts (extract NPV, IRR, CAPEX, reserves)
+    \item Validates extracted data (sanity checks, cross-references)
+    \item Writes to database, updates projects table
+    \item Sends progress updates to UI via WebSocket ("Processing 10/50 documents...")
+    \item On completion, triggers refresh of screener table
+\end{enumerate}
+
+\subsubsection{User Upload}
+
+\begin{itemize}
+    \item \textbf{Drag-and-Drop:} Upload PDF technical reports from file system
+    \item \textbf{Private Projects:} User-uploaded projects are private by default (user\_id field, RLS policy)
+    \item \textbf{Automatic Extraction:} Same LLM pipeline extracts NPV, IRR, CAPEX, reserves
+    \item \textbf{Secure Storage:} PDFs stored in Supabase Storage with user-level access control
+    \item \textbf{Full Feature Access:} Private projects appear in screener (only for owner), support AI chat, comparison, sensitivity
+\end{itemize}
+
+\subsection{7. News \& Announcements Feed}
+
+\textbf{Overview:} Real-time monitoring of mining industry developments with AI summarization and impact analysis.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{Project-Specific News:} Permitting updates, production results, expansion plans, M\&A, financing
+    \item \textbf{Commodity Price Tracking:} Gold, copper, lithium, nickel spot prices and futures
+    \item \textbf{Regulatory Filings:} NI 43-101, PEA, PFS, DFS, annual reports, MD\&A
+    \item \textbf{AI Summarization:} Click "Summarize" to extract key points from 20-page press releases
+    \item \textbf{Impact Analysis:} Automatic classification (positive/neutral/negative) for NPV impact
+    \item \textbf{Historical Archive:} Search and filter past announcements by date, project, company
+    \item \textbf{Alerts:} (Roadmap) Set alerts for specific projects, keywords, or news types
+\end{itemize}
+
+\subsection{8. Interactive Globe \& Geospatial Views}
+
+\textbf{Overview:} 3D visualization of 15,000 projects worldwide with commodity color coding and cluster analysis.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{3D Globe:} Mapbox GL JS or Cesium.js with 3D terrain
+    \item \textbf{15,000 Projects Plotted:} Each project marker at latitude/longitude coordinates
+    \item \textbf{Commodity Color Coding:} Gold (yellow), copper (orange), lithium (purple), nickel (green), rare earths (blue)
+    \item \textbf{Cluster Analysis:} Identify mining districts (e.g., Ontario gold belt, Chilean copper corridor)
+    \item \textbf{Zoom \& Pan:} Explore specific regions (Ontario, Quebec, Western Australia, Atacama Desert)
+    \item \textbf{Click-to-Detail:} Click marker to open project detail panel
+    \item \textbf{Heatmaps:} (Roadmap) Visualize NPV concentration, IRR distributions, risk hotspots
+\end{itemize}
+
+\subsection{9. Company Screener}
+
+\textbf{Overview:} Analyze mining companies and their project portfolios with aggregate metrics.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{Company Database:} Public and private mining companies (majors, intermediates, juniors)
+    \item \textbf{Portfolio View:} See all projects owned by a single company
+    \item \textbf{Aggregate Metrics:} Total NPV, total CAPEX, total production across portfolio
+    \item \textbf{Market Data:} (For public companies) Stock price, market cap, enterprise value, P/NAV ratio
+    \item \textbf{Management Team:} CEO, CFO, COO, key personnel with LinkedIn profiles
+    \item \textbf{Company Comparison:} Side-by-side analysis of competing operators (e.g., Barrick vs. Newmont)
+\end{itemize}
+
+\subsection{10. Document Upload \& Private Projects}
+
+\textbf{Overview:} Proprietary document analysis for confidential due diligence.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{Upload Interface:} Drag-and-drop or click-to-browse for PDF technical reports
+    \item \textbf{Automatic Extraction:} Same LLM pipeline extracts NPV, IRR, CAPEX, reserves from private docs
+    \item \textbf{Private Projects:} User-specific projects invisible to other users (Row Level Security)
+    \item \textbf{Secure Storage:} Supabase Storage with user-level access control (signed URLs expire after 1 hour)
+    \item \textbf{Full Feature Access:} AI chat, comparison, sensitivity analysis work with private projects
+    \item \textbf{Sharing:} (Roadmap) Share private projects with team members via email invite
+\end{itemize}
+
+\subsection{11. Sensitivity Analysis}
+
+\textbf{Overview:} Real-time financial modeling with adjustable assumptions and scenario comparison.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{Commodity Price Scenarios:}
+    \begin{itemize}
+        \item Interactive slider to adjust gold price (\$1,500--\$2,500/oz)
+        \item Real-time NPV recalculation as slider moves
+        \item Chart showing NPV vs. gold price curve
+    \end{itemize}
+    \item \textbf{Discount Rate Tuning:}
+    \begin{itemize}
+        \item Slider for discount rate (5\%, 8\%, 10\%, 12\%, 15\%)
+        \item NPV recalculation (since NPV is present value of future cash flows)
+        \item Table showing NPV at each discount rate
+    \end{itemize}
+    \item \textbf{CAPEX \& OPEX Multipliers:}
+    \begin{itemize}
+        \item Slider for CAPEX multiplier (1.0x, 1.2x, 1.5x, 2.0x) to model cost overruns
+        \item Slider for OPEX multiplier (1.0x, 1.1x, 1.2x, 1.3x)
+        \item Real-time IRR and payback period recalculation
+    \end{itemize}
+    \item \textbf{Production Rate Adjustments:}
+    \begin{itemize}
+        \item Slider for throughput (50\%--150\% of base case)
+        \item Impact on NPV, IRR, payback, mine life
+    \end{itemize}
+    \item \textbf{Scenario Comparison:}
+    \begin{itemize}
+        \item Save scenarios as "Bull", "Base", "Bear"
+        \item Table comparing NPV, IRR, payback across scenarios
+        \item Tornado chart showing sensitivity of NPV to each variable
+    \end{itemize}
+\end{itemize}
+
+\subsection{12. Export \& Reporting}
+
+\textbf{Overview:} Generate reports and export data for external use.
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item \textbf{CSV Export:} Full screener table with all metrics (click "Export to CSV")
+    \item \textbf{PDF Reports:} (Roadmap) Single-project summary with charts, metrics, AI insights
+    \item \textbf{Comparison Reports:} Multi-project analysis for investment committees (CSV or PDF)
+    \item \textbf{API Access:} (Roadmap) RESTful API for programmatic access, integration with internal tools
+    \item \textbf{Excel Integration:} (Roadmap) Excel add-in for pulling Lithos data into spreadsheets
+\end{itemize}
+
+\newpage
+
+\section{Business Model}
+
+\subsection{SaaS Subscription Pricing}
+
+\begin{itemize}
+    \item \textbf{Individual Analyst:} \$500/user/month (or \$5,000/year with 17\% discount)
+    \item \textbf{Team Plan (5--20 users):} \$400/user/month (or \$4,000/year with 17\% discount)
+    \item \textbf{Enterprise (20+ users):} \$50,000/year base + \$300/user/month (custom pricing for 50+ users)
+    \item \textbf{Custom Data Feeds:} API access priced separately (starts at \$10,000/year)
+\end{itemize}
+
+\subsection{Target Customers}
+
+\begin{enumerate}
+    \item \textbf{Mining-Focused Hedge Funds \& PE Firms:} Primary target. 200--300 funds globally managing \$200B+ in mining-related assets. Willing to pay \$50K--\$200K/year for research tools.
+    \item \textbf{Investment Banks:} Mining coverage teams at bulge bracket and boutique banks (20--50 analysts per bank). \$20K--\$100K/year budget.
+    \item \textbf{Mining Companies:} Corporate development and M\&A teams at majors and intermediates. Use for competitive intelligence, acquisition target screening. \$50K--\$200K/year.
+    \item \textbf{Junior Mining Companies:} Competitive intelligence to track peers. \$5K--\$20K/year (lower willingness to pay).
+    \item \textbf{Government Agencies:} Resource assessment, policy planning (e.g., Natural Resources Canada, USGS). \$50K--\$200K/year contracts.
+\end{enumerate}
+
+\subsection{Revenue Projections}
+
+\textbf{Year 1 (2025):}
+\begin{itemize}
+    \item 10 enterprise customers @ \$75K/year = \$750K
+    \item 50 individual/team users @ \$5K/year = \$250K
+    \item \textbf{Total ARR: \$1M}
+\end{itemize}
+
+\textbf{Year 2 (2026):}
+\begin{itemize}
+    \item 30 enterprise customers @ \$100K/year = \$3M
+    \item 200 individual/team users @ \$5K/year = \$1M
+    \item \textbf{Total ARR: \$4M}
+\end{itemize}
+
+\textbf{Year 3 (2027):}
+\begin{itemize}
+    \item 80 enterprise customers @ \$120K/year = \$9.6M
+    \item 500 individual/team users @ \$5K/year = \$2.5M
+    \item \textbf{Total ARR: \$12M}
+\end{itemize}
+
+\newpage
+
+\section{Product Roadmap}
+
+\subsection{Q2 2025 (Next 90 Days)}
+
+\begin{enumerate}
+    \item \textbf{Expand to Oil \& Gas:}
+    \begin{itemize}
+        \item Same extraction pipeline applied to SEC reservoir reports (10-K, technical reports)
+        \item Extract proven/probable reserves, PV-10, IRR, CAPEX for oil \& gas projects
+        \item Target customers: Oil \& gas-focused hedge funds, E\&P companies
+    \end{itemize}
+
+    \item \textbf{Enhanced AI Models:}
+    \begin{itemize}
+        \item Fine-tune GPT-4 on mining-specific corpus (1,000+ technical reports)
+        \item Improve extraction accuracy from 85\% to 95\%+
+        \item Domain-specific prompts for NI 43-101 vs. JORC vs. SAMREC standards
+    \end{itemize}
+
+    \item \textbf{Real-Time Alerts:}
+    \begin{itemize}
+        \item Push notifications for news, permitting updates, price changes
+        \item Email digests (daily/weekly) for watchlisted projects
+        \item Slack integration for team alerts
+    \end{itemize}
+
+    \item \textbf{Portfolio Construction Tools:}
+    \begin{itemize}
+        \item Build portfolios across commodities with risk/return optimization
+        \item Efficient frontier chart (risk vs. return)
+        \item Correlation analysis between projects
+    \end{itemize}
+\end{enumerate}
+
+\subsection{H2 2025 (6--12 Months)}
+
+\begin{enumerate}
+    \item \textbf{Infrastructure \& Real Estate:}
+    \begin{itemize}
+        \item Extend extraction pipeline to infrastructure projects (toll roads, airports, ports)
+        \item Real estate: REIT financial statements, property-level cash flow models
+        \item Target: Infrastructure funds, real estate PE firms
+    \end{itemize}
+
+    \item \textbf{Collaboration Tools:}
+    \begin{itemize}
+        \item Team workspaces with shared watchlists, notes, annotations
+        \item Version control for sensitivity scenarios
+        \item In-app chat for team discussions on projects
+    \end{itemize}
+
+    \item \textbf{Advanced Geospatial:}
+    \begin{itemize}
+        \item Satellite imagery analysis (Maxar, Planet Labs) for mine site monitoring
+        \item Detect changes in site activity (construction progress, truck movements)
+        \item Predict production ramp-up from satellite data
+    \end{itemize}
+
+    \item \textbf{API \& Integrations:}
+    \begin{itemize}
+        \item RESTful API for programmatic access to all data
+        \item Bloomberg Terminal plugin (BQuant integration)
+        \item Excel add-in (pull Lithos data into spreadsheets)
+        \item Slack bot (query Lithos from Slack: "/lithos compare odyssey vs macassa")
+    \end{itemize}
+\end{enumerate}
+
+\subsection{2026 and Beyond}
+
+\begin{itemize}
+    \item Expand to international markets (LATAM, Africa, Asia-Pacific)
+    \item Multi-language support (Spanish, Portuguese, French, Mandarin)
+    \item Predictive analytics: ML models to forecast NPV changes based on commodity prices, news sentiment
+    \item ESG scoring system: Automated extraction of environmental, social, governance metrics from technical reports
+    \item M\&A target identification: AI-powered recommendations for acquisition targets based on fund criteria
+\end{itemize}
+
+\newpage
+
+\section{Competitive Landscape}
+
+\subsection{Direct Competitors}
+
+\subsubsection{S\&P Capital IQ / S\&P Global Market Intelligence}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Established brand with decades of market presence
+    \item Comprehensive financial data on public mining companies
+    \item Used by major investment banks and funds
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item No automated extraction from technical reports (analysts still read 500-page PDFs manually)
+    \item No AI-powered analysis or chat interface
+    \item Clunky 1990s-era UI, steep learning curve
+    \item Expensive (\$20K--\$100K/year per user)
+\end{itemize}
+
+\textbf{Lithos Differentiation:} Automated extraction + AI analysis + modern UI at 1/10th the cost.
+
+\subsubsection{Wood Mackenzie / SNL Metals \& Mining}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Deep mining industry expertise, trusted by operators
+    \item Historical production data, cost curves, supply-demand forecasts
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item Static datasets updated quarterly (not real-time)
+    \item No AI, no automated extraction
+    \item Legacy interface, primarily used for macro commodity research (not project-level)
+    \item Very expensive (\$50K--\$200K/year for enterprise)
+\end{itemize}
+
+\textbf{Lithos Differentiation:} Real-time project-level data + AI + 24-hour update cycle.
+
+\subsubsection{Bloomberg Terminal}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Gold standard for financial data, ubiquitous on trading desks
+    \item Commodity price data, company financials, news
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item No project-level technical data (no NPV, reserves, resources from technical reports)
+    \item No automated extraction or AI
+    \item Extremely expensive (\$24K/year per user)
+\end{itemize}
+
+\textbf{Lithos Differentiation:} Project-level technical data that Bloomberg doesn't have. Positioned as complementary, not competitive.
+
+\subsubsection{PitchBook / Preqin}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Strong in private equity, M\&A transactions, fund performance
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item No mining-specific features, no technical report extraction
+    \item Primarily used for deal sourcing, not project diligence
+\end{itemize}
+
+\textbf{Lithos Differentiation:} Vertical focus on mining with technical data.
+
+\subsection{Indirect Competitors}
+
+\subsubsection{In-House Analyst Teams}
+
+\textbf{How They Work:}
+\begin{itemize}
+    \item Funds hire teams of mining analysts (geologists, engineers) to read technical reports manually
+    \item Analysts spend 2 weeks per project extracting data, building Excel models
+\end{itemize}
+
+\textbf{Lithos Advantage:}
+\begin{itemize}
+    \item Replace 2 weeks of analyst time with 2 minutes of AI time
+    \item Reduce analyst headcount or redeploy analysts to higher-value tasks (relationship building, site visits)
+\end{itemize}
+
+\subsubsection{Mining Consultants (SRK, Hatch, Wood, etc.)}
+
+\textbf{How They Work:}
+\begin{itemize}
+    \item Funds hire consultants to review technical reports, validate resource estimates
+    \item Cost: \$50K--\$200K per project, timeline: 4--8 weeks
+\end{itemize}
+
+\textbf{Lithos Advantage:}
+\begin{itemize}
+    \item Instant first-pass analysis for \$500/month, reserve consultants for final due diligence
+    \item Screen 100 projects in 1 day, shortlist 5 for consultant deep dive
+\end{itemize}
+
+\subsection{Competitive Positioning}
+
+\begin{center}
+\textbf{Lithos is the only platform combining:}
+
+\vspace{0.3em}
+
+\textbf{(1) Automated extraction from 400--500 page reports at scale}
+
+\textbf{(2) AI-powered analysis and chat interface}
+
+\textbf{(3) Real-time updates (24-hour cycle)}
+
+\textbf{(4) Modern, Bloomberg-inspired UI}
+
+\textbf{(5) Affordable pricing (\$500/month vs. \$20K+/year)}
+\end{center}
+
+\newpage
+
+\section{Go-to-Market Strategy}
+
+\subsection{Phase 1: Design Partners (Current)}
+
+\begin{itemize}
+    \item \textbf{Target:} 10--15 design partners (mining-focused funds, analysts)
+    \item \textbf{Approach:} Free or heavily discounted access in exchange for feedback
+    \item \textbf{Goal:} Product-market fit validation, feature prioritization
+    \item \textbf{Timeline:} Q1 2025 (complete)
+\end{itemize}
+
+\subsection{Phase 2: Closed Beta (Q2 2025)}
+
+\begin{itemize}
+    \item \textbf{Target:} 50--100 users (expand beyond design partners)
+    \item \textbf{Approach:} Invite-only beta, \$200/month introductory pricing
+    \item \textbf{Goal:} Prove value, collect testimonials, refine onboarding
+    \item \textbf{Timeline:} April--June 2025
+\end{itemize}
+
+\subsection{Phase 3: Public Launch (Q3 2025)}
+
+\begin{itemize}
+    \item \textbf{Target:} 500+ users by end of Q3
+    \item \textbf{Approach:} Public launch at mining conferences (PDAC, MiningIndaba, Precious Metals Summit)
+    \item \textbf{Marketing:} Content marketing (blog, LinkedIn, YouTube demos), paid ads (Google, LinkedIn)
+    \item \textbf{Goal:} \$1M ARR by end of 2025
+    \item \textbf{Timeline:} July--September 2025
+\end{itemize}
+
+\subsection{Phase 4: Enterprise Sales (Q4 2025 and beyond)}
+
+\begin{itemize}
+    \item \textbf{Target:} 20--50 enterprise customers (\$50K--\$200K/year each)
+    \item \textbf{Approach:} Dedicated sales team, custom onboarding, white-glove support
+    \item \textbf{Goal:} \$4M ARR by end of 2026
+    \item \textbf{Timeline:} Q4 2025 onward
+\end{itemize}
+
+\subsection{Marketing Channels}
+
+\begin{enumerate}
+    \item \textbf{Industry Conferences:}
+    \begin{itemize}
+        \item PDAC (Prospectors \& Developers Association of Canada) — 25,000 attendees
+        \item Mining Indaba (Cape Town) — 7,000 attendees
+        \item Precious Metals Summit (Beaver Creek) — 500 high-net-worth investors
+        \item Sponsor booth, speaking slot, demo stations
+    \end{itemize}
+
+    \item \textbf{Content Marketing:}
+    \begin{itemize}
+        \item Blog: "How to Read a 500-Page NI 43-101 Report in 5 Minutes"
+        \item YouTube: Demo videos, feature walkthroughs, analyst interviews
+        \item LinkedIn: Thought leadership posts on mining research inefficiency
+    \end{itemize}
+
+    \item \textbf{Paid Advertising:}
+    \begin{itemize}
+        \item Google Ads: Target keywords "mining project database", "NI 43-101 database"
+        \item LinkedIn Ads: Target job titles "Mining Analyst", "Mining Portfolio Manager"
+    \end{itemize}
+
+    \item \textbf{Partnerships:}
+    \begin{itemize}
+        \item Mining associations (PDAC, CIM, AusIMM) — member discounts
+        \item Data providers (S\&P, Wood Mackenzie) — integration partnerships
+        \item Mining consultants (SRK, Hatch) — referral agreements
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+
+\section{Team \& Funding}
+
+\subsection{Current Team}
+
+\begin{itemize}
+    \item \textbf{Founder \& CEO:} [Name] — Background in mining finance, previous roles at [Fund/Bank]
+    \item \textbf{Technical Co-Founder / CTO:} [Name] — AI/ML engineer, previous experience at [Tech Company]
+    \item \textbf{Advisors:} Mining industry veterans, LLM researchers, GTM experts
+\end{itemize}
+
+\subsection{Funding}
+
+\textbf{Current Round:}
+\begin{itemize}
+    \item \textbf{Raising:} \$2M seed round
+    \item \textbf{Use of Funds:}
+    \begin{itemize}
+        \item \$800K — Engineering (2 full-stack engineers, 1 AI/ML engineer)
+        \item \$400K — Sales \& Marketing (1 sales lead, conference sponsorships, paid ads)
+        \item \$300K — Data Acquisition (Firecrawl API, OpenAI API, News API subscriptions)
+        \item \$300K — Operations (legal, accounting, Supabase hosting, office)
+        \item \$200K — Runway buffer
+    \end{itemize}
+    \item \textbf{Milestones:} \$1M ARR by end of 2025, 500+ users, 20+ enterprise customers
+\end{itemize}
+
+\newpage
+
+\section{Appendix: Sample Data}
+
+\subsection{Example Project: Odyssey Gold Project}
+
+\begin{itemize}
+    \item \textbf{Project Name:} Odyssey Project
+    \item \textbf{Company:} Agnico Eagle Mines Limited
+    \item \textbf{Location:} Quebec, Canada
+    \item \textbf{Commodity:} Gold
+    \item \textbf{Stage:} Development phase
+    \item \textbf{Status:} Active
+    \item \textbf{NPV:} \$1,485M (at 8\% discount rate, \$1,800/oz gold)
+    \item \textbf{IRR:} 17.5\%
+    \item \textbf{CAPEX:} \$1,736M (initial + sustaining)
+    \item \textbf{AISC:} \$909.02/oz
+    \item \textbf{Payback Period:} 6.2 years
+    \item \textbf{Resources:} M\&I: 18.746M oz Au @ 1.77g/t, Inferred: 184.908M oz
+    \item \textbf{Reserves:} P\&P: 122.88M tonnes @ 1.12g/t Au for 4.43M oz
+    \item \textbf{Mine Life:} 15+ years
+    \item \textbf{Production Rate:} 500,000 oz/year (peak production)
+    \item \textbf{Technical Report URL:} [Supabase Storage Signed URL]
+    \item \textbf{Latitude:} 48.7644° N
+    \item \textbf{Longitude:} -78.1336° W
+\end{itemize}
+
+\subsection{Example AI Chat Transcript}
+
+\textbf{User:} What are the main risks for Odyssey Project?
+
+\textbf{Lithos AI:} Based on the technical report, the main risks for Odyssey Project are:
+
+\begin{enumerate}
+    \item \textbf{Jurisdiction Risk (Low):} Quebec is a Tier 1 mining jurisdiction with strong rule of law, but permitting can take 2--3 years for underground mines. The project is adjacent to the existing Canadian Malartic mine, which reduces infrastructure risk.
+
+    \item \textbf{Commodity Price Risk (Medium):} NPV is sensitive to gold price. At \$1,600/oz (10\% below base case), NPV drops to \$1,100M. At \$2,000/oz, NPV rises to \$2,000M. (Source: Section 22.8, page 287)
+
+    \item \textbf{CAPEX Overrun Risk (Medium):} Initial CAPEX is \$1,736M, which is subject to construction risk. A 20\% overrun would reduce IRR from 17.5\% to 14.2\%. (Source: Section 21.4, page 245)
+
+    \item \textbf{Operational Risk (Low--Medium):} Underground mining is more technically challenging than open pit, but Agnico Eagle has extensive experience. The project benefits from existing infrastructure at Canadian Malartic. (Source: Section 16, page 198)
+\end{enumerate}
+
+\textbf{User:} How does this compare to other gold mines in Ontario?
+
+\textbf{Lithos AI:} Compared to other gold projects in Ontario and Quebec:
+
+\begin{itemize}
+    \item \textbf{NPV:} Odyssey's \$1,485M NPV is in the top quartile. Comparable projects: Detour Lake (\$1,200M), Kirkland Lake (\$800M).
+    \item \textbf{IRR:} 17.5\% IRR is above the median (15\%) for Canadian gold projects at feasibility stage.
+    \item \textbf{AISC:} \$909/oz is competitive. Ontario average is \$950/oz, so Odyssey is slightly lower cost.
+    \item \textbf{Scale:} 4.43M oz P\&P reserves places Odyssey in the "large" category (top 20\% of Canadian gold projects).
+\end{itemize}
+
+Would you like me to pull up specific comparable projects for a detailed side-by-side comparison?
+
+\vspace{2em}
+
+\begin{center}
+\rule{0.5\textwidth}{0.4pt}
+
+\vspace{1em}
+
+\textit{Lithos — Turning weeks of mining research into seconds.}
+
+\vspace{0.5em}
+
+\texttt{www.lithos.ai} $\cdot$ \texttt{team@lithos.ai}
+
+\vspace{0.5em}
+
+\textit{Confidential — Do Not Distribute}
+\end{center}
+
+\end{document}

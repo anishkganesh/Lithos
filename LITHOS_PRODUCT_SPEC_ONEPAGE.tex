@@ -1,0 +1,125 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.65in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{ebgaramond}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{multicol}
+
+% Styling
+\definecolor{primaryblue}{RGB}{37, 99, 235}
+\definecolor{sectiongray}{RGB}{55, 65, 81}
+
+\titleformat{\section}{\large\bfseries\color{primaryblue}}{\thesection}{0em}{}[\vspace{-0.6em}\titlerule\vspace{0.15em}]
+\titleformat{\subsection}{\normalsize\bfseries\color{sectiongray}}{\thesubsection}{0em}{}
+
+\setlist[itemize]{leftmargin=1.2em, nosep, itemsep=0pt, topsep=1pt, parsep=0pt, after=\vspace{2pt}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\setlength{\columnsep}{1.3em}
+
+\hypersetup{colorlinks=true, linkcolor=primaryblue, urlcolor=primaryblue}
+
+\pagestyle{empty}
+
+\begin{document}
+
+% Header
+\begin{center}
+    {\LARGE\bfseries\color{primaryblue} Lithos} \\[0.15em]
+    {\large AI-Powered Critical Minerals Intelligence Platform} \\[0.1em]
+    {\normalsize\textit{Bloomberg Terminal for Mining — Cuts Research from 2 Weeks to 2 Minutes}}
+\end{center}
+
+\vspace{-0.2em}
+
+\begin{multicols}{2}
+
+\section*{Product Overview}
+\textbf{Lithos} automates mining research by extracting structured data from 400--500 page technical reports using LLM-powered pipelines. With 15,000+ indexed projects and instant AI analysis, we turn analyst workflows from weeks to minutes.
+
+\subsection*{Value Proposition}
+\begin{itemize}
+    \item \textbf{Automated Extraction:} NPV, IRR, CAPEX, reserves from NI 43-101/JORC reports
+    \item \textbf{15,000+ Projects:} Gold, copper, lithium, nickel, rare earths worldwide
+    \item \textbf{AI Intelligence:} Risk analysis, comparisons, due diligence in seconds
+    \item \textbf{Real-Time News:} Permitting, production, commodity price tracking
+\end{itemize}
+
+\section*{Core Features}
+
+\subsection*{1. Project Screener}
+Bloomberg-style table with advanced multi-filter system (commodity, jurisdiction, stage, NPV/IRR/CAPEX/AISC ranges), global search, bulk actions (watchlist, CSV export, comparison), conditional formatting.
+
+\subsection*{2. Project Detail Panel}
+Key metrics dashboard, inline PDF viewer for 400--500 page technical reports, resource/reserve breakdown, qualified persons, interactive maps, recent news, risk alerts, similar projects, multi-tab interface.
+
+\subsection*{3. AI Chat}
+GPT-4-powered conversational analysis: project-specific questions ("What are the main risks for Odyssey Project?"), comparative analysis, financial deep dives, document-grounded answers citing technical reports and filings.
+
+\subsection*{4. Project Comparison}
+Side-by-side analysis of 2--10 projects with percentage differences, trend indicators, detailed comparison tables, toggle filters for ESG/jurisdiction risk, export to CSV/PDF for investment committees.
+
+\subsection*{5. Mining Agent}
+Automated scraping from SEDAR, SEC EDGAR, ASX, LSE; Firecrawl-powered document processing; GPT-4 extraction pipeline; real-time progress tracking; validation across report sections; 24-hour update frequency.
+
+\subsection*{6. Interactive Globe}
+3D visualization of 15,000 projects with lat/long coordinates, commodity color coding, cluster analysis, zoom/pan for regional exploration, click-to-detail for instant analysis.
+
+\subsection*{7. News Feed}
+Project-specific news, commodity price tracking, regulatory filings, AI summarization, impact analysis (positive/neutral/negative), historical archive with search.
+
+\subsection*{8. Company Screener}
+Company database with portfolio views, aggregate metrics (total NPV, CAPEX, production), market data for public companies, management teams, company comparison.
+
+\subsection*{9. Document Upload}
+Drag-and-drop PDF upload for private NI 43-101/JORC reports, automatic extraction, user-specific private projects, secure Supabase Storage, full feature access (AI chat, comparison, sensitivity).
+
+\subsection*{10. Sensitivity Analysis}
+Real-time financial modeling with interactive sliders: commodity price scenarios, discount rate tuning (5\%--12\%), CAPEX/OPEX multipliers (1.2x--2.0x), production rate adjustments, scenario comparison (bull/base/bear).
+
+\subsection*{11. Watchlist \& Export}
+One-click watchlist, filtering to watchlisted projects, CSV export, comparison reports for investment committees, API access (roadmap).
+
+\columnbreak
+
+\section*{Technical Architecture}
+
+\textbf{Frontend:} Next.js 15.2.4, TypeScript, Tailwind CSS, Radix UI + shadcn/ui, TanStack Table, Recharts
+
+\textbf{Backend:} Supabase (PostgreSQL), Supabase Auth, OpenAI GPT-4, Firecrawl API, News API
+
+\textbf{Data Sources:} SEDAR (Canada), SEC EDGAR (US), ASX (Australia), LSE (UK), company websites, news APIs
+
+\textbf{Extraction Pipeline:} Firecrawl API extracts text from 400--500 page PDFs $\rightarrow$ GPT-4 structured extraction prompts $\rightarrow$ Multi-pass validation $\rightarrow$ PostgreSQL storage with geospatial indexing
+
+\section*{Key Differentiators}
+
+\begin{itemize}
+    \item \textbf{Automated Extraction at Scale:} Only platform extracting structured data from 400--500 page technical reports automatically
+    \item \textbf{AI-First Architecture:} Built for LLMs from day one with document-grounded conversational intelligence
+    \item \textbf{Real-Time Updates:} 24-hour processing cycle for new filings vs. quarterly updates from competitors
+    \item \textbf{Modern UX:} Bloomberg-inspired interface with advanced filtering, bulk actions, and export capabilities
+    \item \textbf{Vertical Focus:} Deep mining expertise and technical report knowledge vs. horizontal data platforms
+\end{itemize}
+
+\section*{Competitive Position}
+
+\textbf{S\&P Capital IQ / Bloomberg:} Have company financials and commodity prices but no project-level technical data or automated extraction from technical reports. Analysts still read 500-page reports manually.
+
+\textbf{Mining Databases (SNL, Wood Mackenzie):} Static datasets updated quarterly with clunky legacy interfaces. No AI, no real-time extraction, no conversational intelligence.
+
+\textbf{Lithos Advantage:} Only platform combining automated extraction, AI analysis, real-time updates, and modern UI in one integrated solution.
+
+\vspace{0.5em}
+
+\begin{center}
+\textit{Lithos — Turning weeks of mining research into seconds.} \\
+\texttt{www.lithos.ai} $\cdot$ \texttt{team@lithos.ai}
+\end{center}
+
+\end{multicols}
+
+\end{document}

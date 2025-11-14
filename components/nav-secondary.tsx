@@ -11,6 +11,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import { SettingsDialog } from '@/components/settings-dialog'
+import { HelpDialog } from '@/components/help-dialog'
+import { useChat } from '@/lib/chat-context'
+import { useGlobalChat } from '@/lib/global-chat-context'
 
 export function NavSecondary({
   items,
@@ -22,42 +26,44 @@ export function NavSecondary({
     icon: Icon
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [helpOpen, setHelpOpen] = React.useState(false)
+  const { toggleChat } = useChat()
+  const { setInput } = useGlobalChat()
+
+  // Add keyboard shortcut for Cmd/Ctrl+K
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setInput("")
+        toggleChat()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [toggleChat, setInput])
 
   const handleClick = (title: string, e: React.MouseEvent) => {
     e.preventDefault()
 
     switch (title) {
       case "Search":
-        // Trigger command palette keyboard shortcut
-        const event = new KeyboardEvent('keydown', {
-          key: 'k',
-          code: 'KeyK',
-          metaKey: true,
-          ctrlKey: true,
-          bubbles: true
-        })
-        document.dispatchEvent(event)
-        toast.info('Search', {
-          description: 'Use Cmd+K (Mac) or Ctrl+K (Windows) to search across projects, companies, and news'
+        // Open Lithos AI assistant
+        setInput("") // Clear any previous input
+        toggleChat() // Open the chat sidebar
+        toast.success('Lithos AI Assistant opened', {
+          description: 'Ask me anything about mining projects, companies, or news'
         })
         break
 
       case "Settings":
-        toast.info('Settings', {
-          description: 'User preferences and account settings coming soon'
-        })
+        setSettingsOpen(true)
         break
 
       case "Get Help":
-        toast.info('Help & Documentation', {
-          description: 'Access guides, tutorials, and support',
-          action: {
-            label: 'Email Support',
-            onClick: () => {
-              window.location.href = 'mailto:info@lithos-ai.com?subject=Help Request'
-            }
-          }
-        })
+        setHelpOpen(true)
         break
 
       default:
@@ -66,25 +72,32 @@ export function NavSecondary({
   }
 
   return (
-    <SidebarGroup {...props}>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
-                <a
-                  href={item.url}
-                  onClick={(e) => handleClick(item.title, e)}
-                  className="cursor-pointer"
-                >
-                  <item.icon />
-                  <span>{item.title}</span>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <>
+      <SidebarGroup {...props}>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {items.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <a
+                    href={item.url}
+                    onClick={(e) => handleClick(item.title, e)}
+                    className="cursor-pointer"
+                    {...(item.title === "Search" && { 'data-search-trigger': 'true' })}
+                  >
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      {/* Dialogs */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+    </>
   )
 }
