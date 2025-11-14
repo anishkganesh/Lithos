@@ -18,6 +18,14 @@ import { ContextMenuChat } from "@/components/ui/context-menu-chat"
 import { LinksPopover } from "@/components/ui/links-popover"
 import { useRouter } from "next/navigation"
 
+// Helper function to format large dollar amounts
+function formatDollarAmount(value: number): string {
+  if (value >= 1000) {
+    return `$${Math.round(value / 1000)}B`;
+  }
+  return `$${Math.round(value)}M`;
+}
+
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -383,7 +391,7 @@ export function ProjectScreenerGlobal() {
         const npv = row.original.npv
         return (
           <div className="text-sm text-center font-medium">
-            {npv !== null && npv !== undefined ? `$${npv.toFixed(0)}M` : 'N/A'}
+            {npv !== null && npv !== undefined ? formatDollarAmount(npv) : 'N/A'}
           </div>
         )
       },
@@ -423,7 +431,7 @@ export function ProjectScreenerGlobal() {
         const capex = row.original.capex
         return (
           <div className="text-sm text-center font-medium">
-            {capex !== null && capex !== undefined ? `$${capex.toFixed(0)}M` : 'N/A'}
+            {capex !== null && capex !== undefined ? formatDollarAmount(capex) : 'N/A'}
           </div>
         )
       },

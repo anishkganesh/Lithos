@@ -64,11 +64,13 @@ export function formatCurrency(
 
   let displayValue = value
   let displayUnit = unit
+  let displayDecimals = decimals
 
   // Auto-scale large numbers
   if (unit === 'M' && Math.abs(value) >= 1000) {
     displayValue = value / 1000
     displayUnit = 'B'
+    displayDecimals = 0  // No decimals for billions
   } else if (unit === '' && Math.abs(value) >= 1000000) {
     displayValue = value / 1000000
     displayUnit = 'M'
@@ -77,7 +79,7 @@ export function formatCurrency(
     displayUnit = 'K'
   }
 
-  return `$${displayValue.toFixed(decimals)}${displayUnit}${suffix}`
+  return `$${Math.round(displayValue)}${displayUnit}${suffix}`
 }
 
 export function formatPercent(

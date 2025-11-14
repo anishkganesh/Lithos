@@ -12,6 +12,12 @@ interface SensitivityAnalysisProps {
   project: MiningProject
 }
 
+interface ActualValue {
+  value: number
+  unit: string
+  source: string
+}
+
 interface SensitivityParameter {
   name: string
   key: string
@@ -23,7 +29,23 @@ interface SensitivityParameter {
   category: 'market' | 'production' | 'costs'
 }
 
+// Helper function to format large dollar amounts
+function formatDollarAmount(value: number, includeDecimal: boolean = true): string {
+  if (value >= 1000) {
+    // Convert to billions
+    const billions = value / 1000;
+    return `$${Math.round(billions)}B`;
+  } else {
+    // Keep in millions
+    return includeDecimal ? `$${value.toFixed(1)}M` : `$${Math.round(value)}M`;
+  }
+}
+
 export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
+  const [actualValues, setActualValues] = React.useState<Record<string, ActualValue>>({})
+  const [loadingPrices, setLoadingPrices] = React.useState(true)
+  const [aiCalculatedValues, setAiCalculatedValues] = React.useState<{ npv: number; irr: number; aisc: number } | null>(null)
+
   const parameters: SensitivityParameter[] = [
     {
       name: "Commodity Price",
@@ -151,10 +173,10 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
 
     if (changes.length === 0) {
       const insights = [`Base case scenario for ${project.name}.`]
-      if (baselineNPV) insights.push(`NPV: $${baselineNPV.toFixed(1)}M`)
+      if (baselineNPV) insights.push(`NPV: ${formatDollarAmount(baselineNPV)}`)
       if (baselineIRR) insights.push(`IRR: ${baselineIRR.toFixed(1)}%`)
       if (baselineAISC) insights.push(`AISC: $${baselineAISC.toFixed(2)}`)
-      if (project.capex) insights.push(`CAPEX: $${project.capex.toFixed(1)}M`)
+      if (project.capex) insights.push(`CAPEX: ${formatDollarAmount(project.capex)}`)
       if (project.mine_life) insights.push(`Mine Life: ${project.mine_life} years`)
       setAiInsight(insights.join(' | '))
       return
@@ -188,6 +210,11 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
             commodity: project.commodities?.[0],
             mineLife: project.mine_life,
             annualProduction: project.annual_production
+          },
+          actualValues: {
+            commodityPrice: actualValues.price,
+            aisc: actualValues.opex,
+            capex: actualValues.capex
           }
         })
       })
@@ -198,7 +225,10 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
 
       const data = await response.json()
       if (data.success && data.result) {
-        const { explanation, assumptions, riskFactors } = data.result
+        const { npv, irr, aisc, explanation, assumptions, riskFactors } = data.result
+
+        // Store AI-calculated values
+        setAiCalculatedValues({ npv, irr, aisc })
 
         let insightText = explanation
 
@@ -229,7 +259,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
       ]
 
       if (baselineNPV) {
-        insights.push(`NPV: $${npvCalc.toFixed(1)}M (${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%)`)
+        insights.push(`NPV: ${formatDollarAmount(npvCalc, false)} (${npvChange > 0 ? '+' : ''}${npvChange.toFixed(1)}%)`)
       }
       if (baselineIRR) {
         insights.push(`IRR: ${irrCalc.toFixed(1)}% (${irrChange > 0 ? '+' : ''}${irrChange.toFixed(1)} pts)`)
@@ -266,9 +296,9 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
     }
   }
 
-  const calculateNPV = () => calculateNPVForValues(values)
-  const calculateIRR = () => calculateIRRForValues(values)
-  const calculateAISC = () => calculateAISCForValues(values)
+  const calculateNPV = () => aiCalculatedValues?.npv ?? calculateNPVForValues(values)
+  const calculateIRR = () => aiCalculatedValues?.irr ?? calculateIRRForValues(values)
+  const calculateAISC = () => aiCalculatedValues?.aisc ?? calculateAISCForValues(values)
 
   const getPercentChange = (current: number, base: number) => {
     return ((current - base) / base * 100).toFixed(1)
@@ -287,9 +317,41 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
     costs: parameters.filter(p => p.category === 'costs'),
   }
 
+  // Fetch actual commodity prices and other baseline values
   React.useEffect(() => {
-    generateAIInsight(values)
-  }, [])
+    async function fetchActualValues() {
+      try {
+        setLoadingPrices(true)
+        const response = await fetch('/api/commodity-prices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId: project.id,
+            commodities: project.commodities || [],
+            aisc: project.aisc,
+            capex: project.capex
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setActualValues(data.actualValues || {})
+        }
+      } catch (error) {
+        console.error('Error fetching actual values:', error)
+      } finally {
+        setLoadingPrices(false)
+      }
+    }
+
+    fetchActualValues()
+  }, [project.id, project.commodities])
+
+  React.useEffect(() => {
+    if (!loadingPrices) {
+      generateAIInsight(values)
+    }
+  }, [loadingPrices])
 
   const InputRow = ({ param }: { param: SensitivityParameter }) => {
     const [localValue, setLocalValue] = React.useState(values[param.key])
@@ -307,10 +369,67 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
       handleSliderChange(param.key, newValue[0])
     }
 
+    const actualValue = actualValues[param.key]
+
+    // Format the current actual value based on parameter type
+    const getCurrentActualValueDisplay = () => {
+      if (!actualValue) return null;
+
+      const currentValue = actualValue.value * (values[param.key] / 100);
+
+      // For CAPEX (in millions), check if we need to convert to billions
+      if (param.key === 'capex' && actualValue.unit === 'USD M') {
+        if (currentValue === 0) {
+          return 'USD M';
+        }
+        if (currentValue >= 1000) {
+          return `$${Math.round(currentValue / 1000)}B`;
+        }
+        return `$${Math.round(currentValue)}M`;
+      }
+
+      // For commodity price
+      if (param.key === 'price') {
+        if (currentValue === 0) {
+          return actualValue.unit;
+        }
+        return `$${Math.round(currentValue)} ${actualValue.unit}`;
+      }
+
+      // For operating costs (AISC)
+      if (param.key === 'opex') {
+        if (currentValue === 0) {
+          return actualValue.unit;
+        }
+        return `$${currentValue.toFixed(2)} ${actualValue.unit}`;
+      }
+
+      // For production parameters (throughput, grade, recovery) - always show values now
+      // No special handling needed, fall through to default formatting
+
+      // For other values, 2 decimals
+      return `${currentValue.toFixed(2)} ${actualValue.unit}`;
+    };
+
+    // Get display label with commodity name for price
+    const getDisplayLabel = () => {
+      if (param.key === 'price' && project.commodities?.[0]) {
+        return `${project.commodities[0]} Price`
+      }
+      return param.name
+    }
+
     return (
       <div className="mb-5">
         <div className="flex justify-between items-center mb-2">
-          <label className="text-sm font-medium">{param.name}</label>
+          <div className="flex flex-col">
+            <label className="text-sm font-medium">{getDisplayLabel()}</label>
+            {actualValue && (
+              <span className="text-xs text-muted-foreground">
+                {getCurrentActualValueDisplay()}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Input
               type="number"
@@ -395,7 +514,7 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
               <CardContent className="p-4">
                 <div className="text-xs text-muted-foreground mb-1">NPV</div>
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">
-                  {baselineNPV > 0 ? `$${npv.toFixed(0)}M` : 'N/A'}
+                  {baselineNPV > 0 ? formatDollarAmount(npv, false) : 'N/A'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {baselineNPV > 0 && npvTrend !== 0
@@ -488,8 +607,8 @@ export function SensitivityAnalysis({ project }: SensitivityAnalysisProps) {
                     </tr>
                     <tr className="bg-muted/30">
                       <td className="py-2 font-semibold">NPV</td>
-                      <td className="py-2 text-right text-muted-foreground">${baselineNPV}M</td>
-                      <td className="py-2 text-right font-semibold">${npv.toFixed(0)}M</td>
+                      <td className="py-2 text-right text-muted-foreground">{formatDollarAmount(baselineNPV, false)}</td>
+                      <td className="py-2 text-right font-semibold">{formatDollarAmount(npv, false)}</td>
                       <td className={`py-2 text-right font-semibold ${npvTrend >= 0 ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>
                         {npvTrend.toFixed(1)}%
                       </td>

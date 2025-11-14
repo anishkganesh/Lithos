@@ -25,6 +25,11 @@ interface SensitivityAnalysisRequest {
     mineLife?: number;
     annualProduction?: number;
   };
+  actualValues?: {
+    commodityPrice?: { value: number; unit: string };
+    aisc?: { value: number; unit: string };
+    capex?: { value: number; unit: string };
+  };
 }
 
 interface SensitivityAnalysisResult {
@@ -43,7 +48,7 @@ interface SensitivityAnalysisResult {
 export async function POST(req: NextRequest) {
   try {
     const body: SensitivityAnalysisRequest = await req.json();
-    const { baseCase, parameters, projectContext } = body;
+    const { baseCase, parameters, projectContext, actualValues } = body;
 
     // Validate base case
     if (!baseCase || baseCase.npv === undefined || baseCase.irr === undefined || baseCase.aisc === undefined) {
@@ -53,12 +58,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Build context for GPT
+    // Build context for GPT with actual values
+    let actualValuesString = '';
+    if (actualValues) {
+      actualValuesString = '\n**Actual Baseline Values:**';
+      if (actualValues.commodityPrice) {
+        const baseCommodityPrice = actualValues.commodityPrice.value;
+        const newCommodityPrice = baseCommodityPrice * (1 + (parameters.commodityPrice || 0) / 100);
+        actualValuesString += `\n- Base Commodity Price: ${baseCommodityPrice} ${actualValues.commodityPrice.unit}`;
+        if (parameters.commodityPrice) {
+          actualValuesString += `\n- New Commodity Price: ${newCommodityPrice.toFixed(0)} ${actualValues.commodityPrice.unit} (${parameters.commodityPrice > 0 ? '+' : ''}${parameters.commodityPrice}%)`;
+        }
+      }
+      if (actualValues.aisc) {
+        actualValuesString += `\n- Base AISC: ${actualValues.aisc.value.toFixed(2)} ${actualValues.aisc.unit}`;
+      }
+      if (actualValues.capex) {
+        actualValuesString += `\n- Base CAPEX: $${actualValues.capex.value.toFixed(1)}M`;
+      }
+    }
+
     const contextString = `
 **Base Case Financial Metrics:**
 - NPV: $${baseCase.npv.toFixed(1)}M
 - IRR: ${baseCase.irr.toFixed(1)}%
 - AISC: $${baseCase.aisc.toFixed(2)}/unit
+${actualValuesString}
 
 **Parameter Changes:**
 ${parameters.commodityPrice ? `- Commodity Price: ${parameters.commodityPrice > 0 ? '+' : ''}${parameters.commodityPrice}%` : ''}
