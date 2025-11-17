@@ -1,0 +1,176 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+
+% Define colors
+\definecolor{lithosblue}{RGB}{59, 130, 246}
+\definecolor{darkgray}{RGB}{75, 85, 99}
+
+% Page style
+\titleformat{\section}{\Large\bfseries}{}{0em}{}
+\titleformat{\subsection}{\large\bfseries}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{}{0em}{}
+\setlist[itemize]{itemsep=0.4em, topsep=0.4em}
+\setlist[enumerate]{itemsep=0.4em, topsep=0.4em}
+
+\begin{document}
+
+\thispagestyle{empty}
+\begin{center}
+    \vspace*{2cm}
+    {\Huge \textbf{Lithos AI}}\\[0.5cm]
+    {\Large Product \& Business Specification}\\[0.5cm]
+    {\large Grounded in the Lithos AI Business Model}\\[2cm]
+    {\large November 2025}
+\end{center}
+
+\newpage
+\setcounter{page}{1}
+
+\section*{Executive Summary}
+
+Lithos AI is a workflow-native intelligence layer for the critical minerals ecosystem. Rather than selling static data, the platform is delivered as a tiered SaaS product that compresses the mining diligence cycle from weeks to minutes by combining filings ingestion, AI-native analytics, and action tooling. The business model is architected around unlocking progressively deeper stages of the diligence workflow: Basic covers project screening, Pro adds decision-grade analytics, and Enterprise bundles collaboration, governance, and system integrations. Benchmarks against incumbents such as S\&P Commodity Insights and Wood Mackenzie (\$16k--\$20k per seat) show that Lithos delivers superior value-for-money while keeping annual contract values in the enterprise range.
+
+\section*{Customer Problems \& Personas}
+
+\begin{itemize}
+    \item \textbf{Professional Mining Investors:} Hedge funds, private equity, and family offices that need instant access to comparable resource, cost, and ESG levers across 10,000+ projects.
+    \item \textbf{Corporate Development Teams:} Strategics running acquisition pipelines and partnership diligence who require red-flag analysis and integrated document rooms.
+    \item \textbf{Consultancies \& Technical Advisors:} Engineering and geology firms producing reserve updates, logistics studies, and ESG audits who need consistent inputs and branded deliverables.
+\end{itemize}
+
+\section*{Tiered Offering Overview}
+
+Lithos monetizes the entire workflow. Each tier introduces a new cluster of capabilities that expand from passive screening to collaborative decisions. Pricing is optimized for value capture rather than record counts, ensuring natural expansion as teams adopt additional stages of the stack.
+
+\subsection*{Packaging Summary}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{p{0.18\linewidth}p{0.25\linewidth}p{0.25\linewidth}p{0.25\linewidth}}
+\toprule
+\textbf{Dimension} & \textbf{Basic (Screen)} & \textbf{Pro (Analyze)} & \textbf{Enterprise (Act)} \\
+\midrule
+Target Users & Single analysts validating projects & Deal teams and geologists running diligence & Multi-desk organizations and partnerships \\
+Core Data & Watchlists, drill-hole highlights, NI 43-101/ JORC filing viewer & AI-extracted metrics, automated memos, scenario-ready datasets & Portfolio-wide analytics warehouse with governance \\
+AI Features & Keyword search, rapid filters, bookmarking & LLM-driven synthesis, auto red-flag detection, forecasting & Custom copilots, firm-specific prompts, approval workflows \\
+Automation & Manual exports (CSV/PDF) & One-click memo + model generation, auto-refresh dashboards & Event-driven automations into CRM, Slack, Teams, OMS \\
+Controls/Integrations & Single-user authentication, email alerts & SSO, shared workspace, staging APIs & Enterprise IAM, audit logging, native integrations (Snowflake, FactSet, DealCloud) \\
+Commercial Model & Seat-based; accelerates adoption & Seat + workflow bundle; upsells via feature unlocks & Platform fee + seat packs + integration uplift \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Pricing \& Commercial Strategy}
+
+\begin{itemize}
+    \item \textbf{Value Anchor:} Position packages as workflow accelerants priced well below the \$16k--\$20k per-seat incumbents while preserving \$50k--\$150k+ ACVs via bundled automation and governance.
+    \item \textbf{Expansion Motion:} Teams typically land in Basic for screeners/watchlists and expand into Pro as they rely on AI-generated diligence notes, then consolidate vendors by adopting Enterprise integrations for CRM, portfolio, and compliance tooling.
+    \item \textbf{Procurement Narrative:} Emphasize that Lithos prices outcomes (time-to-diligence, fewer consultant hours) rather than charging for raw data volume. Packaging mirrors the screening $\rightarrow$ analysis $\rightarrow$ decision-making funnel described in the business model document.
+    \item \textbf{Seat \& Usage Metrics:} Base package includes 3 seats; incremental seats discounted as teams grow. API and automation quotas gated by tier to encourage upgrades instead of overage nickel-and-diming.
+\end{itemize}
+
+\section*{Monetization Extensions}
+
+\subsection*{1. Geological Analysis Module}
+\begin{itemize}
+    \item Bundle a specialized workspace for geology teams consolidating assays, drill logs, and cross-sections.
+    \item Standardizes inputs, produces consistent cross-sections/visualizations, and auto-generates red-flag summaries for Competent Person sign-off.
+    \item Sold as an add-on to Pro/Enterprise with per-project or per-customer licensing; creates pull from engineering consultancies.
+\end{itemize}
+
+\subsection*{2. Shipment \& Logistics Partnerships}
+\begin{itemize}
+    \item Marketplace routing for international offtakers and refiners needing vetted logistics partners (chartering, customs, warehousing).
+    \item Revenue captured via referral or partner fees, keeping Lithos asset-light while embedding deeper into procurement workflows.
+    \item Unlocks a services ecosystem around each project profile, increasing data freshness as partners contribute telemetry.
+\end{itemize}
+
+\subsection*{3. Transaction Take Rates}
+\begin{itemize}
+    \item When matches initiated on Lithos (e.g., junior explorers connecting with mid-tier miners or traders) culminate in signed agreements, Lithos takes a success-based introduction fee.
+    \item Maintains clear marketplace terms separated from core SaaS contracts to avoid channel conflict; supports strategic financings and offtake auctions within the platform.
+    \item Requires Enterprise tier for KYC/AML controls and deal-room level auditing.
+\end{itemize}
+
+\section*{Product Experience by Tier}
+
+\subsection*{Basic --- Screen}
+\begin{itemize}
+    \item Global mining index with 100+ filters (jurisdiction, commodity, stage, ESG flags).
+    \item Rapid filing viewer with autogenerated highlights, citations, and one-click exports.
+    \item Personal watchlists, saved searches, and daily alert digests.
+\end{itemize}
+
+\subsection*{Pro --- Analyze}
+\begin{itemize}
+    \item Domain-tuned LLM agents extract reserves, throughput, cost curves, and ownership structures with 95\%+ accuracy.
+    \item Auto-generated investment memos, comparable tables, and sensitivity-ready data packs.
+    \item Integrated scenario modeling (DCF, project IRR, payback) plus anomaly detection for data quality.
+\end{itemize}
+
+\subsection*{Enterprise --- Act}
+\begin{itemize}
+    \item Multi-tenant workspaces with approval chains, audit logs, and field-level permissions.
+    \item Event-driven automations (Slack/Teams notifications, CRM enrichment, Snowflake sync, Excel add-ins).
+    \item AI copilots tailored to firm knowledge bases; ability to embed Lithos insights into downstream BI or procurement systems.
+\end{itemize}
+
+\section*{Data \& Platform Architecture}
+
+\begin{itemize}
+    \item Multi-source ingestion: exchange filings (ASX, SEDAR, EDGAR, LSE), technical reports (NI 43-101, JORC, SAMREC), satellite feeds, ESG disclosures, and offtake contracts.
+    \item Data lake feeding feature store and retrieval layers for LLM agents; vector databases maintain semantic access to millions of report sections.
+    \item Service mesh powering API/automation tier with role-based access, rate limiting, and audit logging to meet enterprise compliance.
+\end{itemize}
+
+\section*{Go-to-Market Plan}
+
+\begin{itemize}
+    \item \textbf{Land + Expand:} Start with analyst/designer pairs inside funds or corporate development teams, deploy pilot workspaces, and showcase time-to-diligence reduction.
+    \item \textbf{Design Partnerships:} Co-build domain-tuned copilots with geology consultancies to seed the Geological Analysis Module.
+    \item \textbf{Alliances:} Logistics and services partners embedded within project pages, creating reciprocal lead flow that reduces Lithos' CAC.
+    \item \textbf{Proof of Value:} 4-week onboarding including data ingestion of a client's portfolio, AI accuracy benchmarks, and workflow automation blueprint tied to ROI.
+\end{itemize}
+
+\section*{Success Metrics}
+
+\begin{itemize}
+    \item \textbf{Workflow Adoption:} Percentage of active customers using at least two tiers of the screening $\rightarrow$ analysis $\rightarrow$ action stack.
+    \item \textbf{Seat Expansion:} Net seat growth per customer 90 days after go-live; target $>$130\% net revenue retention.
+    \item \textbf{Automation Throughput:} Number of AI-generated memos, red-flag alerts, and triggered automations per account (leading indicator for Pro/Enterprise upgrades).
+    \item \textbf{Marketplace GMV:} Aggregate value of introductions/logistics referrals flowing through Lithos, tied directly to take-rate revenue.
+\end{itemize}
+
+\section*{Implementation Roadmap}
+
+\begin{itemize}
+    \item \textbf{Q1 2025:} Harden ingestion pipeline, deliver self-serve watchlists, and package Basic tier.
+    \item \textbf{Q2 2025:} Launch Pro tier with automated memo generation, advanced analytics, and the first release of the Geological Analysis Module.
+    \item \textbf{Q3 2025:} Deliver Enterprise automations (SSO, IAM, CRM/Snowflake integrations) plus transaction marketplace beta for pilot partners.
+    \item \textbf{Q4 2025:} Scale partner ecosystem (logistics, consultants) and finalize commercialization playbooks for referral/take-rate revenue.
+\end{itemize}
+
+\section*{Risks \& Mitigations}
+
+\begin{itemize}
+    \item \textbf{Data Rights \& Compliance:} Mitigate via explicit licensing of filings, transparent citation trails, and legal review for transaction marketplace flows.
+    \item \textbf{AI Accuracy:} Maintain human-in-the-loop validation for high-stakes metrics, publish precision/recall dashboards per commodity, and continuously fine-tune models.
+    \item \textbf{Channel Conflict:} Separate SaaS contracts from marketplace agreements to reassure consulting partners and strategics.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+    \textit{Lithos AI --- pricing the workflow, not the PDF.}\\
+    \texttt{www.lithos.ai} \quad\textbullet\quad \texttt{team@lithos.ai}
+\end{center}
+
+\end{document}
+

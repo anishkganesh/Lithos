@@ -1,0 +1,135 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\definecolor{lithosblue}{RGB}{59,130,246}
+\definecolor{darkgray}{RGB}{55,65,81}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{0.75em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.5em}{}
+\setlist[itemize]{itemsep=0.4em, topsep=0.4em}
+
+\begin{document}
+
+\thispagestyle{empty}
+\begin{center}
+    \vspace*{1.5cm}
+    {\Huge \textbf{Lithos AI}}\\[0.35cm]
+    {\Large Feature-Only Product Snapshot}\\[0.35cm]
+    {\large November 2025}\\[2cm]
+    {\small ``Two pages of exactly what users get.''}
+\end{center}
+
+\newpage
+\setcounter{page}{1}
+
+\section*{Platform Pillars}
+
+\begin{itemize}
+    \item \textbf{Global Mining Intelligence Index:} Ingests filings from ASX, SEDAR, EDGAR, LSE, plus NI 43-101/JORC/SAMREC reports, ESG disclosures, drill logs, and offtake contracts within 15 minutes of publication.
+    \item \textbf{Domain-Tuned LLM Fabric:} 1M+ document corpus powering retrieval-augmented copilots for resource extraction, red-flag monitoring, and memo drafting with cited references.
+    \item \textbf{Workflow Automation Mesh:} Event bus that pushes structured outputs into Excel, Snowflake, Slack, DealCloud, and custom APIs with approval controls and audit logging.
+\end{itemize}
+
+\section*{Tier Highlights}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{p{0.18\linewidth}p{0.26\linewidth}p{0.26\linewidth}p{0.26\linewidth}}
+\toprule
+\textbf{Sphere} & \textbf{Basic} & \textbf{Pro} & \textbf{Enterprise} \\
+\midrule
+Data Access & Watchlists, 15+ filters, inline filing viewer & AI-extracted metrics, historical deltas, bulk downloads & Firm-wide data warehouse sync, streaming updates \\
+AI Features & Smart search, instant highlight reels & Diligence memos, anomaly detection, scenario packs & Custom copilots tied to internal knowledge bases \\
+Automation & Manual exports (CSV, PDF) & One-click memo + model builders & Event-driven workflows into CRM/BI, role-based approvals \\
+Governance & Single-user auth, email alerts & Shared workspaces, SSO, staging API keys & Full IAM, field-level permissions, audit trails, DLP hooks \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Feature Inventory}
+
+\subsection*{A. Screening \& Discovery}
+\begin{itemize}
+    \item Multi-factor screener with 100+ filters (jurisdiction, stage, grades, ESG flags, permitting status).
+    \item Infinite-scroll grids with pinned columns, conditional formatting, and saved views per analyst.
+    \item Global activity map with satellite overlays for infrastructure, port proximity, and jurisdiction risk.
+    \item Real-time alerting (email, Slack) for filings, drill results, management changes, and price-sensitive news.
+\end{itemize}
+
+\subsection*{B. Project Deep Dives}
+\begin{itemize}
+    \item Auto-generated executive summary cards (NPV, IRR, payback, throughput) with provenance links.
+    \item Tabbed view: Overview, Technical, Financial, Documents, ESG, AI Insights, Experts.
+    \item Side-by-side comparison up to five projects with delta indicators, waterfall charts, and spider plots.
+    \item Drill log viewer with structured intercepts, grade-thickness calculators, and lithology tagging.
+\end{itemize}
+
+\subsection*{C. AI Copilots}
+\begin{itemize}
+    \item Natural-language queries returning cited passages and structured tables.
+    \item Multi-document synthesis for NI 43-101 bundles, ESG filings, and offtake contracts.
+    \item Auto red-flag generator covering permitting risk, metallurgical concerns, capex overruns, and ESG controversies.
+    \item Memo studio templates (investment briefs, board updates, lender memos) with firm branding.
+\end{itemize}
+
+\subsection*{D. Financial Modeling}
+\begin{itemize}
+    \item Mining-specific DCF blocks with commodity curves, recovery sliders, and Monte Carlo runs.
+    \item Cost curve visualizations and benchmarking across regions, projects, or operators.
+    \item Sensitivity lab enabling batch runs across grade, recovery, capex, FX, and discount rate assumptions.
+    \item Excel/Sheets add-ins that refresh Lithos data with traceable formulas.
+\end{itemize}
+
+\newpage
+
+\subsection*{E. Collaboration \& Governance}
+\begin{itemize}
+    \item Multi-user workspaces with assignments, comment threads, and @mentions.
+    \item Version-controlled scenarios; ability to fork AI outputs for human edits with compare mode.
+    \item Knowledge graph linking teams, experts, documents, and deal notes per project.
+    \item Audit-ready logging (who read/exported what, AI prompts/responses, data lineage).
+\end{itemize}
+
+\subsection*{F. Automations \& Integrations}
+\begin{itemize}
+    \item Out-of-the-box connectors for Slack, Teams, DealCloud, Salesforce, HubSpot, Snowflake, and REST APIs.
+    \item Trigger builder: "If filing drops $\rightarrow$ run AI extraction $\rightarrow$ push memo to CRM $\rightarrow$ notify channel."
+    \item Webhook subscriptions with retry logic, dead-letter queues, and schema versioning.
+    \item Marketplace for logistics partners, consultants, and labs to plug structured updates back into Lithos.
+\end{itemize}
+
+\subsection*{G. Marketplace Extensions}
+\begin{itemize}
+    \item Geological Analysis Module with cross-sections, assay harmonization, and Competent Person-ready exports.
+    \item Referral network for shipping, customs, and warehousing providers, including status tracking inside project timelines.
+    \item Deal introduction workflows for explorers, mid-tier miners, and offtakers with configurable success fees.
+\end{itemize}
+
+\section*{Monitoring \& Reliability}
+\begin{itemize}
+    \item 24/7 API monitoring, latency dashboards, and SLA alerts visible to customers.
+    \item Data freshness badges denoting ingest timestamps and AI confidence intervals.
+    \item Quality review queue with human override for critical metrics; customers can submit inline corrections.
+\end{itemize}
+
+\section*{Feature Delivery Roadmap (Snapshot)}
+\begin{itemize}
+    \item \textbf{Live:} Screener 2.0, AI memo studio, Monte Carlo engine, Slack/DealCloud pushes.
+    \item \textbf{Coming in Q1 2026:} In-app geospatial change detection, Snowflake secure data share, automated ESG scoring.
+    \item \textbf{Coming in Q2 2026:} Logistics marketplace SLA tracking, on-platform deal rooms, multilingual copilots (ES/FR/PT).
+\end{itemize}
+
+\vfill
+
+\begin{center}
+    \textit{Lithos AI --- Feature depth to collapse diligence, end-to-end.}
+\end{center}
+
+\end{document}

@@ -17,6 +17,7 @@
     "@dnd-kit/sortable": "latest",
     "@dnd-kit/utilities": "latest",
     "@factset/sdk-globalfilings": "^3.2.0",
+    "@factset/sdk-streetaccountnews": "^2.3.0",
     "@factset/sdk-utils": "^2.1.0",
     "@hookform/resolvers": "^3.10.0",
     "@mendable/firecrawl-js": "^1.29.3",

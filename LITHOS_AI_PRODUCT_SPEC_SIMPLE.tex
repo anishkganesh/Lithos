@@ -1,0 +1,409 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+% Define colors
+\definecolor{lithosblue}{RGB}{59, 130, 246}
+\definecolor{darkgray}{RGB}{75, 85, 99}
+
+\begin{document}
+
+\thispagestyle{empty}
+\begin{center}
+    \vspace*{2cm}
+    {\Huge \textbf{Lithos AI: Product Specification}}\\
+    \vspace{0.5cm}
+    {\Large AI-Powered Critical Minerals Intelligence Platform}\\
+    \vspace{2cm}
+    {\large November 2025}
+\end{center}
+
+\newpage
+\setcounter{page}{1}
+
+\section*{Executive Summary}
+
+Lithos AI is a Bloomberg Terminal-inspired platform supercharged by artificial intelligence for the critical minerals industry. The platform transforms months of mining diligence into minutes by ingesting and analyzing drill-hole logs, technical reports, satellite imagery, offtake contracts, and ESG filings through fine-tuned LLMs and geospatial models.
+
+The platform delivers instant diligence notes, cash-flow forecasts, and supply-chain risk maps for miners, traders, and financiers, replacing fragmented workflows with an integrated solution that accelerates decision-making in the \$7.1B resource intelligence market.
+
+\section*{Core Product Architecture}
+
+\subsection*{1. Global Mining Intelligence Index}
+
+\textbf{Functionality:}
+\begin{itemize}
+    \item Continuously ingests and normalizes data from multiple sources:
+        \begin{itemize}
+            \item Public filings from ASX, SEDAR, EDGAR, LSE exchanges
+            \item Technical reports (NI 43-101, JORC, SAMREC standards)
+            \item Drill results and resource estimates
+            \item Permitting documents and environmental assessments
+            \item Real-time news and announcements
+            \item Satellite imagery and geospatial data
+        \end{itemize}
+    \item Maintains comprehensive profiles for 10,000+ mining projects globally
+    \item Tracks 50+ critical minerals including lithium, copper, nickel, cobalt, rare earths
+    \item Updates within 15 minutes of source publication
+\end{itemize}
+
+\textbf{Key Features:}
+\begin{itemize}
+    \item Advanced search with 100+ filterable parameters
+    \item Custom watchlists with real-time alerts
+    \item Bulk data export (CSV, Excel, API)
+    \item Historical data tracking with version control
+    \item Source-linked citations for audit trails
+\end{itemize}
+
+\subsection*{2. AI-Powered Analytics Engine}
+
+\textbf{Functionality:}
+\begin{itemize}
+    \item Domain-tuned LLM trained on 1M+ mining documents
+    \item Natural language query processing for complex research
+    \item Automated extraction of key mining metrics:
+        \begin{itemize}
+            \item Resource/reserve estimates
+            \item Production forecasts
+            \item Capital and operating costs
+            \item Metallurgical recoveries
+            \item Infrastructure requirements
+        \end{itemize}
+    \item Comparative analysis across projects and commodities
+    \item Risk assessment and red flag detection
+\end{itemize}
+
+\textbf{Key Features:}
+\begin{itemize}
+    \item Plain-English queries with cited responses
+    \item Multi-document synthesis and summarization
+    \item Automated diligence memo generation
+    \item Technical report parsing with 95\% accuracy
+    \item Anomaly detection for data quality issues
+\end{itemize}
+
+\subsection*{3. Financial Modeling Suite}
+
+\textbf{Functionality:}
+\begin{itemize}
+    \item Dynamic DCF models with mining-specific parameters
+    \item Real-time sensitivity analysis across key variables:
+        \begin{itemize}
+            \item Commodity prices
+            \item Grade and recovery rates
+            \item Capital and operating costs
+            \item Discount rates
+            \item Exchange rates
+        \end{itemize}
+    \item Peer benchmarking and valuation comparables
+    \item Monte Carlo simulations for risk assessment
+    \item Automated financial statement analysis
+\end{itemize}
+
+\textbf{Key Features:}
+\begin{itemize}
+    \item Pre-built mining financial models
+    \item Interactive sensitivity charts
+    \item NPV, IRR, payback calculations
+    \item Production cost curves
+    \item Export to Excel with formulas preserved
+\end{itemize}
+
+\section*{User Interface Components}
+
+\subsection*{1. Project Screener Dashboard}
+
+\textbf{Features:}
+\begin{itemize}
+    \item Dense, spreadsheet-style table with 15+ simultaneous projects
+    \item Advanced filtering with multi-select options
+    \item Real-time search across all columns
+    \item Column management and visibility controls
+    \item Bulk actions (export, watchlist, compare)
+    \item Conditional formatting for IRR, ESG scores, risk levels
+    \item Infinite scroll with virtualization for performance
+\end{itemize}
+
+\subsection*{2. Project Detail View}
+
+\textbf{Features:}
+\begin{itemize}
+    \item Comprehensive single-project analysis interface
+    \item Key metrics cards (NPV, IRR, Payback, Production)
+    \item Risk alerts and red flags panel
+    \item Interactive sensitivity analysis with real-time calculations
+    \item Similar projects recommendations
+    \item Multi-tab interface:
+        \begin{itemize}
+            \item Overview: Executive summary and key highlights
+            \item Technical: Resource details and mining parameters
+            \item Financial: Models and sensitivity analysis
+            \item Documents: Source files and reports
+            \item AI Insights: Generated analysis and recommendations
+            \item News: Related articles and announcements
+            \item Experts: Team profiles and contact information
+        \end{itemize}
+\end{itemize}
+
+\subsection*{3. Comparison Tool}
+
+\textbf{Features:}
+\begin{itemize}
+    \item Side-by-side comparison of up to 5 projects
+    \item Percentage differences with trend indicators
+    \item Detailed comparison tables
+    \item Toggle switches for ESG Score, Jurisdiction Risk
+    \item Spider charts for visual analysis
+    \item Export to CSV/PDF functionality
+\end{itemize}
+
+\subsection*{4. Interactive Maps}
+
+\textbf{Features:}
+\begin{itemize}
+    \item Global heat map of mining activity
+    \item Project locations with commodity filters
+    \item Infrastructure overlay (ports, rail, power)
+    \item Jurisdiction risk visualization
+    \item Satellite imagery integration
+    \item Distance calculations to key infrastructure
+\end{itemize}
+
+\section*{Data Collection \& Processing}
+
+\subsection*{Mining Agent System}
+
+\textbf{Architecture:}
+\begin{itemize}
+    \item \textbf{Orchestrator:} Coordinates multiple scrapers and document processing
+    \item \textbf{Scrapers:} Exchange-specific collectors for ASX, SEDAR, EDGAR, LSE
+    \item \textbf{Document Processor:} Extracts structured data from PDFs and reports
+    \item \textbf{News Aggregator:} Real-time monitoring of 500+ sources
+    \item \textbf{Quality Assurance:} Validation and anomaly detection
+\end{itemize}
+
+\textbf{Processing Pipeline:}
+\begin{enumerate}
+    \item Source monitoring and change detection
+    \item Document retrieval and parsing
+    \item Data extraction and normalization
+    \item Quality validation and error correction
+    \item Database update and version control
+    \item Alert generation and distribution
+\end{enumerate}
+
+\section*{Advanced Features}
+
+\subsection*{1. AI Assistant Chat Interface}
+
+\begin{itemize}
+    \item Conversational interface for complex queries
+    \item Multi-turn dialogue with context retention
+    \item Document upload for custom analysis
+    \item Code generation for data analysis
+    \item Export conversations with citations
+\end{itemize}
+
+\subsection*{2. Automated Reporting}
+
+\begin{itemize}
+    \item Weekly market summary reports
+    \item Portfolio monitoring dashboards
+    \item Custom alert configurations
+    \item Scheduled data exports
+    \item Email and webhook integrations
+\end{itemize}
+
+\subsection*{3. API \& Integrations}
+
+\begin{itemize}
+    \item RESTful API with comprehensive endpoints
+    \item GraphQL support for flexible queries
+    \item Webhook notifications for real-time updates
+    \item Excel plugin for direct data access
+    \item Python/R libraries for data science workflows
+\end{itemize}
+
+\subsection*{4. Collaboration Tools}
+
+\begin{itemize}
+    \item Team workspaces with role-based access
+    \item Shared watchlists and portfolios
+    \item Annotation and commenting system
+    \item Version-controlled analysis documents
+    \item Audit trails for compliance
+\end{itemize}
+
+\section*{Technical Specifications}
+
+\subsection*{Technology Stack}
+
+\begin{itemize}
+    \item \textbf{Frontend:} Next.js 15.2.4, React 18, TypeScript
+    \item \textbf{UI Components:} Radix UI, shadcn/ui, Tailwind CSS
+    \item \textbf{Backend:} Node.js, Express, PostgreSQL
+    \item \textbf{Database:} Supabase (PostgreSQL with real-time)
+    \item \textbf{Authentication:} Supabase Auth with SSO support
+    \item \textbf{AI/ML:} OpenAI GPT-4, Custom fine-tuned models
+    \item \textbf{Web Scraping:} Firecrawl API, Puppeteer
+    \item \textbf{Analytics:} Apache Spark for large-scale processing
+    \item \textbf{Infrastructure:} AWS/Vercel, Docker, Kubernetes
+\end{itemize}
+
+\subsection*{Performance Metrics}
+
+\begin{itemize}
+    \item Page load time: <2 seconds
+    \item Search response: <500ms
+    \item Data refresh rate: 15 minutes
+    \item API response time: <200ms (p95)
+    \item Concurrent users: 10,000+
+    \item Data accuracy: >95\%
+    \item Uptime SLA: 99.9\%
+\end{itemize}
+
+\subsection*{Security \& Compliance}
+
+\begin{itemize}
+    \item SOC 2 Type II certified
+    \item GDPR and CCPA compliant
+    \item End-to-end encryption for sensitive data
+    \item Multi-factor authentication
+    \item Role-based access control (RBAC)
+    \item Comprehensive audit logging
+    \item Regular penetration testing
+\end{itemize}
+
+\section*{Pricing Tiers}
+
+\subsection*{Basic Plan - \$1,000/month}
+\begin{itemize}
+    \item 3 users
+    \item 100 projects in watchlist
+    \item Basic screening and alerts
+    \item CSV exports
+    \item Email support
+\end{itemize}
+
+\subsection*{Professional Plan - \$2,500/month}
+\begin{itemize}
+    \item 10 users
+    \item Unlimited watchlists
+    \item Advanced analytics and AI assistant
+    \item API access (10,000 calls/month)
+    \item Custom alerts and reports
+    \item Priority support
+\end{itemize}
+
+\subsection*{Enterprise Plan - \$5,000+/month}
+\begin{itemize}
+    \item Unlimited users
+    \item Custom data sources
+    \item Private cloud deployment option
+    \item Unlimited API access
+    \item SSO and advanced security
+    \item Dedicated customer success manager
+    \item Custom integrations
+    \item White-label options
+\end{itemize}
+
+\section*{Implementation Roadmap}
+
+\subsection*{Current Release (v1.0)}
+\begin{itemize}
+    \item Core screening and project database
+    \item Basic financial modeling
+    \item AI-powered search and insights
+    \item Real-time data updates
+    \item Export functionality
+\end{itemize}
+
+\subsection*{Q1 2026 (v1.5)}
+\begin{itemize}
+    \item Advanced sensitivity analysis
+    \item Portfolio optimization tools
+    \item Mobile applications (iOS/Android)
+    \item Enhanced collaboration features
+    \item Expanded commodity coverage
+\end{itemize}
+
+\subsection*{Q2 2026 (v2.0)}
+\begin{itemize}
+    \item Geological data integration
+    \item 3D resource modeling
+    \item Supply chain tracking
+    \item ESG scoring engine
+    \item Transaction marketplace
+\end{itemize}
+
+\subsection*{Q3 2026 (v2.5)}
+\begin{itemize}
+    \item Satellite imagery analysis
+    \item Predictive analytics for project success
+    \item Automated due diligence workflows
+    \item Integration with trading platforms
+    \item Blockchain-based audit trails
+\end{itemize}
+
+\section*{Competitive Advantages}
+
+\begin{enumerate}
+    \item \textbf{Speed:} 100x faster than manual analysis through AI automation
+    \item \textbf{Coverage:} Most comprehensive mining project database globally
+    \item \textbf{Accuracy:} 95\%+ data extraction accuracy with source verification
+    \item \textbf{Integration:} End-to-end workflow from screening to decision
+    \item \textbf{Intelligence:} Domain-specific AI trained on mining data
+    \item \textbf{Cost:} 50-70\% lower than incumbent solutions
+    \item \textbf{Usability:} Modern interface designed for mining professionals
+    \item \textbf{Real-time:} 15-minute data refresh vs daily/weekly competitors
+\end{enumerate}
+
+\section*{Customer Success Metrics}
+
+\begin{itemize}
+    \item \textbf{Time Savings:} 90\% reduction in research time
+    \item \textbf{Coverage Increase:} 5x more projects monitored per analyst
+    \item \textbf{Decision Speed:} 3 days to 3 hours for initial assessment
+    \item \textbf{ROI:} Average 12x return on platform investment
+    \item \textbf{User Adoption:} 85\% daily active usage rate
+    \item \textbf{NPS Score:} 72 (industry average: 35)
+\end{itemize}
+
+\section*{Support \& Training}
+
+\subsection*{Onboarding Program}
+\begin{itemize}
+    \item Dedicated onboarding specialist
+    \item Custom data migration assistance
+    \item Team training sessions (virtual or on-site)
+    \item Best practices documentation
+    \item 30-day success review
+\end{itemize}
+
+\subsection*{Ongoing Support}
+\begin{itemize}
+    \item 24/7 technical support for Enterprise
+    \item Comprehensive knowledge base
+    \item Video tutorials and webinars
+    \item User community forum
+    \item Regular feature updates and improvements
+\end{itemize}
+
+\section*{Conclusion}
+
+Lithos AI represents a paradigm shift in mining intelligence, transforming how professionals discover, analyze, and act on critical minerals opportunities. By combining comprehensive data coverage, AI-powered analytics, and intuitive workflows, Lithos delivers unprecedented value to mining investors, corporate development teams, and industry consultants.
+
+The platform's ability to compress months of diligence into minutes, while maintaining audit-quality accuracy, positions Lithos as the essential tool for navigating the rapidly evolving critical minerals landscape. With continuous innovation and customer-centric development, Lithos is building the operating system for the future of mining intelligence.
+
+\vspace{2cm}
+\begin{center}
+    \textbf{For more information or to schedule a demo:}\\
+    \href{https://lithosai.com}{www.lithosai.com}\\
+    sales@lithosai.com\\
+    +1 (555) 123-4567
+\end{center}
+
+\end{document}

@@ -24,27 +24,30 @@ export class FirecrawlNewsScraper {
   private openai: OpenAI;
 
   private newsSources = [
-    // Major Mining News Sites
-    { name: 'Mining.com', url: 'https://www.mining.com/latest-news/' },
-    { name: 'Northern Miner', url: 'https://www.northernminer.com/' },
-    { name: 'Kitco News', url: 'https://www.kitco.com/news/category/commodities/' },
-    { name: 'Mining Journal', url: 'https://www.mining-journal.com/news/' },
+    // Major Global Mining News Sites (Fast & Reliable)
     { name: 'Mining Weekly', url: 'https://www.miningweekly.com/' },
-    { name: 'Mining Technology', url: 'https://www.mining-technology.com/news/' },
-
-    // Regional Mining News
-    { name: 'Australian Mining', url: 'https://www.australianmining.com.au/news/' },
     { name: 'Mining Review Africa', url: 'https://www.miningreview.com/news/' },
-    { name: 'Canadian Mining Journal', url: 'https://www.canadianminingjournal.com/news/' },
+    { name: 'Northern Miner', url: 'https://www.northernminer.com/' },
+    { name: 'Australian Mining', url: 'https://www.australianmining.com.au/news/' },
+    { name: 'Kitco News', url: 'https://www.kitco.com/news/' },
 
-    // Commodity-Specific
-    { name: 'Gold News', url: 'https://www.mining.com/category/gold-2/' },
-    { name: 'Copper News', url: 'https://www.mining.com/category/copper/' },
-    { name: 'Lithium News', url: 'https://www.mining.com/category/lithium/' },
+    // Regional Mining Publications
+    { name: 'Canadian Mining Journal', url: 'https://www.canadianminingjournal.com/news/' },
+    { name: 'International Mining', url: 'https://im-mining.com/category/news/' },
+    { name: 'Mining Magazine', url: 'https://www.miningmagazine.com/news/' },
 
     // Industry Publications
-    { name: 'S&P Global Market Intelligence', url: 'https://www.spglobal.com/marketintelligence/en/news-insights/latest-news-headlines?category=metals-mining' },
-    { name: 'Reuters Mining', url: 'https://www.reuters.com/business/energy/' },
+    { name: 'Engineering & Mining Journal', url: 'https://www.e-mj.com/news/' },
+    { name: 'Pit & Quarry', url: 'https://www.pitandquarry.com/news/' },
+    { name: 'Rock to Road', url: 'https://www.rocktoroad.com/news/' },
+
+    // Commodity Market News
+    { name: 'Fastmarkets', url: 'https://www.fastmarkets.com/insights/' },
+    { name: 'Argus Metals', url: 'https://www.argusmedia.com/en/news-and-insights/metals' },
+
+    // Global News Organizations
+    { name: 'Reuters Commodities', url: 'https://www.reuters.com/markets/commodities/' },
+    { name: 'Mining People', url: 'https://miningpeople.com.au/news/' },
   ];
 
   constructor() {

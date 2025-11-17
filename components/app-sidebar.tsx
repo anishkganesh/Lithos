@@ -10,6 +10,7 @@ import {
   IconWorld,
   IconBuilding,
   IconSphere,
+  IconNetwork,
 } from "@tabler/icons-react"
 
 import { NavMain } from '@/components/nav-main'
@@ -48,6 +49,11 @@ const data = {
       title: "Global Companies",
       url: "/companies",
       icon: IconBuilding,
+    },
+    {
+      title: "Supply Chain",
+      url: "/supply-chain",
+      icon: IconNetwork,
     },
     {
       title: "News & Announcements",

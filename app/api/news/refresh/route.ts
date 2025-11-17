@@ -57,20 +57,21 @@ export async function GET(request: Request) {
       message: 'News refresh endpoint is ready. Send a POST request to refresh news.',
       lastRefresh: null, // Could query database for last fetched_at
       sources: [
-        'Mining.com',
-        'Northern Miner',
-        'Kitco News',
-        'Mining Journal',
         'Mining Weekly',
-        'Mining Technology',
-        'Australian Mining',
         'Mining Review Africa',
+        'Northern Miner',
+        'Australian Mining',
+        'Kitco News',
         'Canadian Mining Journal',
-        'Gold News',
-        'Copper News',
-        'Lithium News',
-        'S&P Global Market Intelligence',
-        'Reuters Mining'
+        'International Mining',
+        'Mining Magazine',
+        'Engineering & Mining Journal',
+        'Pit & Quarry',
+        'Rock to Road',
+        'Fastmarkets',
+        'Argus Metals',
+        'Reuters Commodities',
+        'Mining People'
       ]
     });
   } catch (error) {
